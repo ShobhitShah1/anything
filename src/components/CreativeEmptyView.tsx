@@ -35,7 +35,7 @@ const ROTATING_ITEMS = [
   },
   {
     title: 'Stash secret keys.',
-    desc: 'Encrypted tokens, API keys, and credentials with AES reveal.',
+    desc: 'Keep tokens, API keys, and credentials in this browser.',
   },
   {
     title: 'Collect web links.',
@@ -99,7 +99,7 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({
   };
 
   return (
-    <div className="min-h-[72vh] flex flex-col items-center justify-center max-w-4xl mx-auto px-4 py-8 text-center select-none">
+    <div className="w-full flex flex-col items-center justify-center max-w-4xl mx-auto px-4 py-8 text-center select-none">
       {/* Ambient Motion Floating Halo directly on canvas */}
       <motion.div
         animate={{ 
@@ -249,7 +249,7 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({
                 <KeyRound className="w-3 h-3 text-zinc-400" />
                 <span>Secret Key</span>
               </span>
-              <span className="text-[10px] font-mono text-emerald-500 font-medium">Encrypted</span>
+              <span className="text-[10px] font-mono text-emerald-500 font-medium">Local</span>
             </div>
 
             <h4 className="text-xs font-semibold mb-2">GitHub Token</h4>
@@ -274,7 +274,7 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({
           </div>
 
           <div className="pt-3 mt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-[10px] font-mono text-zinc-400">
-            <span>256-bit AES</span>
+            <span>Browser storage</span>
             <span>Tap eye to view</span>
           </div>
         </motion.div>
@@ -355,12 +355,6 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({
           <span>Direct Paste</span>
         </span>
 
-        <span className="flex items-center gap-1.5">
-          <kbd className="px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 font-mono text-[10px]">
-            /
-          </kbd>
-          <span>Search</span>
-        </span>
       </motion.div>
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SavedItem, ViewMode, ItemType, Folder } from './types';
 import { loadSavedItems, saveItemsToStorage, loadFolders, saveFolders } from './utils/storage';
+import { fetchLinkPreview } from './utils/fetchPreview';
 import { sound } from './utils/sound';
 import { Header } from './components/Header';
 import { FilterBar, FilterCategory, SortOption } from './components/FilterBar';
@@ -33,7 +34,7 @@ export function App() {
   // Theme: Permanently Dark (White mode removed)
   const isDark = true;
 
-  // Modals & Sheets
+  // Capture screen and item viewers
   const [isCaptureOpen, setIsCaptureOpen] = useState(false);
   const [captureInitialType, setCaptureInitialType] = useState<ItemType>('note');
   const [captureInitialContent, setCaptureInitialContent] = useState<string>('');
@@ -177,8 +178,19 @@ export function App() {
     }
   };
 
-  const handleSaveNewItem = (newItem: SavedItem) => {
+  const handleSaveNewItem = (newItem: SavedItem, enrichPreview = false) => {
     setItems((prev) => [newItem, ...prev]);
+    if (newItem.type === 'link' && enrichPreview) {
+      void fetchLinkPreview(newItem.url).then((preview) => {
+        setItems((prev) => prev.map((item) => item.id === newItem.id && item.type === 'link' ? {
+          ...item,
+          title: item.title === newItem.domain ? preview.title : item.title,
+          description: item.description === newItem.description ? item.description || preview.description : item.description,
+          previewImage: item.previewImage === newItem.previewImage ? preview.imageUrl : item.previewImage,
+          favicon: preview.favicon || item.favicon,
+        } : item));
+      }).catch(() => { /* The link is already saved; metadata is optional. */ });
+    }
   };
 
   const handleImportItems = (newItems: SavedItem[]) => {
@@ -338,8 +350,9 @@ export function App() {
   }, [selectedFilter, isDefaultOverview, pinnedItems, unpinnedItems, filteredItems]);
 
   return (
-    <div id="top" className="min-h-screen flex flex-col font-sans pb-32 bg-[#09090B] text-[#F4F4F5]">
+    <div id="top" className="min-h-screen flex flex-col font-sans bg-[#09090B] text-[#F4F4F5]">
       
+      <div inert={isCaptureOpen} aria-hidden={isCaptureOpen} className={`collection-surface ${items.length > 0 ? 'pb-32' : ''} ${isCaptureOpen ? "capture-active" : ""}`}>
       {/* Top Header */}
       <Header
         items={items}
@@ -405,7 +418,7 @@ export function App() {
       </AnimatePresence>
 
       {/* Unified Monochrome Filter & Folder Toolbar */}
-      <FilterBar
+      {items.length > 0 && <FilterBar
         folders={folders}
         selectedFolderId={selectedFolderId}
         onSelectFolder={setSelectedFolderId}
@@ -415,10 +428,10 @@ export function App() {
         onFilterChange={setSelectedFilter}
         itemCounts={itemCounts}
         isDark={isDark}
-      />
+      />}
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-4">
+      <main className={`flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-4 ${items.length === 0 ? 'flex flex-col justify-center' : ''}`}>
         
         {/* Creative Empty Canvas (Centered, with on-screen motion canvas) */}
         {items.length === 0 ? (
@@ -498,7 +511,9 @@ export function App() {
         />
       )}
 
-      {/* Modern Slide-over Capture Sheet with Markdown, Skills, Folders & Live Preview */}
+      </div>
+
+      {/* Direct capture screen */}
       <CaptureSheet
         isOpen={isCaptureOpen}
         onClose={() => {

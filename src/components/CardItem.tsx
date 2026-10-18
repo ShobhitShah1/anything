@@ -536,7 +536,7 @@ export const CardItem: React.FC<CardItemProps> = ({
 
         {/* 7. Link Card */}
         {item.type === 'link' && (() => {
-          const coverImage = item.previewImage || (item.url ? `https://s0.wp.com/mshots/v1/${encodeURIComponent(item.url)}?w=800` : undefined);
+          const coverImage = item.previewImage;
           return (
             <div className="space-y-2.5">
               {coverImage && (
@@ -558,12 +558,8 @@ export const CardItem: React.FC<CardItemProps> = ({
                     loading="lazy"
                     onError={(e) => {
                       const img = e.target as HTMLImageElement;
-                      if (!img.src.includes('s0.wp.com') && item.url) {
-                        img.src = `https://s0.wp.com/mshots/v1/${encodeURIComponent(item.url)}?w=800`;
-                      } else {
-                        const parent = img.parentElement;
-                        if (parent) parent.style.display = 'none';
-                      }
+                      const parent = img.parentElement;
+                      if (parent) parent.style.display = 'none';
                     }}
                   />
                 </div>

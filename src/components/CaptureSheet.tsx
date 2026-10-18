@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
-  X, 
+  X,
   Pin, 
   Upload, 
   Check, 
@@ -29,7 +29,7 @@ import {
 import { ItemType, SavedItem, Folder, ChecklistItem } from '../types';
 import { sound } from '../utils/sound';
 import { parseSocialUrl } from '../utils/storage';
-import { fetchLinkPreview, LinkPreviewData, normalizeUrl, isDirectImageUrl } from '../utils/fetchPreview';
+import { fetchLinkPreview, getImmediateLinkPreview, LinkPreviewData, normalizeUrl, isDirectImageUrl } from '../utils/fetchPreview';
 import { findDuplicateItem, readClipboardSafely } from '../utils/clipboard';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { FolderDropdown } from './FolderDropdown';
@@ -38,7 +38,7 @@ import { InstagramIcon, RedditIcon, XIcon } from './Icons';
 interface CaptureSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (item: SavedItem) => void;
+  onSave: (item: SavedItem, enrichPreview?: boolean) => void;
   existingItems: SavedItem[];
   folders: Folder[];
   onCreateFolder?: (name: string) => Folder;
@@ -127,7 +127,10 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   const [duplicateItem, setDuplicateItem] = useState<SavedItem | null>(null);
   const [clipboardSuggestion, setClipboardSuggestion] = useState<string | null>(null);
   const [autoDetectedBadge, setAutoDetectedBadge] = useState<string | null>(null);
-  const fetchTimerRef = React.useRef<any>(null);
+  const fetchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewVersion = React.useRef(0);
+  const reduceMotion = useReducedMotion();
+  const [formError, setFormError] = useState('');
 
   // Markdown write/render tab
   const [markdownTab, setMarkdownTab] = useState<'write' | 'render'>('write');
@@ -145,12 +148,16 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       setIsChecklistMode(false);
       setChecklistItems([]);
       setShowSecret(false);
+      previewVersion.current += 1;
+      setIsFetchingPreview(false);
+      setFormError('');
       setPreviewData(null);
       setDuplicateItem(null);
       setAutoDetectedBadge(null);
       setMobileTab('editor');
       setMarkdownTab('write');
-      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => (document.getElementById('capture-url') || document.getElementById('capture-title'))?.focus());
+
 
       if (initialContent) {
         handleContentChange(initialContent);
@@ -162,10 +169,17 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         });
       }
     } else {
+      previewVersion.current += 1;
       document.body.style.overflow = '';
       setClipboardSuggestion(null);
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+      fetchTimerRef.current = null;
     }
+    return () => {
+      document.body.style.overflow = '';
+      previewVersion.current += 1;
+      if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    };
   }, [isOpen, initialType, initialFolderId, initialContent, initialTitle]);
 
   useEffect(() => {
@@ -183,6 +197,12 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   // Omni-Input Auto-Detection
   const handleContentChange = (val: string) => {
     setContent(val);
+    previewVersion.current += 1;
+    if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    fetchTimerRef.current = null;
+    setIsFetchingPreview(false);
+    setPreviewData(null);
+    setFormError('');
 
     const dup = findDuplicateItem(val, existingItems);
     setDuplicateItem(dup);
@@ -193,20 +213,26 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       return;
     }
 
+    const isWebUrl = (() => {
+      try { return new URL(normalizeUrl(trimmed)).hostname.includes('.'); }
+      catch { return false; }
+    })();
+
     // Direct Image URL detection
-    if (isDirectImageUrl(trimmed)) {
+    if (isWebUrl && isDirectImageUrl(trimmed)) {
       if (type !== 'image' && type !== 'link') {
         setType('link');
         setAutoDetectedBadge('Image Link');
       }
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+      setPreviewData(getImmediateLinkPreview(trimmed));
       triggerFetchPreview(trimmed);
       return;
     }
 
     // Check for social URLs
     const social = parseSocialUrl(trimmed);
-    if (social.detectedType !== 'link') {
+    if (isWebUrl && social.detectedType !== 'link') {
       setType(social.detectedType);
       setAutoDetectedBadge(
         social.detectedType === 'x_post' ? 'X Post' :
@@ -217,7 +243,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         setTitle(social.extractedInfo.title);
       }
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
-      fetchTimerRef.current = setTimeout(() => triggerFetchPreview(trimmed), 250);
+      setPreviewData(getImmediateLinkPreview(trimmed));
+      fetchTimerRef.current = setTimeout(() => triggerFetchPreview(trimmed), 200);
       return;
     }
 
@@ -227,7 +254,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       try {
         const u = trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`;
         const parsed = new URL(u);
-        return parsed.hostname.includes('.') && parsed.hostname.length > 3;
+        return ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password && parsed.hostname.includes('.') && parsed.hostname.length > 3;
       } catch {
         return false;
       }
@@ -239,7 +266,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         setAutoDetectedBadge('Smart Web Link');
       }
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
-      fetchTimerRef.current = setTimeout(() => triggerFetchPreview(trimmed), 300);
+      setPreviewData(getImmediateLinkPreview(trimmed));
+      fetchTimerRef.current = setTimeout(() => triggerFetchPreview(trimmed), 200);
       return;
     }
 
@@ -262,24 +290,17 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   const triggerFetchPreview = async (urlStr: string, forceFresh: boolean = false) => {
     const cleanUrl = urlStr.trim();
     if (!cleanUrl) return;
+    if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    fetchTimerRef.current = null;
+    const version = ++previewVersion.current;
     setIsFetchingPreview(true);
     try {
       const data = await fetchLinkPreview(cleanUrl, forceFresh);
-      setPreviewData(data);
-      if (data.author) {
-        if (!title || title === 'Untitled' || title === '𝕏 Post' || title === 'X Post' || title === 'Post' || title.startsWith('@')) {
-          setTitle(data.author);
-        }
-      } else if (!title && data.title && data.title !== data.domain) {
-        setTitle(data.title);
-      }
-      if (data.description && !secondaryNote) {
-        setSecondaryNote(data.description);
-      }
-    } catch (err) {
-      console.warn('Fetch preview error:', err);
+      if (version === previewVersion.current) setPreviewData(data);
+    } catch {
+      if (version === previewVersion.current) setFormError('Use a valid http or https link.');
     } finally {
-      setIsFetchingPreview(false);
+      if (version === previewVersion.current) setIsFetchingPreview(false);
     }
   };
 
@@ -406,6 +427,16 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
     if (e) e.preventDefault();
     if (!content.trim() && !title.trim() && checklistItems.length === 0) return;
 
+    if (['link', 'x_post', 'reddit_post', 'instagram_post'].includes(type)) {
+      try {
+        const parsed = new URL(normalizeUrl(content));
+        if (!parsed.hostname.includes('.')) throw new Error('Invalid URL');
+      } catch {
+        setFormError('Add a valid web link before saving.');
+        return;
+      }
+    }
+
     const base = {
       id: `item-${Date.now()}`,
       title: title.trim() || 'Untitled',
@@ -433,8 +464,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         content: tweetBody,
         postUrl: content || 'https://x.com',
         imageUrl: previewData?.imageUrl,
-        likes: previewData?.likes || 142,
-        reposts: previewData?.reposts || 18,
+        likes: previewData?.likes,
+        reposts: previewData?.reposts,
       };
     } else if (type === 'reddit_post') {
       const social = parseSocialUrl(content);
@@ -517,15 +548,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
           domain = 'link';
         }
 
-        const isDirectImg = isDirectImageUrl(fullUrl);
-        const ytMatch = fullUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-        const ghMatch = fullUrl.match(/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+)/);
-
-        const fallbackCover = isDirectImg ? fullUrl :
-          ytMatch ? `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg` :
-          (ghMatch && !['features', 'topics', 'trending', 'collections', 'events', 'explore'].includes(ghMatch[1])
-            ? `https://opengraph.githubassets.com/1/${ghMatch[1]}/${ghMatch[2].replace(/\.git$/, '')}`
-            : `https://s0.wp.com/mshots/v1/${encodeURIComponent(fullUrl)}?w=800`);
+        const immediate = getImmediateLinkPreview(fullUrl);
 
         newItem = {
           ...base,
@@ -534,7 +557,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
           url: fullUrl,
           domain: previewData?.domain || domain,
           description: secondaryNote || previewData?.description || undefined,
-          previewImage: previewData?.imageUrl || fallbackCover,
+          previewImage: previewData ? previewData.imageUrl : immediate.imageUrl,
           favicon: previewData?.favicon || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
         };
       } else {
@@ -550,7 +573,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
     }
 
     sound.save();
-    onSave(newItem);
+    onSave(newItem, isFetchingPreview || fetchTimerRef.current !== null);
     onClose();
   };
 
@@ -569,44 +592,24 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   const currentFolder = folders.find((f) => f.id === selectedFolderId);
   const passwordStrength = useMemo(() => getPasswordStrength(content), [content]);
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-3 sm:p-6 md:p-8">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          onClick={() => {
-            sound.click();
-            onClose();
-          }}
-          className="fixed inset-0 bg-black/75 dark:bg-black/85 backdrop-blur-md"
-        />
-
-        {/* On-Screen Centered Modal Dialog */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 14 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 14 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className={`relative w-full max-w-5xl lg:max-w-6xl h-[88vh] max-h-[840px] rounded-3xl border shadow-2xl z-10 flex flex-col overflow-hidden transition-colors ${
-            isDark 
-              ? 'bg-[#121214] border-white/[0.09] text-[#F4F4F5] shadow-[0_24px_80px_rgba(0,0,0,0.95)]' 
-              : 'bg-white border-zinc-200/90 text-zinc-950 shadow-[0_24px_80px_rgba(0,0,0,0.14)]'
-          }`}
+      {isOpen && (
+        <motion.section
+          aria-labelledby="capture-heading"
+          initial={{ opacity: 0, transform: reduceMotion ? 'none' : 'translateX(24px)' }}
+          animate={{ opacity: 1, transform: 'translateX(0px)' }}
+          exit={{ opacity: 0, transform: reduceMotion ? 'none' : 'translateX(24px)' }}
+          transition={{ duration: reduceMotion ? 0.1 : 0.2, ease: [0.32, 0.72, 0, 1] }}
+          className={`capture-screen ${type === 'link' ? 'capture-link-screen' : ''}`}
         >
-
           {/* Top Bar */}
-          <div className={`px-6 py-2.5 border-b flex items-center justify-between gap-3 shrink-0 ${
+          <div className={`capture-header px-6 py-4 border-b flex items-center justify-between gap-3 shrink-0 ${
             isDark ? 'border-white/[0.08] bg-[#101012]' : 'border-zinc-200/80 bg-zinc-50/50'
           }`}>
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="font-bold text-base sm:text-lg tracking-tight text-zinc-950 dark:text-white">
-                Capture
+              <span id="capture-heading" className="font-bold text-base sm:text-lg tracking-tight text-zinc-950 dark:text-white">
+                {type === 'link' ? 'Save a link' : 'Capture'}
               </span>
 
               {autoDetectedBadge && (
@@ -620,31 +623,14 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Mobile View Toggle */}
-              <div className="flex items-center p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs md:hidden">
-                <button
-                  type="button"
-                  onClick={() => setMobileTab('editor')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                    mobileTab === 'editor'
-                      ? (isDark ? 'bg-zinc-800 text-white font-medium' : 'bg-zinc-900 text-white font-medium')
-                      : 'text-zinc-500 dark:text-zinc-400'
-                  }`}
-                >
-                  Editor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMobileTab('preview')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                    mobileTab === 'preview'
-                      ? (isDark ? 'bg-zinc-800 text-white font-medium' : 'bg-zinc-900 text-white font-medium')
-                      : 'text-zinc-500 dark:text-zinc-400'
-                  }`}
-                >
-                  Live Card
-                </button>
-              </div>
+              {type !== 'link' && <button
+                type="button"
+                onClick={() => setMobileTab(mobileTab === 'editor' ? 'preview' : 'editor')}
+                aria-pressed={mobileTab === 'preview'} aria-controls="capture-live-preview"
+                className="capture-preview-toggle">
+                {mobileTab === 'preview' ? <Edit3 size={14} /> : <Eye size={14} />}
+                <span>{mobileTab === 'preview' ? 'Edit' : 'Preview'}</span>
+              </button>}
 
               {/* Folder Selector */}
               <FolderDropdown
@@ -689,7 +675,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
           </div>
 
           {/* Full-Width 9 Type Ribbon: ZERO horizontal scroll, completely visible */}
-          <div className={`px-6 py-2 border-b shrink-0 ${
+          <div className={`capture-types px-6 py-3 border-b shrink-0 ${
             isDark ? 'border-white/[0.07] bg-[#121215]' : 'border-zinc-200/80 bg-zinc-50/40'
           }`}>
             <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5 w-full">
@@ -702,6 +688,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                     onClick={() => {
                       sound.click();
                       setType(opt.id);
+                      setMobileTab('editor');
                     }}
                     className={`relative w-full py-2 px-1.5 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
                       isActive
@@ -722,10 +709,10 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
           </div>
 
           {/* Main Workstation Body: Dual-Pane on Desktop, Tabbed on Mobile */}
-          <div className="flex-1 flex min-h-0 overflow-hidden">
+          <div className="capture-content flex min-h-0">
             {/* Left Pane: Authoring & Inputs */}
-            <div className={`flex-1 p-6 flex flex-col justify-between overflow-y-auto no-scrollbar space-y-4 ${
-              mobileTab === 'preview' ? 'hidden md:flex' : 'flex'
+            <div className={`capture-fields flex-1 p-6 flex flex-col gap-6 min-w-0 ${
+              mobileTab === 'preview' && type !== 'link' ? 'hidden' : 'flex'
             }`}>
               <div className="space-y-3.5">
                 {/* Clipboard Notification Banner */}
@@ -772,7 +759,10 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                 )}
 
                 {/* Title Input */}
-                <input
+                {type !== 'link' && type !== 'note' && <input
+                  id="capture-title"
+                  autoFocus
+                  aria-label="Item title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -782,13 +772,12 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                     type === 'code' ? 'Snippet Title...' :
                     type === 'x_post' ? 'Topic / Title (optional)...' :
                     type === 'reddit_post' ? 'Reddit Title...' :
-                    type === 'link' ? 'Page Title (optional)...' :
                     'Title (optional)...'
                   }
                   className={`w-full text-xl sm:text-2xl font-bold tracking-tight bg-transparent focus:outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-600 transition-colors ${
                     isDark ? 'text-zinc-50' : 'text-zinc-950'
                   }`}
-                />
+                />}
 
                 {/* Mode-Specific Content Area */}
                 {type === 'x_post' ? (
@@ -865,7 +854,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border shrink-0 ${
                           isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700' : 'bg-zinc-200 text-zinc-700 border-zinc-300'
                         }`}>
-                          Verified Post
+                          X link
                         </span>
                       </div>
                     )}
@@ -895,97 +884,48 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                     </div>
                   </div>
                 ) : type === 'link' ? (
-                  /* Web Link Studio */
-                  <div className="space-y-3.5">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
-                          Web URL
-                        </span>
-                        {isFetchingPreview && (
-                          <span className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Extracting page meta...</span>
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="relative flex items-center">
-                        <input
-                          type="url"
-                          value={content}
-                          onChange={(e) => handleContentChange(e.target.value)}
-                          placeholder="https://example.com/article..."
-                          className={`w-full pl-3.5 pr-20 py-2.5 rounded-2xl text-xs font-mono border bg-transparent focus:outline-none placeholder:text-zinc-400 transition-colors ${
-                            isDark ? 'border-zinc-800 text-white bg-zinc-900/40' : 'border-zinc-200 text-zinc-900 bg-zinc-50'
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (content.trim()) triggerFetchPreview(content.trim(), true);
-                          }}
-                          disabled={!content.trim() || isFetchingPreview}
-                          className={`absolute right-1.5 px-3 py-1 rounded-xl text-[11px] font-medium border transition-colors cursor-pointer flex items-center gap-1 ${
-                            isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-200 bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                          } disabled:opacity-40 disabled:cursor-not-allowed`}
-                        >
-                          <RefreshCw className={`w-3 h-3 ${isFetchingPreview ? 'animate-spin' : ''}`} />
-                          <span>Fetch</span>
-                        </button>
-                      </div>
+                  <div className="capture-link-entry">
+                    <label className="capture-link-label" htmlFor="capture-url">Paste a link</label>
+                    <div className="capture-url-field">
+                      <Link2 size={17} aria-hidden="true" />
+                      <input id="capture-url" type="url" autoFocus value={content}
+                        onChange={(e) => handleContentChange(e.target.value)}
+                        placeholder="https://…" autoComplete="off" spellCheck={false} />
+                      {content.trim() && <button type="button" aria-label="Refresh link preview"
+                        onClick={() => triggerFetchPreview(content, true)} disabled={isFetchingPreview}>
+                        <RefreshCw size={15} className={isFetchingPreview ? 'animate-spin' : ''} />
+                      </button>}
                     </div>
 
-                    {/* Live Extracted Cover Banner in Studio */}
-                    {previewData?.imageUrl && (
-                      <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/40 group">
-                        <img
-                          src={previewData.imageUrl}
-                          alt="Cover preview"
-                          className="w-full h-36 object-cover"
-                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex items-end justify-between p-2.5">
-                          <span className="text-[11px] font-medium text-white flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                            <Sparkles className="w-3 h-3 text-amber-400" />
-                            <span>Cover Image Extracted</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setPreviewData((prev) => prev ? { ...prev, imageUrl: undefined } : null)}
-                            className="text-[10px] text-zinc-400 hover:text-rose-400 bg-black/70 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 transition-colors cursor-pointer"
-                          >
-                            Remove
-                          </button>
+                    {previewData ? (
+                      <div className="capture-link-result">
+                        <div className="capture-link-cover">
+                          {previewData.imageUrl ? <img key={previewData.imageUrl} src={previewData.imageUrl} alt="Page cover"
+                            onError={() => setPreviewData(prev => prev ? { ...prev, imageUrl: undefined, error: 'The page cover could not load.' } : null)} />
+                            : <div className="capture-cover-placeholder">
+                                {isFetchingPreview ? <Loader2 size={24} className="animate-spin" /> : <Link2 size={24} />}
+                                <span>{isFetchingPreview ? 'Loading preview' : 'No cover available'}</span>
+                              </div>}
+                        </div>
+                        <div className="capture-link-copy">
+                          <span>{previewData.domain}</span>
+                          <h2>{title || previewData.title}</h2>
+                          <p>{previewData.description || (isFetchingPreview ? 'Getting the page details. You can save right away.' : 'Keep this link in your collection.')}</p>
                         </div>
                       </div>
-                    )}
+                    ) : <p className="capture-link-empty">An article, a useful tool, your next rabbit hole. Keep it here.</p>}
+                    <p className="capture-link-status" role="status">
+                      {isFetchingPreview ? 'Getting page details in the background…' : previewData?.error || (previewData ? 'Ready to save' : '')}
+                    </p>
 
-                    {isFetchingPreview && !previewData?.imageUrl && (
-                      <div className="w-full h-24 rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/20 flex flex-col items-center justify-center gap-1.5 text-xs text-zinc-400 font-mono animate-pulse">
-                        <Loader2 className="w-4 h-4 animate-spin text-zinc-300" />
-                        <span>Extracting preview metadata & cover image...</span>
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
-                        <span>Page Summary / Commentary</span>
-                        <span>{secondaryNote.length} characters</span>
-                      </div>
-
-                      <textarea
-                        rows={6}
-                        value={secondaryNote}
-                        onChange={(e) => setSecondaryNote(e.target.value)}
-                        placeholder="Page summary, key quotes, or your personal notes..."
-                        className={`w-full p-4 rounded-2xl text-xs border bg-transparent focus:outline-none resize-none leading-relaxed transition-colors ${
-                          isDark 
-                            ? 'border-zinc-800 text-zinc-200 bg-zinc-900/30 placeholder:text-zinc-500' 
-                            : 'border-zinc-200 text-zinc-800 bg-zinc-50/50 placeholder:text-zinc-400'
-                        }`}
-                      />
-                    </div>
+                    <details className="capture-link-options">
+                      <summary>Add a title or personal note <span>Optional</span></summary>
+                      <label htmlFor="capture-title">Title</label>
+                      <input id="capture-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={previewData?.title || 'Give it a title'} />
+                      <label htmlFor="capture-link-note">Your note</label>
+                      <textarea id="capture-link-note" rows={3} value={secondaryNote} onChange={(e) => setSecondaryNote(e.target.value)} placeholder="Why are you keeping this?" />
+                      {previewData?.imageUrl && <button type="button" onClick={() => setPreviewData(prev => prev ? { ...prev, imageUrl: undefined } : null)}>Remove cover image</button>}
+                    </details>
                   </div>
                 ) : type === 'reddit_post' ? (
                   /* Reddit Post Studio */
@@ -1343,9 +1283,11 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                   </div>
                 ) : (
                   /* Note & Checklist Studio */
-                  <div className="space-y-3">
+                  <div className="capture-note-composer">
+                    {type === 'note' && <input id="capture-title" type="text" autoFocus aria-label="Note title"
+                      value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Untitled note" />}
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-zinc-400 font-mono">Content</span>
+                      <span className="text-xs text-zinc-500">{isChecklistMode ? 'Checklist' : 'Your note'}</span>
                       <button
                         type="button"
                         onClick={() => setIsChecklistMode(!isChecklistMode)}
@@ -1424,6 +1366,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                       </div>
                     ) : (
                       <textarea
+                        id="capture-note-content"
+                        aria-label="Note content"
                         rows={7}
                         value={content}
                         onChange={(e) => handleContentChange(e.target.value)}
@@ -1438,7 +1382,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
               </div>
 
               {/* Tags Row */}
-              <div className={`pt-2 border-t space-y-1.5 shrink-0 ${
+              <div className={`capture-tags pt-2 space-y-1.5 shrink-0 ${
                 isDark ? 'border-white/[0.08]' : 'border-zinc-200/80'
               }`}>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -1471,15 +1415,17 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                           handleAddTag(tagInput);
                         }
                       }}
-                      placeholder="+ add tag..."
-                      className={`w-20 px-2 py-0.5 text-xs bg-transparent focus:outline-none placeholder:text-zinc-400 font-mono ${
+                      placeholder="+ Add tags"
+                      aria-label="Add tags"
+                      className={`w-28 px-2 py-0.5 text-xs bg-transparent focus:outline-none placeholder:text-zinc-400 font-mono ${
                         isDark ? 'text-white' : 'text-zinc-900'
                       }`}
                     />
                   </div>
 
-                  <span className="text-[10px] text-zinc-400 ml-2 hidden sm:inline">Quick:</span>
-                  <div className="hidden sm:flex items-center gap-1">
+                  <details className="capture-tag-suggestions">
+                    <summary>Suggestions</summary>
+                    <div className="flex flex-wrap items-center gap-1 mt-2">
                     {SUGGESTED_TAGS.map((stag) => (
                       <button
                         key={stag}
@@ -1494,30 +1440,31 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         #{stag}
                       </button>
                     ))}
-                  </div>
+                    </div>
+                  </details>
                 </div>
               </div>
             </div>
 
             {/* Right Pane: 1:1 Live Simulation Card */}
-            <div className={`w-full md:w-[380px] lg:w-[420px] p-6 border-t md:border-t-0 md:border-l flex flex-col justify-between shrink-0 overflow-y-auto no-scrollbar transition-colors ${
+            <div id="capture-live-preview" className={`capture-preview w-full md:w-[320px] p-6 border-t md:border-t-0 md:border-l flex flex-col shrink-0 min-w-0 ${
               isDark 
                 ? 'bg-[#0B0B0D] border-white/[0.08]' 
                 : 'bg-[#F4F4F6] border-zinc-200/90'
-            } ${mobileTab === 'editor' ? 'hidden md:flex' : 'flex'}`}>
+            } ${type === 'link' || mobileTab === 'editor' ? 'hidden' : 'flex'}`}>
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className={`text-[11px] font-mono font-semibold uppercase tracking-wider ${
                     isDark ? 'text-zinc-400' : 'text-zinc-700'
                   }`}>
-                    // Live Simulation
+                    Preview
                   </span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono border ${
                     isDark 
                       ? 'bg-[#18181C] text-zinc-300 border-white/[0.08]' 
                       : 'bg-white text-zinc-800 border-zinc-300 shadow-2xs font-medium'
                   }`}>
-                    1:1 Scale
+                    On your canvas
                   </span>
                 </div>
 
@@ -1570,7 +1517,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
 
                   {/* Card Title */}
                   <h3 className="font-semibold text-sm leading-snug mb-2 line-clamp-2">
-                    {title || (type === 'secret' ? 'Secret Key' : type === 'code' ? 'Code Snippet' : 'Untitled Item')}
+                    {title || previewData?.title || (type === 'secret' ? 'Secret Key' : type === 'code' ? 'Code Snippet' : 'Untitled Item')}
                   </h3>
 
                   {/* Dynamic Body Preview */}
@@ -1609,8 +1556,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         />
                       )}
                       <div className="flex items-center gap-3 text-[11px] text-zinc-400 pt-0.5 font-mono">
-                        <span>{previewData?.likes ?? 142} likes</span>
-                        <span>{previewData?.reposts ?? 18} reposts</span>
+                        <span>{previewData?.likes ?? '—'} likes</span>
+                        <span>{previewData?.reposts ?? '—'} reposts</span>
                       </div>
                     </div>
                   ) : type === 'instagram_post' ? (
@@ -1670,12 +1617,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                     </div>
                   ) : type === 'link' ? (
                     <div className="space-y-2">
-                      {isFetchingPreview ? (
-                        <div className="w-full h-28 rounded-xl bg-zinc-800/40 border border-zinc-800/60 flex items-center justify-center gap-2 text-xs text-zinc-500 font-mono animate-pulse">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Fetching image...</span>
-                        </div>
-                      ) : previewData?.imageUrl ? (
+                      {previewData?.imageUrl ? (
                         <div className="overflow-hidden rounded-xl border border-zinc-800/80">
                           <img
                             src={previewData.imageUrl}
@@ -1686,7 +1628,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         </div>
                       ) : null}
                       <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
-                        {secondaryNote || previewData?.description || 'Link preview description...'}
+                        {secondaryNote || previewData?.description || 'Save now, or add your own notes.'}
                       </p>
                       <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1.5">
                         {previewData?.favicon && (
@@ -1735,24 +1677,19 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                 </div>
               </div>
 
-              {/* Bottom live hint */}
-              <div className={`mt-4 pt-3 border-t text-[11px] flex items-center justify-between font-mono ${
-                isDark ? 'border-white/[0.08] text-zinc-400' : 'border-zinc-200/80 text-zinc-600'
-              }`}>
-                <span>Auto-saved to Anything</span>
-                <span>Ready to pin</span>
-              </div>
+              <p className="mt-4 text-xs leading-relaxed text-zinc-500">Your item will look like this in the collection.</p>
             </div>
           </div>
 
+          {formError && <p role="alert" className="capture-error py-2 text-sm text-rose-300">{formError}</p>}
           {/* Bottom Action Footer Bar */}
-          <div className={`px-6 py-3.5 border-t flex items-center justify-between gap-3 shrink-0 transition-colors ${
+          <div className={`capture-footer px-6 py-4 flex items-center justify-between gap-3 shrink-0 transition-colors ${
             isDark ? 'border-white/[0.08] bg-[#0E0E10]' : 'border-zinc-200/80 bg-zinc-50/70'
           }`}>
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
               <span>Press</span>
               <kbd className="px-1.5 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 font-mono text-[10px] bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                ⌘
+                Ctrl / ⌘
               </kbd>
               <span>+</span>
               <kbd className="px-1.5 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 font-mono text-[10px] bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
@@ -1781,7 +1718,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                   !content.trim() && !title.trim() && checklistItems.length === 0
                     ? 'opacity-40 cursor-not-allowed bg-zinc-300 dark:bg-zinc-800 text-zinc-500'
                     : isDark
-                    ? 'bg-white text-zinc-950 hover:bg-zinc-200 shadow-[0_0_24px_rgba(255,255,255,0.12)]'
+                    ? 'bg-white text-zinc-950 hover:bg-zinc-200'
                     : 'bg-zinc-950 text-white hover:bg-black shadow-[0_2px_12px_rgba(0,0,0,0.18)]'
                 }`}
               >
@@ -1790,8 +1727,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
               </button>
             </div>
           </div>
-        </motion.div>
-      </div>
+        </motion.section>
+      )}
     </AnimatePresence>
   );
 };

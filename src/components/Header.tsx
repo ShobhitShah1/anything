@@ -86,6 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 sm:gap-2.5">
           
           {/* View Mode Toggle */}
+          {items.length > 0 && <>
           <div className="flex items-center p-0.5 rounded-lg border bg-zinc-900 border-zinc-800">
             <button
               onClick={() => {
@@ -143,6 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Clipboard className="w-3.5 h-3.5" />
           </button>
+          </>}
 
           {/* Sound Toggle */}
           <button
@@ -187,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
           </label>
 
           {/* Save Button */}
-          <button
+          {items.length > 0 && <button
             onClick={() => {
               sound.pop();
               onOpenCapture();
@@ -205,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}>
               ⌘K
             </kbd>
-          </button>
+          </button>}
 
         </div>
       </div>

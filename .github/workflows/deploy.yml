@@ -29,17 +29,30 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
+
+      - name: Check Pages configuration
+        id: pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
+
+      - name: Explain missing Pages setup
+        if: steps.pages.outcome == 'failure'
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "::error::Enable Pages first: https://github.com/$REPOSITORY/settings/pages - under Build and deployment, set Source to GitHub Actions, then re-run this workflow."
+          exit 1
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Check link previews
+        run: node --test src/utils/fetchPreview.test.mjs
+
       - name: Build production bundle
         run: npm run build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
