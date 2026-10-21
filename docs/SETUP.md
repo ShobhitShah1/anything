@@ -11,6 +11,8 @@ npm run dev
 
 `npm run build` creates the production site in `dist`. `npm run preview` serves that build locally.
 
+Google sign-in and cloud sync are optional. See [Firebase setup](FIREBASE.md) for web app configuration, authorized domains, private Firestore rules, and verification steps. Keep `.env.local` out of Git and provide the `VITE_FIREBASE_*` values to your production build environment when enabling accounts.
+
 ## Deploying to GitHub Pages
 
 One-time repository setup (requires a repository admin or maintainer):
@@ -28,10 +30,12 @@ Official setup: https://docs.github.com/en/pages/getting-started-with-github-pag
 
 ## Link preview behavior
 
-A domain card appears immediately, and saving never waits for the network. Known image, YouTube, and GitHub links get a cover without a metadata request. CORS-enabled pages are read directly using their HTML metadata, avoiding provider rate limits. A working cover is checked before it is displayed; GitHub Pages mirrors can recover cover URLs that still point at an old custom domain. Other public links use the existing Microlink provider with an eight-second background deadline covering both headers and body. Provider errors are shown rather than reported as a successful preview. JavaScript-only pages may have fewer details; the link still saves normally. Successful previews are cached in the current browser session for 24 hours (up to 100 entries), overlapping requests share the same work, and failures can retry after 30 seconds. Refresh bypasses the local cache. Website screenshot fallbacks are no longer requested.
+A domain card appears immediately, and saving never waits for the network. Direct image links render immediately. General web links race CORS-enabled HTML metadata against Microlink; X posts use FxTwitter, and YouTube/Vimeo metadata uses Noembed. Requests share a five-second deadline covering both headers and body. Images load normally without a blocking cover check, and website screenshot fallbacks are not requested.
+
+Successful previews are cached in the current browser session for 24 hours (up to 100 entries). Overlapping requests share the same work, and failures can retry after 15 seconds. Refresh preview in the item details bypasses the local cache. Public services may rate-limit requests, and some sites provide incomplete metadata; the original link still saves normally.
 
 If you save while metadata is loading, the saved link receives the result in the background. Updates preserve your edited title and notes, and do not recreate deleted items.
 
 References: https://ogp.me/ and https://microlink.io/docs/api/parameters/prerender
 
-Run provider checks with Node 24: `node --test src/utils/fetchPreview.test.mjs`. Browser metadata checks are in `tests/link-preview.browser.mjs`; with Vite running, import that module in the browser and call `runMetadataChecks()`.
+Run provider checks with Node 24: `node --test src/utils/fetchPreview.test.mjs src/utils/masonry.test.mjs src/utils/storage.test.mjs public/sw.test.mjs`. Browser metadata checks are in `tests/link-preview.browser.mjs`; with Vite running, import that module in the browser and call `runMetadataChecks()`.

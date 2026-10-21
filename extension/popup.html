@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Save to Anything</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header><strong>Anything.</strong><span>A little less scattered.</span></header>
+  <button id="save-page" type="button">Save this page <span>↗</span></button>
+  <form id="settings"><label for="app-url">Your Anything address</label><input id="app-url" type="url" required placeholder="https://your-anything-address/"><button type="submit">Connect collection</button></form>
+  <label class="copy-option"><input id="auto-copy" type="checkbox">Auto-save text I copy</label>
+  <p class="hint">Off by default. When enabled, copied text and links from websites go to your collection. Password fields are excluded. Right-click saving works without this option.</p>
+  <p id="status" role="status"></p>
+  <script type="module" src="popup.js"></script>
+</body></html>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SavedItem } from '../types';
 import { sound } from '../utils/sound';
@@ -10,6 +9,7 @@ interface FocusCanvasViewProps {
   onTogglePin: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateItem: (updated: SavedItem) => void;
+  onOpenDetail?: (item: SavedItem) => void;
   onOpenImage?: (imageUrl: string, title: string) => void;
   isDark?: boolean;
 }
@@ -20,6 +20,7 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
   onDelete,
   onUpdateItem,
   onOpenImage,
+  onOpenDetail,
   isDark = false,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,17 +28,19 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, [contenteditable="true"]') || items.length === 0) return;
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        handleNext();
+        setCurrentIndex(previous => (previous + 1) % items.length);
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        handlePrev();
+        setCurrentIndex(previous => (previous - 1 + items.length) % items.length);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, items.length]);
+  }, [items.length]);
 
   if (items.length === 0) {
     return (
@@ -65,7 +68,7 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
       {/* Navigation & Counter Bar */}
       <div className="w-full flex items-center justify-between pb-4 text-xs font-mono text-zinc-500">
         <div className="flex items-center gap-2">
-          <span>// focus mode</span>
+          <span>One thing at a time</span>
           <span className="text-zinc-300 dark:text-zinc-700">•</span>
           <span className={`font-semibold ${isDark ? 'text-zinc-200' : 'text-zinc-900'}`}>
             {safeIndex + 1} of {items.length}
@@ -94,17 +97,8 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
         </div>
       </div>
 
-      {/* Main Focus Card with Spring Slide */}
+      {/* Focused memory */}
       <div className="w-full">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentItem.id}
-            initial={{ opacity: 0, scale: 0.97, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="w-full"
-          >
             <CardItem
               item={currentItem}
               onTogglePin={onTogglePin}
@@ -116,10 +110,10 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
               }}
               onUpdateItem={onUpdateItem}
               onOpenImage={onOpenImage}
+              onOpenDetail={onOpenDetail}
               isDark={isDark}
             />
-          </motion.div>
-        </AnimatePresence>
+
       </div>
 
       {/* Mini indicator dots */}
@@ -127,6 +121,8 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
         {items.map((item, idx) => (
           <button
             key={item.id}
+            aria-label={`View save ${idx + 1}`}
+            aria-pressed={idx === safeIndex}
             onClick={() => {
               sound.click();
               setCurrentIndex(idx);

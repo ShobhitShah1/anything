@@ -1,5 +1,5 @@
-import { SavedItem, ItemType } from '../types';
-import { parseSocialUrl } from './storage';
+import type { SavedItem, ItemType } from '../types';
+import { parseSocialUrl } from './storage.ts';
 
 const CLIPBOARD_PERMISSION_KEY = 'anything_clipboard_permission';
 
@@ -142,20 +142,26 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
 }
 
 export function findDuplicateItem(queryUrlOrContent: string, items: SavedItem[]): SavedItem | null {
-  const clean = queryUrlOrContent.trim().toLowerCase();
-  if (!clean || clean.length < 3) return null;
+  const clean = queryUrlOrContent.trim();
+  if (!clean) return null;
+  const canonicalUrl = (value: string) => {
+    try { return new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`).href; }
+    catch { return value; }
+  };
 
   for (const item of items) {
-    if ('url' in item && item.url && item.url.trim().toLowerCase() === clean) {
+    if ('url' in item && item.url && canonicalUrl(item.url) === canonicalUrl(clean)) {
       return item;
     }
-    if ('postUrl' in item && item.postUrl && item.postUrl.trim().toLowerCase() === clean) {
+    if ('postUrl' in item && item.postUrl && canonicalUrl(item.postUrl) === canonicalUrl(clean)) {
       return item;
     }
     if ('secretValue' in item && item.secretValue && item.secretValue.trim() === queryUrlOrContent.trim()) {
       return item;
     }
-    if ('content' in item && item.content && item.content.trim().toLowerCase() === clean && clean.length > 15) {
+    if ('imageUrl' in item && item.type === 'image' && canonicalUrl(item.imageUrl) === canonicalUrl(clean)) return item;
+    if ('code' in item && item.code.trim() === clean) return item;
+    if ('content' in item && item.content && item.content.trim() === clean) {
       return item;
     }
   }

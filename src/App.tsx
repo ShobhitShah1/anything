@@ -1,28 +1,35 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SavedItem, ViewMode, ItemType, Folder } from './types';
 import { loadSavedItems, saveItemsToStorage, loadFolders, saveFolders } from './utils/storage';
-import { fetchLinkPreview } from './utils/fetchPreview';
+import { fetchLinkPreview, applyLinkPreview } from './utils/fetchPreview';
 import { sound } from './utils/sound';
 import { Header } from './components/Header';
+import { FloatingCaptureBar } from './components/FloatingCaptureBar';
 import { FilterBar, FilterCategory, SortOption } from './components/FilterBar';
-import { PinnedShelf } from './components/PinnedShelf';
 import { MasonryGrid } from './components/MasonryGrid';
-import { CardItem } from './components/CardItem';
 import { ListView } from './components/ListView';
 import { FocusCanvasView } from './components/FocusCanvasView';
 import { CaptureSheet } from './components/CaptureSheet';
 import { CardDetailModal } from './components/CardDetailModal';
 import { WholeViewModal } from './components/WholeViewModal';
 import { ImageViewerModal } from './components/ImageViewerModal';
-import { FloatingCaptureBar } from './components/FloatingCaptureBar';
 import { CreativeEmptyView } from './components/CreativeEmptyView';
-import { readClipboardSafely, autoDetectClipboardContent, findDuplicateItem } from './utils/clipboard';
-import { Plus, ClipboardCheck, AlertCircle } from 'lucide-react';
+import { useCloudAccount } from './hooks/useCloudAccount';
+import { readClipboardSafely, autoDetectClipboardContent } from './utils/clipboard';
+import { createQuickCaptures } from './utils/quickCapture';
+import { ClipboardCheck, AlertCircle } from 'lucide-react';
 
 export function App() {
-  const [items, setItems] = useState<SavedItem[]>(() => loadSavedItems());
+  const [items, setItemsState] = useState<SavedItem[]>(() => loadSavedItems());
+  const itemsRef = useRef(items);
+  const setItems = useCallback((update: React.SetStateAction<SavedItem[]>) => {
+    const next = typeof update === 'function' ? update(itemsRef.current) : update;
+    itemsRef.current = next;
+    setItemsState(next);
+  }, []);
   const [folders, setFolders] = useState<Folder[]>(() => loadFolders());
+  const account = useCloudAccount(items, folders, setItems, setFolders);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<ViewMode>('masonry');
@@ -31,8 +38,22 @@ export function App() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>('newest');
 
-  // Theme: Permanently Dark (White mode removed)
-  const isDark = true;
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [autoClipboard, setAutoClipboard] = useState(() => {
+    try { return localStorage.getItem('anything_auto_clipboard') === 'true'; } catch { return false; }
+  });
+  const [captureStatus, setCaptureStatus] = useState('');
+  const lastClipboard = useRef('');
+  const clipboardBusy = useRef(false);
+  const previewQueue = useRef<{ id: string; url: string }[]>([]);
+  const previewWorkers = useRef(0);
+
+  useEffect(() => {
+    if (!captureStatus) return;
+    const timer = window.setTimeout(() => setCaptureStatus(''), 5000);
+    return () => clearTimeout(timer);
+  }, [captureStatus]);
+
 
   // Capture screen and item viewers
   const [isCaptureOpen, setIsCaptureOpen] = useState(false);
@@ -62,15 +83,27 @@ export function App() {
     duplicateTitle?: string;
   } | null>(null);
 
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-    document.documentElement.classList.remove('light');
-    localStorage.setItem('anything_theme', 'dark');
-  }, []);
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.classList.toggle('light', !isDark);
+    try { localStorage.setItem('anything_theme', isDark ? 'dark' : 'light'); } catch { /* Theme still works without storage. */ }
+  }, [isDark]);
 
   useEffect(() => {
-    saveItemsToStorage(items);
+    saveItemsToStorage(itemsRef.current);
   }, [items]);
+
+  useEffect(() => {
+    const receive = (event: StorageEvent) => {
+      if (event.key !== 'anything_items_v2' || !event.newValue) return;
+      try {
+        const next = JSON.parse(event.newValue);
+        if (Array.isArray(next)) setItems(next);
+      } catch { /* Keep the current collection if another tab writes invalid data. */ }
+    };
+    window.addEventListener('storage', receive);
+    return () => window.removeEventListener('storage', receive);
+  }, [setItems]);
 
   useEffect(() => {
     saveFolders(folders);
@@ -168,6 +201,23 @@ export function App() {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const handleDeleteAll = () => {
+    if (!saveItemsToStorage([])) {
+      setCaptureStatus('Could not delete saves. Your collection is unchanged.');
+      return false;
+    }
+    setItems([]);
+    previewQueue.current = [];
+    setAutoClipboard(false);
+    setDetailItem(null);
+    setIsDetailOpen(false);
+    setWholeViewItem(null);
+    setIsWholeViewOpen(false);
+    setLightbox({ isOpen: false, imageUrl: null, title: null });
+    setCaptureStatus('All saves deleted. Clipboard auto-save paused.');
+    return true;
+  };
+
   const handleUpdateItem = (updated: SavedItem) => {
     setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     if (detailItem?.id === updated.id) {
@@ -180,18 +230,121 @@ export function App() {
 
   const handleSaveNewItem = (newItem: SavedItem, enrichPreview = false) => {
     setItems((prev) => [newItem, ...prev]);
-    if (newItem.type === 'link' && enrichPreview) {
-      void fetchLinkPreview(newItem.url).then((preview) => {
-        setItems((prev) => prev.map((item) => item.id === newItem.id && item.type === 'link' ? {
-          ...item,
-          title: item.title === newItem.domain ? preview.title : item.title,
-          description: item.description === newItem.description ? item.description || preview.description : item.description,
-          previewImage: item.previewImage === newItem.previewImage ? preview.imageUrl : item.previewImage,
-          favicon: preview.favicon || item.favicon,
-        } : item));
-      }).catch(() => { /* The link is already saved; metadata is optional. */ });
+    const url = 'url' in newItem ? newItem.url : 'postUrl' in newItem ? newItem.postUrl : undefined;
+    if (url && enrichPreview) {
+      void fetchLinkPreview(url).then(preview => {
+        if (preview.error) return;
+        setItems(previous => previous.map(item => item.id === newItem.id ? applyLinkPreview(item, preview) : item));
+      }).catch(() => { /* The item is saved even if metadata fails. */ });
     }
   };
+
+  const captureTexts = useCallback((texts: string[], linksOnly = false) => {
+    try {
+      const result = { items: [] as SavedItem[], duplicates: 0 };
+      for (const text of texts) {
+        const batch = createQuickCaptures(text, [...result.items, ...itemsRef.current], linksOnly, selectedFolderId || undefined);
+        result.items.push(...batch.items);
+        result.duplicates += batch.duplicates;
+      }
+      if (result.items.length) {
+        const next = [...result.items, ...itemsRef.current];
+        if (!saveItemsToStorage(next)) throw new Error('Browser storage is full. Export a backup and free some space before saving.');
+        setItems(next);
+        for (const item of result.items) {
+          const url = 'url' in item ? item.url : 'postUrl' in item ? item.postUrl : undefined;
+          if (url) previewQueue.current.push({ id: item.id, url });
+        }
+        const runWorker = async () => {
+          previewWorkers.current++;
+          try {
+            while (previewQueue.current.length) {
+              const entry = previewQueue.current.shift()!;
+              try {
+                const preview = await fetchLinkPreview(entry.url);
+                if (preview.error) continue;
+                const nextItems = itemsRef.current.map(item => item.id === entry.id ? applyLinkPreview(item, preview) : item);
+                setItems(nextItems);
+              } catch { /* The original capture is already saved. */ }
+            }
+          } finally { previewWorkers.current--; }
+        };
+        while (previewWorkers.current < 3 && previewQueue.current.length) void runWorker();
+      }
+      setCaptureStatus(result.items.length ? `Saved ${result.items.length}${result.duplicates ? ` · ${result.duplicates} already saved` : ''}` : 'Already in your collection');
+      return true;
+    } catch (error) {
+      setCaptureStatus(error instanceof Error ? error.message : 'Could not save this capture.');
+      return false;
+    }
+  }, [selectedFolderId, setItems]);
+
+  const captureText = useCallback((text: string, linksOnly = false) => captureTexts([text], linksOnly), [captureTexts]);
+
+  const handleQuickSave = (text: string) => {
+    const saved = captureText(text, true);
+    if (saved) { setSelectedFilter('all'); setSearchQuery(''); }
+    return saved;
+  };
+
+  const handlePasteLinks = async () => {
+    const result = await readClipboardSafely();
+    if (result.status === 'ok' && result.text) handleQuickSave(result.text);
+    else setCaptureStatus(result.status === 'permission_denied' ? 'Clipboard access was blocked. Paste into the link field instead.' : 'Copy a link first, then try again.');
+  };
+
+  const handleToggleAutoClipboard = async () => {
+    if (autoClipboard) { setAutoClipboard(false); return; }
+    const result = await readClipboardSafely();
+    if (result.status === 'permission_denied' || result.status === 'unsupported') {
+      setCaptureStatus('Allow clipboard access in your browser to enable auto-save.');
+      return;
+    }
+    setAutoClipboard(true);
+    setCaptureStatus('Auto-save on · checks while this page is focused');
+    if (result.text) {
+      if (captureText(result.text)) lastClipboard.current = result.text;
+      else setAutoClipboard(false);
+    }
+  };
+
+  useEffect(() => {
+    try { localStorage.setItem('anything_auto_clipboard', String(autoClipboard)); } catch { /* Preference storage is optional. */ }
+    if (!autoClipboard) return;
+    let active = true;
+    const check = async () => {
+      if (clipboardBusy.current || document.visibilityState !== 'visible' || !document.hasFocus() || isCaptureOpen || isDetailOpen || isWholeViewOpen || lightbox.isOpen) return;
+      clipboardBusy.current = true;
+      try {
+        const result = await readClipboardSafely();
+        if (!active) return;
+        if (result.status === 'permission_denied' || result.status === 'unsupported') {
+          setAutoClipboard(false);
+          setCaptureStatus('Clipboard auto-save paused. Allow access to turn it back on.');
+        } else if (result.text && result.text !== lastClipboard.current) {
+          if (captureText(result.text)) lastClipboard.current = result.text;
+          else setAutoClipboard(false);
+        }
+      } finally { clipboardBusy.current = false; }
+    };
+    void check();
+    const timer = window.setInterval(check, 1200);
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', check);
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
+  }, [autoClipboard, captureText, isCaptureOpen, isDetailOpen, isWholeViewOpen, lightbox.isOpen]);
+
+  useEffect(() => {
+    const receive = (event: MessageEvent) => {
+      if (event.source !== window || event.origin !== location.origin || event.data?.source !== 'anything-extension' || !Array.isArray(event.data.entries) || event.data.entries.length > 100) return;
+      const entries = event.data.entries.filter((entry: { id?: unknown; text?: unknown }) => typeof entry?.id === 'string' && entry.id.length <= 100 && typeof entry.text === 'string' && entry.text.trim() && entry.text.length <= 50_000);
+      const ids = entries.length && captureTexts(entries.map((entry: { text: string }) => entry.text)) ? entries.map((entry: { id: string }) => entry.id) : [];
+      window.postMessage({ source: 'anything-app', savedIds: ids }, location.origin);
+    };
+    window.addEventListener('message', receive);
+    window.postMessage({ source: 'anything-app', ready: true }, location.origin);
+    return () => window.removeEventListener('message', receive);
+  }, [captureTexts]);
 
   const handleImportItems = (newItems: SavedItem[]) => {
     setItems(newItems);
@@ -276,15 +429,16 @@ export function App() {
   }, [items]);
 
   const itemCounts = useMemo(() => {
+    const scopedItems = items.filter(i => selectedFolderId === null || i.folderId === selectedFolderId);
     const counts: Record<string, number> = {
-      all: items.length,
-      pinned: items.filter((i) => i.isPinned).length,
+      all: scopedItems.length,
+      pinned: scopedItems.filter((i) => i.isPinned).length,
     };
-    items.forEach((i) => {
+    scopedItems.forEach((i) => {
       counts[i.type] = (counts[i.type] || 0) + 1;
     });
     return counts;
-  }, [items]);
+  }, [items, selectedFolderId]);
 
   const filteredItems = useMemo(() => {
     return items
@@ -350,18 +504,31 @@ export function App() {
   }, [selectedFilter, isDefaultOverview, pinnedItems, unpinnedItems, filteredItems]);
 
   return (
-    <div id="top" className="min-h-screen flex flex-col font-sans bg-[#09090B] text-[#F4F4F5]">
+    <div id="top" className="anything-app min-h-screen flex flex-col">
       
-      <div inert={isCaptureOpen} aria-hidden={isCaptureOpen} className={`collection-surface ${items.length > 0 ? 'pb-32' : ''} ${isCaptureOpen ? "capture-active" : ""}`}>
+      <div inert={isCaptureOpen} aria-hidden={isCaptureOpen} className={`collection-surface ${isCaptureOpen ? "capture-active" : ""}`}>
       {/* Top Header */}
       <Header
+        account={account}
         items={items}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onOpenCapture={() => handleOpenCapture('note')}
         onImportItems={handleImportItems}
-        isDark={true}
+        onDeleteAll={handleDeleteAll}
+        isDark={isDark}
         onReadClipboard={handleReadClipboard}
+        autoClipboard={autoClipboard}
+        onToggleAutoClipboard={handleToggleAutoClipboard}
+        onToggleTheme={() => setIsDark(previous => !previous)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedFilter={selectedFilter}
+        onNavigate={(filter) => {
+          setSelectedFilter(filter);
+          setSelectedFolderId(null);
+          setSearchQuery('');
+          setSelectedTag(null);
+        }}
       />
 
       {/* Clipboard Toast Banner */}
@@ -427,15 +594,19 @@ export function App() {
         selectedFilter={selectedFilter}
         onFilterChange={setSelectedFilter}
         itemCounts={itemCounts}
+        folderCounts={Object.fromEntries(folders.map(folder => [folder.id, items.filter(item => item.folderId === folder.id).length]))}
+        sortOption={sortOption}
+        onSortChange={setSortOption}
         isDark={isDark}
       />}
 
       {/* Main Content Area */}
-      <main className={`flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-4 ${items.length === 0 ? 'flex flex-col justify-center' : ''}`}>
+      <main className={`flex-1 w-full collection-main max-w-[1600px] mx-auto px-5 sm:px-9 pt-2 pb-10 ${items.length === 0 ? 'welcome-main' : ''}`}>
         
         {/* Creative Empty Canvas (Centered, with on-screen motion canvas) */}
         {items.length === 0 ? (
           <CreativeEmptyView
+            account={account}
             onOpenCapture={() => handleOpenCapture('note')}
             onDirectPaste={handleDirectPaste}
             onLoadStarters={handleImportItems}
@@ -445,17 +616,13 @@ export function App() {
           <>
               {/* Masonry View */}
               {viewMode === 'masonry' && (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`masonry-view-${selectedFilter}-${selectedFolderId || 'all'}-${searchQuery}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  >
+                <>
                     {gridItems.length === 0 ? (
-                      <div className="py-20 text-center">
-                        <p className="text-sm text-zinc-400">No items match your search or filter</p>
+                      <div className="collection-no-results">
+                        <span className="empty-orbit" aria-hidden="true">✳</span>
+                        <h2>Nothing here. Yet.</h2>
+                        <p>Try a different thought, or give this space something to remember.</p>
+                        <button type="button" onClick={() => { setSearchQuery(''); setSelectedFilter('all'); setSelectedFolderId(null); setSelectedTag(null); }}>Show everything</button>
                       </div>
                     ) : (
                       <MasonryGrid
@@ -469,8 +636,7 @@ export function App() {
                         isDark={isDark}
                       />
                     )}
-                  </motion.div>
-                </AnimatePresence>
+                </>
               )}
 
               {/* List View */}
@@ -493,6 +659,7 @@ export function App() {
                 onDelete={handleDeleteItem}
                 onUpdateItem={handleUpdateItem}
                 onOpenImage={handleOpenImage}
+                onOpenDetail={handleOpenDetail}
                 isDark={isDark}
               />
             )}
@@ -501,16 +668,7 @@ export function App() {
 
       </main>
 
-      {/* Floating Bottom Dock with Integrated Search & Save Button (Hidden when empty!) */}
-      {items.length > 0 && (
-        <FloatingCaptureBar
-          onOpenCapture={() => handleOpenCapture('note')}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          isDark={isDark}
-        />
-      )}
-
+      <FloatingCaptureBar hidden={isCaptureOpen || isDetailOpen || isWholeViewOpen || lightbox.isOpen} onOpenCapture={() => handleOpenCapture('note')} onQuickSave={handleQuickSave} onPasteLinks={handlePasteLinks} status={captureStatus} />
       </div>
 
       {/* Direct capture screen */}

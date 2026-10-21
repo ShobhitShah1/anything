@@ -1,0 +1,9 @@
+:root { color-scheme: light dark; font: 13px/1.5 system-ui, sans-serif; }
+body { width: 300px; padding: 20px; margin: 0; background: light-dark(#f4f5f7,#141416); color: light-dark(#26282e,#e7e7ec); }
+header { display: flex; flex-direction: column; margin-bottom: 20px; } strong { font-size: 22px; letter-spacing: -.04em; }
+header span,.hint { color: light-dark(#7c808c,#94949f); font-size: 11px; }
+button,input { font: inherit; } button { cursor: pointer; border: 1px solid light-dark(#e3e5eb,#34343d); border-radius: 9px; padding: 9px 12px; background: light-dark(#fff,#232327); color: inherit; }
+#save-page { width: 100%; text-align: left; margin-bottom: 22px; } #save-page span { float: right; }
+form { display: grid; gap: 8px; } label { font-size: 12px; } input[type=url] { min-width: 0; padding: 9px; background: light-dark(#fff,#1c1c20); color: inherit; border: 1px solid light-dark(#e3e5eb,#34343d); border-radius: 8px; font-size: 11px; }
+.copy-option { display: flex; gap: 7px; align-items: center; margin-top: 22px; cursor: pointer; } .hint { line-height: 1.7; } #status { font-size: 11px; min-height: 16px; }
+:focus-visible { outline: 2px solid #939ac1; outline-offset: 3px; }

@@ -1,4 +1,4 @@
-import { SavedItem, Folder } from '../types';
+import type { SavedItem, Folder } from '../types';
 
 const STORAGE_KEY = 'anything_items_v2';
 const LEGACY_STORAGE_KEY = 'anything_vault_items_v2';
@@ -25,11 +25,13 @@ export function loadSavedItems(): SavedItem[] {
   }
 }
 
-export function saveItemsToStorage(items: SavedItem[]): void {
+export function saveItemsToStorage(items: SavedItem[]): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    return true;
   } catch (err) {
     console.error('Failed to save items to storage:', err);
+    return false;
   }
 }
 
@@ -42,7 +44,7 @@ export function loadFolders(): Folder[] {
       return DEFAULT_FOLDERS;
     }
     const parsed = JSON.parse(data);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_FOLDERS;
+    return Array.isArray(parsed) ? parsed : DEFAULT_FOLDERS;
   } catch (err) {
     console.error('Failed to load folders from storage:', err);
     return DEFAULT_FOLDERS;
@@ -85,8 +87,12 @@ export function parseSocialUrl(url: string): {
 } {
   const clean = url.trim();
 
+  let host: string;
+  try { host = new URL(/^https?:\/\//i.test(clean) ? clean : `https://${clean}`).hostname.replace(/^www\./, ''); }
+  catch { return { detectedType: 'link', extractedInfo: { title: 'Link' } }; }
+
   // X / Twitter
-  if (clean.includes('twitter.com') || clean.includes('x.com')) {
+  if (['twitter.com', 'x.com', 'mobile.twitter.com'].includes(host)) {
     const match = clean.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/);
     const handle = match ? match[1] : 'user';
     return {
@@ -96,7 +102,7 @@ export function parseSocialUrl(url: string): {
   }
 
   // Reddit
-  if (clean.includes('reddit.com')) {
+  if (['reddit.com', 'old.reddit.com'].includes(host)) {
     const subMatch = clean.match(/reddit\.com\/r\/([a-zA-Z0-9_]+)/);
     const sub = subMatch ? `r/${subMatch[1]}` : 'r/reddit';
     return {
@@ -106,7 +112,7 @@ export function parseSocialUrl(url: string): {
   }
 
   // Instagram
-  if (clean.includes('instagram.com')) {
+  if (host === 'instagram.com') {
     const instaMatch = clean.match(/instagram\.com\/(?:p|reel|([a-zA-Z0-9_.]+))/);
     const handle = instaMatch && instaMatch[1] ? instaMatch[1] : 'instagram';
     return {

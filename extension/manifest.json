@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Save to Anything",
+  "version": "1.0.0",
+  "description": "Save pages, links, images and selected text to your own Anything collection.",
+  "permissions": ["contextMenus", "storage", "scripting", "activeTab"],
+  "host_permissions": ["http://localhost/*", "http://127.0.0.1/*", "https://shobhitshah1.github.io/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "optional_permissions": ["clipboardRead"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "Save to Anything" }
+}

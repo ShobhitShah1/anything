@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { SavedItem, Folder } from '../types';
 import { CardItem } from './CardItem';
+import { packMasonry } from '../utils/masonry';
 
 interface MasonryGridProps {
   items: SavedItem[];
@@ -14,112 +15,89 @@ interface MasonryGridProps {
   isDark?: boolean;
 }
 
-function useColumnCount(): number {
-  const [columns, setColumns] = useState<number>(() => {
-    if (typeof window === 'undefined') return 3;
-    if (window.innerWidth < 640) return 1;
-    if (window.innerWidth < 1024) return 2;
-    return 3;
-  });
+export const MasonryGrid: React.FC<MasonryGridProps> = ({
+  items, folders, onTogglePin, onDelete, onUpdateItem, onOpenImage, onOpenDetail, isDark = true,
+}) => {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+  const [ready, setReady] = useState(false);
+  const [width, setWidth] = useState(0);
+  const [heights, setHeights] = useState<Record<string, number>>({});
+  const columnCount = Math.max(1, Math.floor((width + 16) / 296));
+  const cardWidth = Math.max(0, (width - (columnCount - 1) * 16) / columnCount);
+  const layout = packMasonry(items.map(item => heights[item.id] || 0), columnCount, 16);
 
   useEffect(() => {
-    const update = () => {
-      const w = window.innerWidth;
-      const count = w < 640 ? 1 : w < 1024 ? 2 : 3;
-      setColumns(count);
-    };
-
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    // Reveal cached images together after decoding, without a placeholder flash.
+    const grid = gridRef.current;
+    if (!grid) return;
+    let cancelled = false;
+    let frame = 0;
+    let deadline = 0;
+    const images = Array.from(grid.querySelectorAll<HTMLImageElement>('img'))
+      .filter(image => image.getBoundingClientRect().top < window.innerHeight);
+    const settled = images.map(image => {
+      image.loading = 'eager';
+      return image.decode().catch(() => {});
+    });
+    // A slow remote image must not hold up the collection.
+    void Promise.race([
+      Promise.all([...settled, document.fonts.ready]),
+      new Promise<void>(resolve => { deadline = window.setTimeout(resolve, 250); }),
+    ]).then(() => {
+      clearTimeout(deadline);
+      if (!cancelled) frame = requestAnimationFrame(() => setReady(true));
+    });
+    return () => { cancelled = true; cancelAnimationFrame(frame); clearTimeout(deadline); };
   }, []);
 
-  return columns;
-}
-
-function estimateItemHeight(item: SavedItem): number {
-  const h = 100; // Base card header & padding
-
-  switch (item.type) {
-    case 'instagram_post':
-      return h + 420;
-    case 'image':
-      return h + 300;
-    case 'x_post':
-      return h + (item.imageUrl ? 320 : 0) + Math.min(120, Math.ceil((item.content?.length || 0) / 30) * 20);
-    case 'reddit_post':
-      return h + (item.imageUrl ? 260 : 0) + Math.min(80, Math.ceil((item.content?.length || 0) / 30) * 18);
-    case 'link':
-      return h + 220 + Math.min(60, Math.ceil((item.description?.length || 0) / 30) * 18);
-    case 'code':
-      return h + Math.min(240, (item.code?.split('\n').length || 4) * 20);
-    case 'markdown':
-      return h + Math.min(220, ((item as any).content?.length || 0) * 0.4);
-    case 'secret':
-      return h + 90;
-    case 'note':
-    default:
-      if (item.checklist && item.checklist.length > 0) {
-        return h + item.checklist.length * 32;
-      }
-      return h + Math.min(180, Math.ceil((item.content?.length || 0) / 30) * 20);
-  }
-}
-
-export const MasonryGrid: React.FC<MasonryGridProps> = ({
-  items,
-  folders,
-  onTogglePin,
-  onDelete,
-  onUpdateItem,
-  onOpenImage,
-  onOpenDetail,
-  isDark = true,
-}) => {
-  const columnCount = useColumnCount();
-
-  // Greedy shortest-column distribution:
-  // Packs cards vertically with tight gap-6 (zero empty row dead spaces) while balancing column heights evenly
-  const columns = useMemo(() => {
-    const cols: SavedItem[][] = Array.from({ length: columnCount }, () => []);
-    const heights = new Array(columnCount).fill(0);
-
-    items.forEach((item) => {
-      let minCol = 0;
-      for (let i = 1; i < columnCount; i++) {
-        if (heights[i] < heights[minCol]) {
-          minCol = i;
-        }
-      }
-      cols[minCol].push(item);
-      heights[minCol] += estimateItemHeight(item) + 24;
-    });
-
-    return cols;
-  }, [items, columnCount]);
-
-  if (items.length === 0) return null;
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const measure = () => {
+      setWidth(grid.clientWidth);
+      const next: Record<string, number> = {};
+      grid.querySelectorAll<HTMLElement>('[data-masonry-id]').forEach(element => {
+        next[element.dataset.masonryId!] = (element.firstElementChild as HTMLElement).offsetHeight;
+      });
+      setHeights(previous => Object.keys(next).length === Object.keys(previous).length &&
+        Object.keys(next).every(id => next[id] === previous[id]) ? previous : next);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    grid.querySelectorAll('[data-masonry-id] > *').forEach(element => observer.observe(element));
+    return () => observer.disconnect();
+  }, [items, cardWidth]);
 
   return (
-    <div className="flex gap-6 items-start w-full">
-      {columns.map((colItems, colIdx) => (
-        <div key={`masonry-col-${colIdx}`} className="flex-1 flex flex-col gap-6 min-w-0">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {colItems.map((item) => (
-              <CardItem
-                key={item.id}
-                item={item}
-                folderName={folders.find((f) => f.id === item.folderId)?.name}
-                onTogglePin={onTogglePin}
-                onDelete={onDelete}
-                onUpdateItem={onUpdateItem}
-                onOpenImage={onOpenImage}
-                onOpenDetail={onOpenDetail}
-                isDark={isDark}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-      ))}
+    <div ref={gridRef} className="relative w-full" aria-busy={!ready} style={{ height: layout.height, visibility: width > 0 && ready ? 'visible' : 'hidden' }}>
+      <AnimatePresence initial={false}>
+        {items.map((item, index) => (
+          <motion.div
+            key={item.id}
+            data-masonry-id={item.id}
+            layout={reduceMotion || !ready ? false : 'position'}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            transition={{ layout: { duration: 0.26, ease: [0.23, 1, 0.32, 1] }, opacity: { duration: 0.16 } }}
+            className="absolute top-0 left-0"
+            style={{ width: cardWidth || '100%', top: layout.positions[index].top, left: layout.positions[index].column * (cardWidth + 16) }}
+          >
+            <CardItem
+              item={item}
+              folderName={folders.find(folder => folder.id === item.folderId)?.name}
+              onTogglePin={onTogglePin}
+              onDelete={onDelete}
+              onUpdateItem={onUpdateItem}
+              onOpenImage={onOpenImage}
+              onOpenDetail={onOpenDetail}
+              isDark={isDark}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 };

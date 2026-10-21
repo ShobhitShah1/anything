@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { getItemTitle } from '../utils/itemTitle';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -19,9 +20,11 @@ import {
   Sparkles,
   ExternalLink,
   Maximize2,
+  RefreshCw,
   Folder as FolderIcon
 } from 'lucide-react';
 import { SavedItem, NoteItem, CodeItem, MarkdownItem, Folder } from '../types';
+import { fetchLinkPreview, applyLinkPreview } from '../utils/fetchPreview';
 import { sound } from '../utils/sound';
 import { SecretReveal } from './SecretReveal';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -56,13 +59,19 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
   onCreateFolder,
   isDark = true,
 }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [previewStatus, setPreviewStatus] = useState<{ id: string; message: string } | null>(null);
+  const latestItem = useRef(item);
+  latestItem.current = item;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) onClose();
     };
     if (isOpen) {
+      if (dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
       window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
@@ -122,7 +131,7 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <dialog ref={dialogRef} aria-label={item.title} onCancel={event => { event.preventDefault(); onClose(); }} className="memory-dialog fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -138,11 +147,11 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
         {/* Modal Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.98, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98, y: 10 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className={`relative w-full max-w-2xl rounded-3xl border shadow-2xl p-6 sm:p-8 z-10 my-8 overflow-hidden transition-colors ${
+          className={`memory-detail relative w-full max-w-3xl rounded-3xl border shadow-2xl p-6 sm:p-8 z-10 my-8 overflow-hidden transition-colors ${
             isDark 
               ? 'bg-[#18181B] border-zinc-800 text-[#F4F4F5]' 
               : 'bg-white border-zinc-200 text-[#111111]'
@@ -177,6 +186,19 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5">
+              {(item.type === 'link' || item.type === 'x_post') && <button type="button" disabled={isRefreshing} aria-label="Refresh preview" title="Refresh preview" className="p-2 rounded-xl text-zinc-500 cursor-pointer disabled:opacity-40" onClick={async () => {
+                const id = item.id;
+                setIsRefreshing(true);
+                setPreviewStatus(null);
+                try {
+                  const data = await fetchLinkPreview(item.type === 'link' ? item.url : item.postUrl, true);
+                  if (latestItem.current?.id !== id) return;
+                  if (data.error) { setPreviewStatus({ id, message: data.error }); return; }
+                  onUpdateItem(applyLinkPreview(latestItem.current, data));
+                  setPreviewStatus({ id, message: 'Preview updated.' });
+                } catch { setPreviewStatus({ id, message: 'Could not update this preview.' }); }
+                finally { setIsRefreshing(false); }
+              }}><RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /></button>}
               {/* Whole View Button */}
               {onOpenWholeView && (
                 <button
@@ -246,8 +268,10 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
             </div>
           </div>
 
+          {previewStatus?.id === item.id && <p role="status" className="mb-4 text-xs text-zinc-500">{previewStatus.message}</p>}
+
           {/* Main Card Detail Content (Larger, Readable Fonts!) */}
-          <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="memory-detail-content space-y-5 max-h-[70vh] overflow-y-auto pr-1">
             
             {/* Title */}
             {item.title && (
@@ -256,7 +280,7 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
                   ? 'font-serif text-2xl sm:text-3xl font-medium'
                   : ''
               }`}>
-                {item.title}
+                {getItemTitle(item)}
               </h2>
             )}
 
@@ -515,7 +539,7 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
                     <img
                       src={item.previewImage}
                       alt={item.title}
-                      className="w-full max-h-72 object-cover"
+                      className="w-full h-auto object-contain"
                     />
                   </div>
                 )}
@@ -568,7 +592,7 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
           </div>
         </motion.div>
-      </div>
+      </dialog>
     </AnimatePresence>
   );
 };

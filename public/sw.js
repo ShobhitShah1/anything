@@ -1,18 +1,4 @@
-const CACHE_NAME = 'anything-image-cache-v1';
-
-const IMAGE_DOMAINS = [
-  'images.unsplash.com',
-  's0.wp.com',
-  'unavatar.io',
-  'pbs.twimg.com',
-  'abs.twimg.com',
-  'google.com/s2/favicons',
-  'github.githubassets.com',
-  'opengraph.githubassets.com',
-  'redditstatic.com',
-  'instagram.com',
-  'ytimg.com',
-];
+const CACHE_NAME = 'anything-image-cache-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -23,7 +9,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key.startsWith('anything-image-cache-') && key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
@@ -36,14 +22,11 @@ self.addEventListener('activate', (event) => {
 // Cache-First strategy for images: serve instantly from local cache across all reloads
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  const url = req.url;
 
   if (req.method !== 'GET') return;
 
-  const isImageReq =
-    req.destination === 'image' ||
-    /\.(png|jpg|jpeg|webp|svg|gif|ico|avif)(\?.*)?$/i.test(url) ||
-    IMAGE_DOMAINS.some((domain) => url.includes(domain));
+  // API URLs often contain image/social hostnames in query parameters.
+  const isImageReq = req.destination === 'image';
 
   if (isImageReq) {
     event.respondWith(

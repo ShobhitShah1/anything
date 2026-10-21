@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, ExternalLink } from 'lucide-react';
 import { sound } from '../utils/sound';
@@ -18,6 +18,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   onClose,
   isDark = true,
 }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = React.useState(false);
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
       }
     };
     if (isOpen) {
+      if (dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
       window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
@@ -47,7 +49,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+      <dialog ref={dialogRef} aria-label={title || 'Image preview'} onCancel={event => { event.preventDefault(); onClose(); }} className="memory-dialog fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -124,7 +126,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
             />
           </div>
         </motion.div>
-      </div>
+      </dialog>
     </AnimatePresence>
   );
 };

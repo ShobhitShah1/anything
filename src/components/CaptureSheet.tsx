@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X,
   Pin, 
@@ -22,15 +22,14 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  ArrowUpRight,
-  ExternalLink,
-  Edit3
+  Edit3,
+  ChevronDown
 } from 'lucide-react';
 import { ItemType, SavedItem, Folder, ChecklistItem } from '../types';
 import { sound } from '../utils/sound';
 import { parseSocialUrl } from '../utils/storage';
 import { fetchLinkPreview, getImmediateLinkPreview, LinkPreviewData, normalizeUrl, isDirectImageUrl } from '../utils/fetchPreview';
-import { findDuplicateItem, readClipboardSafely } from '../utils/clipboard';
+import { findDuplicateItem, readClipboardSafely, autoDetectClipboardContent } from '../utils/clipboard';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { FolderDropdown } from './FolderDropdown';
 import { InstagramIcon, RedditIcon, XIcon } from './Icons';
@@ -129,7 +128,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   const [autoDetectedBadge, setAutoDetectedBadge] = useState<string | null>(null);
   const fetchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewVersion = React.useRef(0);
-  const reduceMotion = useReducedMotion();
+  const captureDialogRef = React.useRef<HTMLDialogElement>(null);
   const [formError, setFormError] = useState('');
 
   // Markdown write/render tab
@@ -137,6 +136,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (captureDialogRef.current && !captureDialogRef.current.open) captureDialogRef.current.showModal();
+      document.body.style.overflow = 'hidden';
       setType(initialType);
       setTitle(initialTitle || '');
       setContent(initialContent || '');
@@ -156,7 +157,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       setAutoDetectedBadge(null);
       setMobileTab('editor');
       setMarkdownTab('write');
-      requestAnimationFrame(() => (document.getElementById('capture-url') || document.getElementById('capture-title'))?.focus());
+      requestAnimationFrame(() => (document.getElementById('capture-url') || document.getElementById('capture-note-content') || document.getElementById('capture-title'))?.focus());
 
 
       if (initialContent) {
@@ -196,6 +197,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
 
   // Omni-Input Auto-Detection
   const handleContentChange = (val: string) => {
+    if (title && title === parseSocialUrl(content).extractedInfo?.title) setTitle('');
     setContent(val);
     previewVersion.current += 1;
     if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
@@ -214,16 +216,14 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
     }
 
     const isWebUrl = (() => {
-      try { return new URL(normalizeUrl(trimmed)).hostname.includes('.'); }
+      try { return !/\s/.test(trimmed) && new URL(normalizeUrl(trimmed)).hostname.includes('.'); }
       catch { return false; }
     })();
 
     // Direct Image URL detection
     if (isWebUrl && isDirectImageUrl(trimmed)) {
-      if (type !== 'image' && type !== 'link') {
-        setType('link');
-        setAutoDetectedBadge('Image Link');
-      }
+      setType('image');
+      setAutoDetectedBadge('Image');
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
       setPreviewData(getImmediateLinkPreview(trimmed));
       triggerFetchPreview(trimmed);
@@ -239,11 +239,12 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         social.detectedType === 'reddit_post' ? 'Reddit' :
         social.detectedType === 'instagram_post' ? 'Instagram' : 'Social'
       );
-      if (social.extractedInfo?.title && !title) {
+      if (social.extractedInfo?.title && (!title || title === parseSocialUrl(content).extractedInfo?.title)) {
         setTitle(social.extractedInfo.title);
       }
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
       setPreviewData(getImmediateLinkPreview(trimmed));
+      setIsFetchingPreview(true);
       fetchTimerRef.current = setTimeout(() => triggerFetchPreview(trimmed), 200);
       return;
     }
@@ -267,8 +268,14 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       }
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
       setPreviewData(getImmediateLinkPreview(trimmed));
+      setIsFetchingPreview(true);
       fetchTimerRef.current = setTimeout(() => triggerFetchPreview(trimmed), 200);
       return;
+    }
+
+    if (autoDetectedBadge && ['link', 'x_post', 'reddit_post', 'instagram_post', 'image'].includes(type) && !isWebUrl) {
+      setType('note');
+      setAutoDetectedBadge(null);
     }
 
     // Check for Markdown document (# Heading or ``` code)
@@ -284,6 +291,10 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       setSecretCategory('api_key');
       setAutoDetectedBadge('API Key / Token');
       return;
+    }
+    if (type === 'note' && autoDetectClipboardContent(trimmed).type === 'code') {
+      setType('code');
+      setAutoDetectedBadge('Code snippet');
     }
   };
 
@@ -462,7 +473,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         authorHandle,
         authorAvatar: previewData?.authorAvatar || `https://unavatar.io/x/${authorHandle.replace(/^@/, '')}`,
         content: tweetBody,
-        postUrl: content || 'https://x.com',
+        postUrl: normalizeUrl(content),
         imageUrl: previewData?.imageUrl,
         likes: previewData?.likes,
         reposts: previewData?.reposts,
@@ -595,13 +606,14 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.section
+        <motion.dialog
+          ref={captureDialogRef}
+          onCancel={event => { event.preventDefault(); onClose(); }}
           aria-labelledby="capture-heading"
-          initial={{ opacity: 0, transform: reduceMotion ? 'none' : 'translateX(24px)' }}
-          animate={{ opacity: 1, transform: 'translateX(0px)' }}
-          exit={{ opacity: 0, transform: reduceMotion ? 'none' : 'translateX(24px)' }}
-          transition={{ duration: reduceMotion ? 0.1 : 0.2, ease: [0.32, 0.72, 0, 1] }}
-          className={`capture-screen ${type === 'link' ? 'capture-link-screen' : ''}`}
+          initial={false}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.1 }}
+          className={`capture-screen ${type === 'link' || type === 'x_post' ? 'capture-link-screen' : ''}`}
         >
           {/* Top Bar */}
           <div className={`capture-header px-6 py-4 border-b flex items-center justify-between gap-3 shrink-0 ${
@@ -609,30 +621,54 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
           }`}>
             <div className="flex items-center gap-2.5 min-w-0">
               <span id="capture-heading" className="font-bold text-base sm:text-lg tracking-tight text-zinc-950 dark:text-white">
-                {type === 'link' ? 'Save a link' : 'Capture'}
+                Save something.
               </span>
 
-              {autoDetectedBadge && (
-                <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full border shrink-0 flex items-center gap-1.5 ${
-                  isDark ? 'bg-zinc-800 text-zinc-200 border-zinc-700' : 'bg-zinc-100 text-zinc-800 border-zinc-300'
-                }`}>
-                  <Sparkles className="w-3 h-3 text-zinc-400" />
-                  <span>{autoDetectedBadge}</span>
-                </span>
-              )}
+
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {type !== 'link' && <button
+              {type !== 'link' && type !== 'x_post' && <button
                 type="button"
                 onClick={() => setMobileTab(mobileTab === 'editor' ? 'preview' : 'editor')}
+                aria-label={mobileTab === 'preview' ? 'Edit memory' : 'Preview memory'}
+                title={mobileTab === 'preview' ? 'Edit memory' : 'Preview memory'}
                 aria-pressed={mobileTab === 'preview'} aria-controls="capture-live-preview"
                 className="capture-preview-toggle">
                 {mobileTab === 'preview' ? <Edit3 size={14} /> : <Eye size={14} />}
                 <span>{mobileTab === 'preview' ? 'Edit' : 'Preview'}</span>
               </button>}
 
-              {/* Folder Selector */}
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  sound.click();
+                  onClose();
+                }}
+                className="p-2 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Close (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="capture-type-row">
+            <details className="capture-kind-picker">
+              <summary>{typeOptions.find(option => option.id === type)?.icon}<span>{typeOptions.find(option => option.id === type)?.label}</span><ChevronDown size={12} /></summary>
+              <div className="capture-kind-menu" role="group" aria-label="Save type">
+                {typeOptions.map(option => (
+                  <button key={option.id} type="button" aria-label={option.label} aria-pressed={type === option.id} onClick={event => {
+                    setType(option.id);
+                    setMobileTab('editor');
+                    event.currentTarget.closest('details')!.open = false;
+                  }}>{option.icon}<span>{option.label}</span>{type === option.id && <Check size={12} />}</button>
+                ))}
+              </div>
+            </details>
+            <span className="capture-detection-hint">{autoDetectedBadge ? 'Ready to keep' : 'Choose a type, or just start writing'}</span>
+            <div className="capture-organization">              {/* Folder Selector */}
               <FolderDropdown
                 folders={folders}
                 selectedFolderId={selectedFolderId}
@@ -654,65 +690,21 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                     ? (isDark ? 'bg-white text-zinc-950 border-white font-semibold' : 'bg-zinc-950 text-white border-zinc-950')
                     : (isDark ? 'text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-950 border-zinc-200 hover:bg-zinc-100')
                 }`}
+                aria-label={isPinned ? 'Unpin memory' : 'Pin memory'}
+                aria-pressed={isPinned}
                 title={isPinned ? 'Pinned to top' : 'Pin to top'}
               >
                 <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current' : ''}`} />
               </button>
 
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  sound.click();
-                  onClose();
-                }}
-                className="p-2 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                title="Close (Esc)"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Full-Width 9 Type Ribbon: ZERO horizontal scroll, completely visible */}
-          <div className={`capture-types px-6 py-3 border-b shrink-0 ${
-            isDark ? 'border-white/[0.07] bg-[#121215]' : 'border-zinc-200/80 bg-zinc-50/40'
-          }`}>
-            <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5 w-full">
-              {typeOptions.map((opt) => {
-                const isActive = type === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      sound.click();
-                      setType(opt.id);
-                      setMobileTab('editor');
-                    }}
-                    className={`relative w-full py-2 px-1.5 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
-                      isActive
-                        ? (isDark 
-                            ? 'bg-zinc-100 text-zinc-950 font-semibold border-white shadow-xs' 
-                            : 'bg-zinc-950 text-white font-semibold border-zinc-950 shadow-xs')
-                        : (isDark 
-                            ? 'border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 font-medium' 
-                            : 'border-transparent text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 font-medium')
-                    }`}
-                  >
-                    {opt.icon}
-                    <span className="truncate">{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+</div>
           </div>
 
           {/* Main Workstation Body: Dual-Pane on Desktop, Tabbed on Mobile */}
           <div className="capture-content flex min-h-0">
             {/* Left Pane: Authoring & Inputs */}
             <div className={`capture-fields flex-1 p-6 flex flex-col gap-6 min-w-0 ${
-              mobileTab === 'preview' && type !== 'link' ? 'hidden' : 'flex'
+              mobileTab === 'preview' && type !== 'link' && type !== 'x_post' ? 'hidden' : 'flex'
             }`}>
               <div className="space-y-3.5">
                 {/* Clipboard Notification Banner */}
@@ -720,7 +712,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                   <motion.div
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`px-3.5 py-2.5 rounded-2xl text-xs flex items-center justify-between gap-3 border ${
+                    className={`capture-clipboard-suggestion px-3.5 py-2.5 rounded-2xl text-xs flex items-center justify-between gap-3 border ${
                       isDark 
                         ? 'bg-zinc-900/90 border-zinc-800 text-zinc-300' 
                         : 'bg-zinc-50 border-zinc-200 text-zinc-800'
@@ -729,7 +721,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                     <div className="flex items-center gap-2 truncate min-w-0">
                       <Clipboard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                       <span className="truncate text-xs">
-                        Clipboard: <em className="font-mono">{clipboardSuggestion.slice(0, 48)}...</em>
+                        <span>From your clipboard</span><small>{clipboardSuggestion.slice(0, 60)}{clipboardSuggestion.length > 60 ? '…' : ''}</small>
                       </span>
                     </div>
                     <button
@@ -739,7 +731,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         isDark ? 'bg-white text-zinc-950 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black'
                       }`}
                     >
-                      Quick Paste
+                      Paste
                     </button>
                   </motion.div>
                 )}
@@ -759,7 +751,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                 )}
 
                 {/* Title Input */}
-                {type !== 'link' && type !== 'note' && <input
+                {type !== 'link' && type !== 'note' && type !== 'x_post' && <input
                   id="capture-title"
                   autoFocus
                   aria-label="Item title"
@@ -770,7 +762,6 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                     type === 'markdown' ? 'Document or Skill Name...' :
                     type === 'secret' ? 'Secret Name (e.g. GitHub Token, Wi-Fi)...' :
                     type === 'code' ? 'Snippet Title...' :
-                    type === 'x_post' ? 'Topic / Title (optional)...' :
                     type === 'reddit_post' ? 'Reddit Title...' :
                     'Title (optional)...'
                   }
@@ -780,112 +771,9 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                 />}
 
                 {/* Mode-Specific Content Area */}
-                {type === 'x_post' ? (
-                  /* X Post Studio */
-                  <div className="space-y-3.5">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <XIcon className="w-3 h-3" />
-                          <span>Status / Post URL</span>
-                        </span>
-                        {isFetchingPreview && (
-                          <span className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Fetching live tweet...</span>
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="relative flex items-center">
-                        <input
-                          type="url"
-                          value={content}
-                          onChange={(e) => handleContentChange(e.target.value)}
-                          placeholder="https://x.com/username/status/123456789..."
-                          className={`w-full pl-3.5 pr-20 py-2.5 rounded-2xl text-xs font-mono border bg-transparent focus:outline-none placeholder:text-zinc-400 transition-colors ${
-                            isDark ? 'border-zinc-800 text-white bg-zinc-900/40' : 'border-zinc-200 text-zinc-900 bg-zinc-50'
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (content.trim()) triggerFetchPreview(content.trim());
-                          }}
-                          disabled={!content.trim() || isFetchingPreview}
-                          className={`absolute right-1.5 px-3 py-1 rounded-xl text-[11px] font-medium border transition-colors cursor-pointer flex items-center gap-1 ${
-                            isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-200 bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                          } disabled:opacity-40 disabled:cursor-not-allowed`}
-                        >
-                          <RefreshCw className={`w-3 h-3 ${isFetchingPreview ? 'animate-spin' : ''}`} />
-                          <span>Fetch</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Author Meta Row */}
-                    {(previewData?.author || previewData?.authorHandle || isFetchingPreview) && (
-                      <div className={`p-3 rounded-2xl border flex items-center justify-between gap-3 text-xs ${
-                        isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-                      }`}>
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {previewData?.authorAvatar ? (
-                            <img
-                              src={previewData.authorAvatar}
-                              alt={previewData.author || 'Author'}
-                              className="w-7 h-7 rounded-full object-cover bg-zinc-800 border border-zinc-700/50 shrink-0"
-                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-white shrink-0">
-                              <XIcon className="w-3.5 h-3.5" />
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="font-semibold truncate leading-tight">
-                              {previewData?.author || 'Creator'}
-                            </p>
-                            <p className="text-[11px] text-zinc-400 font-mono leading-tight">
-                              {previewData?.authorHandle || '@author'}
-                            </p>
-                          </div>
-                        </div>
-
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border shrink-0 ${
-                          isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700' : 'bg-zinc-200 text-zinc-700 border-zinc-300'
-                        }`}>
-                          X link
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Tweet Content Textarea */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
-                        <span>Tweet Content</span>
-                        <span>{secondaryNote.length} characters</span>
-                      </div>
-
-                      <textarea
-                        rows={6}
-                        value={secondaryNote}
-                        onChange={(e) => setSecondaryNote(e.target.value)}
-                        placeholder={
-                          isFetchingPreview 
-                            ? 'Fetching tweet text automatically...' 
-                            : 'Tweet text auto-populates here, or type/edit notes...'
-                        }
-                        className={`w-full p-4 rounded-2xl text-xs border bg-transparent focus:outline-none resize-none leading-relaxed transition-colors ${
-                          isDark 
-                            ? 'border-zinc-800 text-zinc-200 bg-zinc-900/30 placeholder:text-zinc-500' 
-                            : 'border-zinc-200 text-zinc-800 bg-zinc-50/50 placeholder:text-zinc-400'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                ) : type === 'link' ? (
+                {type === 'link' || type === 'x_post' ? (
                   <div className="capture-link-entry">
-                    <label className="capture-link-label" htmlFor="capture-url">Paste a link</label>
+                    <label className="capture-link-label" htmlFor="capture-url">{type === 'x_post' ? 'Paste an X post link' : 'Paste a link'}</label>
                     <div className="capture-url-field">
                       <Link2 size={17} aria-hidden="true" />
                       <input id="capture-url" type="url" autoFocus value={content}
@@ -909,7 +797,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         </div>
                         <div className="capture-link-copy">
                           <span>{previewData.domain}</span>
-                          <h2>{title || previewData.title}</h2>
+                          {type === 'x_post' && <div className="capture-post-author">{previewData.authorAvatar && <img src={previewData.authorAvatar} alt="" />}<span>{previewData.authorHandle}</span></div>}
+                          <h2>{type === 'x_post' ? previewData.author || title || previewData.title : title || previewData.title}</h2>
                           <p>{previewData.description || (isFetchingPreview ? 'Getting the page details. You can save right away.' : 'Keep this link in your collection.')}</p>
                         </div>
                       </div>
@@ -956,7 +845,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (content.trim()) triggerFetchPreview(content.trim());
+                            if (content.trim()) triggerFetchPreview(content.trim(), true);
                           }}
                           disabled={!content.trim() || isFetchingPreview}
                           className={`absolute right-1.5 px-3 py-1 rounded-xl text-[11px] font-medium border transition-colors cursor-pointer flex items-center gap-1 ${
@@ -1008,7 +897,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (content.trim()) triggerFetchPreview(content.trim());
+                            if (content.trim()) triggerFetchPreview(content.trim(), true);
                           }}
                           disabled={!content.trim() || isFetchingPreview}
                           className={`absolute right-1.5 px-3 py-1 rounded-xl text-[11px] font-medium border transition-colors cursor-pointer flex items-center gap-1 ${
@@ -1284,10 +1173,11 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                 ) : (
                   /* Note & Checklist Studio */
                   <div className="capture-note-composer">
-                    {type === 'note' && <input id="capture-title" type="text" autoFocus aria-label="Note title"
-                      value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Untitled note" />}
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-zinc-500">{isChecklistMode ? 'Checklist' : 'Your note'}</span>
+                    {type === 'note' && <details className="capture-note-title" open={title ? true : undefined}>
+                      <summary>{title || 'Untitled memory'}<span>{title ? 'Edit title' : 'Add a title · optional'}</span></summary>
+                      <input id="capture-title" type="text" aria-label="Note title" value={title} onChange={event => setTitle(event.target.value)} placeholder="Give it a title" />
+                    </details>}
                       <button
                         type="button"
                         onClick={() => setIsChecklistMode(!isChecklistMode)}
@@ -1298,7 +1188,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         }`}
                       >
                         <CheckSquare className="w-3.5 h-3.5 text-zinc-400" />
-                        <span>{isChecklistMode ? 'Checklist Active' : 'Checklist'}</span>
+                        <span>{isChecklistMode ? 'Checklist on' : 'Checklist'}</span>
                       </button>
                     </div>
 
@@ -1366,12 +1256,13 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                       </div>
                     ) : (
                       <textarea
+                        autoFocus
                         id="capture-note-content"
                         aria-label="Note content"
-                        rows={7}
+                        rows={5}
                         value={content}
                         onChange={(e) => handleContentChange(e.target.value)}
-                        placeholder="Write a thought, note, idea, or paste anything..."
+                        placeholder="Write a thought, or paste a link…"
                         className={`w-full p-4 rounded-2xl text-xs border bg-transparent focus:outline-none resize-none leading-relaxed transition-colors ${
                           isDark ? 'border-zinc-800 text-zinc-200 bg-zinc-900/40' : 'border-zinc-200 text-zinc-800 bg-zinc-50'
                         }`}
@@ -1451,7 +1342,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
               isDark 
                 ? 'bg-[#0B0B0D] border-white/[0.08]' 
                 : 'bg-[#F4F4F6] border-zinc-200/90'
-            } ${type === 'link' || mobileTab === 'editor' ? 'hidden' : 'flex'}`}>
+            } ${type === 'link' || type === 'x_post' || mobileTab === 'editor' ? 'hidden' : 'flex'}`}>
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className={`text-[11px] font-mono font-semibold uppercase tracking-wider ${
@@ -1546,7 +1437,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                         </div>
                       </div>
                       <p className="text-xs text-zinc-700 dark:text-zinc-200 line-clamp-4 leading-relaxed whitespace-pre-wrap">
-                        {secondaryNote || (isFetchingPreview ? 'Fetching live tweet...' : 'Tweet content will appear here...')}
+                        {secondaryNote || previewData?.description || (isFetchingPreview ? 'Loading post...' : 'Post text is unavailable.')}
                       </p>
                       {previewData?.imageUrl && (
                         <img
@@ -1681,7 +1572,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
             </div>
           </div>
 
-          {formError && <p role="alert" className="capture-error py-2 text-sm text-rose-300">{formError}</p>}
+          {formError && <p role="alert" className="capture-error py-2 text-sm text-rose-700">{formError}</p>}
           {/* Bottom Action Footer Bar */}
           <div className={`capture-footer px-6 py-4 flex items-center justify-between gap-3 shrink-0 transition-colors ${
             isDark ? 'border-white/[0.08] bg-[#0E0E10]' : 'border-zinc-200/80 bg-zinc-50/70'
@@ -1723,11 +1614,11 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                 }`}
               >
                 <Check className="w-4 h-4 stroke-[2.5]" />
-                <span>Save to Anything</span>
+                <span>Save memory</span>
               </button>
             </div>
           </div>
-        </motion.section>
+        </motion.dialog>
       )}
     </AnimatePresence>
   );

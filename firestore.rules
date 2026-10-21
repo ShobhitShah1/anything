@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/collection/{record} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['kind', 'id', 'deleted', 'data'])
+        && request.resource.data.kind in ['item', 'folder']
+        && request.resource.data.id is string
+        && request.resource.data.id.size() > 0
+        && request.resource.data.id.size() <= 500
+        && request.resource.data.deleted is bool
+        && ((request.resource.data.deleted == true && request.resource.data.data == null)
+          || (request.resource.data.deleted == false && request.resource.data.data is map
+            && request.resource.data.data.id == request.resource.data.id));
+      // Deletions use tombstones so offline clients cannot bring old saves back.
+      allow delete: if false;
+    }
+  }
+}

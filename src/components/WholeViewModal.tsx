@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { getItemTitle } from '../utils/itemTitle';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -42,6 +43,7 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
   folders,
   isDark = true,
 }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -66,6 +68,7 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
       if (e.key === 'Escape' && isOpen) onClose();
     };
     if (isOpen) {
+      if (dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
       window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
@@ -120,12 +123,15 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 12 }}
+      <motion.dialog
+        ref={dialogRef}
+        aria-label={item.title}
+        onCancel={event => { event.preventDefault(); onClose(); }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        className={`fixed inset-0 z-50 overflow-y-auto flex flex-col transition-colors ${
+        className={`memory-reader fixed inset-0 z-50 overflow-y-auto flex flex-col transition-colors ${
           isDark ? 'bg-[#121214] text-[#F4F4F5]' : 'bg-white text-[#111111]'
         }`}
       >
@@ -255,7 +261,7 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
         </header>
 
         {/* Main Canvas Viewport */}
-        <main className="flex-1 w-full max-w-4xl mx-auto px-6 sm:px-12 py-10 space-y-6">
+        <main className={`flex-1 w-full max-w-4xl mx-auto px-6 sm:px-12 py-10 space-y-6 ${item.type === 'link' ? 'reader-link-main' : ''}`}>
           {/* Header section: Title & Date */}
           <div className="space-y-3 pb-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
             {isEditing ? (
@@ -272,9 +278,11 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
               <h1 className={`text-2xl sm:text-4xl font-bold tracking-tight ${
                 isDark ? 'text-white' : 'text-zinc-900'
               }`}>
-                {item.title}
+                {getItemTitle(item)}
               </h1>
             )}
+
+            {item.type === 'link' && <a className="reader-link-url" href={item.url} target="_blank" rel="noopener noreferrer" title={item.url}>{item.favicon && <img src={item.favicon} alt="" />}<span>{item.url}</span><ExternalLink /></a>}
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
               <span>Saved on {formattedDate}</span>
@@ -348,8 +356,8 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
               <p className="text-lg leading-relaxed whitespace-pre-wrap">{item.content}</p>
 
               {item.imageUrl && (
-                <div className="rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 max-h-[500px]">
-                  <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
+                <div className="rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                  <img src={item.imageUrl} alt="" className="w-full h-auto object-contain" />
                 </div>
               )}
 
@@ -365,28 +373,13 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
               </a>
             </div>
           ) : item.type === 'link' ? (
-            <div className="space-y-6">
-              {item.previewImage && (
-                <div className="rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 max-h-[400px]">
-                  <img src={item.previewImage} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-
-              {item.description && (
-                <p className="text-base sm:text-lg leading-relaxed text-zinc-600 dark:text-zinc-300">
-                  {item.description}
-                </p>
-              )}
-
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 transition-all hover:opacity-90"
-              >
-                <span>Open link in new tab</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+            <div className={`reader-link-layout ${item.previewImage ? '' : 'reader-link-text-only'}`}>
+              {item.previewImage && <div className="reader-link-image"><img src={item.previewImage} alt={getItemTitle(item)} /></div>}
+              <div className="reader-link-summary">
+                <span className="mind-eyebrow">Saved for later</span>
+                {item.description && <p>{item.description}</p>}
+                <a href={item.url} target="_blank" rel="noopener noreferrer" className="mind-save-button"><span>Open website</span><ExternalLink /></a>
+              </div>
             </div>
           ) : item.type === 'code' ? (
             <div className="space-y-4">
@@ -414,7 +407,7 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
           ) : null}
 
         </main>
-      </motion.div>
+      </motion.dialog>
     </AnimatePresence>
   );
 };

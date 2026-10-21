@@ -1,3 +1,5 @@
+import type { SavedItem } from '../types';
+
 export interface LinkPreviewData {
   title: string;
   description?: string;
@@ -14,7 +16,7 @@ export interface LinkPreviewData {
   error?: string;
 }
 
-const CACHE_KEY = 'anything_link_previews_v3';
+const CACHE_KEY = 'anything_link_previews_v4';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 const previewCache = new Map<string, { data: LinkPreviewData; expires: number }>();
 const pendingPreviews = new Map<string, Promise<LinkPreviewData>>();
@@ -183,39 +185,63 @@ export function extractHtmlPreview(html: string, pageUrl: string) {
   return { data, images: [...new Set(images)] };
 }
 
-async function loadCover(images: string[]): Promise<string | undefined> {
-  if (!images.length) return undefined;
-  const pending: HTMLImageElement[] = [];
-  let timeout: ReturnType<typeof setTimeout>;
-  try {
-    return await Promise.race([
-      Promise.any(images.slice(0, 4).map(src => new Promise<string>((resolve, reject) => {
-        const image = new Image();
-        pending.push(image);
-        image.onload = () => resolve(src);
-        image.onerror = reject;
-        image.src = src;
-      }))),
-      new Promise<undefined>(resolve => { timeout = setTimeout(resolve, 5000); }),
-    ]);
-  } catch { return undefined; }
-  finally {
-    clearTimeout(timeout!);
-    for (const image of pending) { image.onload = null; image.onerror = null; image.src = ''; }
-  }
+const PREVIEW_DEADLINE = 5000;
+
+async function fetchJson(url: string, signal: AbortSignal) {
+  const response = await fetch(url, { signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+  if (!response.ok) throw new Error(response.status === 429 ? 'Preview service is busy. Try again shortly.' : response.status === 404 ? 'This URL is unavailable or was removed.' : 'This page could not be previewed.');
+  return response.json();
 }
 
-async function fetchHtmlPreview(url: string) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
-  let html: string;
-  try {
-    const response = await fetch(url, { signal: controller.signal, credentials: 'omit', headers: { Accept: 'text/html' } });
-    if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) return undefined;
-    html = await response.text();
-  } finally { clearTimeout(timeout); }
-  const { data, images } = extractHtmlPreview(html, url);
-  return { ...data, imageUrl: await loadCover(images) };
+async function fetchMetadata(url: string, fallback: LinkPreviewData, signal: AbortSignal, forceFresh: boolean) {
+  const params = new URLSearchParams({ url, retry: '0', timeout: '4500', prerender: 'auto', force: String(forceFresh) });
+  const json = await fetchJson(`https://api.microlink.io?${params}`, signal);
+  if (json.status !== 'success' || !json.data) throw new Error('This page could not be previewed.');
+  const data = json.data;
+  return {
+    ...fallback,
+    title: typeof data.title === 'string' && data.title.trim() ? data.title : fallback.title,
+    description: typeof data.description === 'string' ? data.description : undefined,
+    imageUrl: safeWebUrl(typeof data.image === 'string' ? data.image : data.image?.url) || fallback.imageUrl,
+    publisher: typeof data.publisher === 'string' ? data.publisher : fallback.domain,
+    author: typeof data.author === 'string' ? data.author : undefined,
+    favicon: safeWebUrl(typeof data.logo === 'string' ? data.logo : data.logo?.url) || fallback.favicon,
+  };
+}
+
+async function fetchHtmlPreview(url: string, signal: AbortSignal) {
+  const response = await fetch(url, { signal, credentials: 'omit', referrerPolicy: 'no-referrer', headers: { Accept: 'text/html' } });
+  if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) throw new Error('Page metadata unavailable.');
+  const { data, images } = extractHtmlPreview(await response.text(), url);
+  if (!data.description && !images.length && data.title === new URL(url).hostname) throw new Error('Page has no metadata.');
+  // Show metadata immediately; image loading must never delay the preview.
+  return { ...data, imageUrl: images[0] };
+}
+
+async function fetchXPreview(url: string, fallback: LinkPreviewData, signal: AbortSignal) {
+  const id = new URL(url).pathname.match(/^\/(?:[^/]+\/status|i\/web\/status)\/(\d+)/)?.[1];
+  if (!id) throw new Error('Paste an X post URL containing /status/ and the post ID.');
+  const json = await fetchJson(`https://api.fxtwitter.com/status/${id}`, signal);
+  const tweet = json.tweet;
+  if (json.code !== 200 || !tweet || typeof tweet.text !== 'string') throw new Error('This X post is unavailable, private, or deleted.');
+  return {
+    ...fallback,
+    title: typeof tweet.author?.name === 'string' ? tweet.author.name : fallback.title,
+    description: tweet.text,
+    author: typeof tweet.author?.name === 'string' ? tweet.author.name : undefined,
+    authorHandle: typeof tweet.author?.screen_name === 'string' ? `@${tweet.author.screen_name}` : fallback.authorHandle,
+    authorAvatar: safeWebUrl(tweet.author?.avatar_url),
+    imageUrl: safeWebUrl(tweet.media?.photos?.[0]?.url || tweet.media?.videos?.[0]?.thumbnail_url || tweet.media?.external?.thumbnail_url),
+    likes: typeof tweet.likes === 'number' ? tweet.likes : undefined,
+    reposts: typeof tweet.retweets === 'number' ? tweet.retweets : undefined,
+    publisher: 'X',
+  };
+}
+
+async function fetchVideoPreview(url: string, fallback: LinkPreviewData, signal: AbortSignal) {
+  const data = await fetchJson(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, signal);
+  if (data.error || typeof data.title !== 'string') throw new Error('Video metadata unavailable.');
+  return { ...fallback, title: data.title, author: typeof data.author_name === 'string' ? data.author_name : undefined, imageUrl: safeWebUrl(data.thumbnail_url) || fallback.imageUrl };
 }
 
 export function fetchLinkPreview(rawUrl: string, forceFresh = false): Promise<LinkPreviewData> {
@@ -224,47 +250,72 @@ export function fetchLinkPreview(rawUrl: string, forceFresh = false): Promise<Li
   if (!forceFresh && cached && cached.expires > Date.now()) return Promise.resolve(cached.data);
   const pending = pendingPreviews.get(url);
   if (pending) return pending;
-
   if (forceFresh) previewCache.delete(url);
   const fallback = getImmediateLinkPreview(url);
-  if (fallback.imageUrl || ['x.com', 'twitter.com'].includes(fallback.domain)) {
-    return Promise.resolve(cachePreview(fallback));
-  }
+  if (isDirectImageUrl(url)) return Promise.resolve(cachePreview(fallback));
 
   const request = (async () => {
-    // Browsers can read CORS-enabled pages directly, avoiding provider quotas entirely.
-    if (typeof document !== 'undefined') {
-      try {
-        const direct = await fetchHtmlPreview(url);
-        if (direct) return cachePreview(direct);
-      } catch { /* Most sites require the metadata provider because of CORS. */ }
-    }
     const controller = new AbortController();
-    // Saving is already complete; allow the provider enough time to return real metadata.
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), PREVIEW_DEADLINE);
     try {
-      const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}&prerender=false`, {
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error(response.status === 429 ? 'Preview service is busy. Your link can still be saved.' : 'Preview unavailable. Your link can still be saved.');
-      const json = await response.json();
-      if (json.status !== 'success' || !json.data) throw new Error('Preview unavailable');
-      const d = json.data;
-      return cachePreview({
-        ...fallback,
-        title: typeof d.title === 'string' ? d.title : fallback.title,
-        description: typeof d.description === 'string' ? d.description : undefined,
-        imageUrl: safeWebUrl(typeof d.image === 'string' ? d.image : d.image?.url),
-        publisher: typeof d.publisher === 'string' ? d.publisher : fallback.domain,
-        author: typeof d.author === 'string' ? d.author : undefined,
-        favicon: safeWebUrl(typeof d.logo === 'string' ? d.logo : d.logo?.url) || fallback.favicon,
-      });
+      let data: LinkPreviewData;
+      if (['x.com', 'twitter.com', 'mobile.twitter.com'].includes(fallback.domain)) {
+        data = await fetchXPreview(url, fallback, controller.signal);
+      } else if (['youtube.com', 'm.youtube.com', 'youtu.be', 'vimeo.com'].includes(fallback.domain)) {
+        data = await fetchVideoPreview(url, fallback, controller.signal);
+      } else {
+        const providers: Promise<LinkPreviewData>[] = [fetchMetadata(url, fallback, controller.signal, forceFresh)];
+        if (typeof document !== 'undefined') providers.push(fetchHtmlPreview(url, controller.signal));
+        data = await Promise.any(providers);
+      }
+      const { error: _oldError, ...clean } = data;
+      return cachePreview(clean);
     } catch (error) {
-      return cachePreview({ ...fallback, error: error instanceof Error ? error.message : 'Preview unavailable. You can still save this link.' }, 30_000);
+      const errors = error instanceof AggregateError ? error.errors : [error];
+      const message = controller.signal.aborted ? 'Preview timed out. You can save now and retry later.'
+        : errors.find(problem => problem instanceof Error && problem.message.includes('busy'))?.message
+        || errors.find(problem => problem instanceof Error)?.message || 'Preview unavailable. You can still save this link.';
+      return cachePreview({ ...fallback, error: message }, 15_000);
     } finally {
       clearTimeout(timeout);
+      controller.abort();
     }
   })().finally(() => pendingPreviews.delete(url));
   pendingPreviews.set(url, request);
   return request;
+}
+
+export function applyLinkPreview(item: SavedItem, preview: LinkPreviewData): SavedItem {
+  if (preview.error) return item;
+  if (item.type === 'link') return {
+    ...item,
+    title: !item.title || [item.domain, item.url, 'Link'].includes(item.title) ? preview.title : item.title,
+    description: item.description || preview.description,
+    previewImage: item.previewImage || preview.imageUrl,
+    favicon: preview.favicon || item.favicon,
+  };
+  if (item.type === 'x_post') return {
+    ...item,
+    authorName: preview.author || item.authorName,
+    authorHandle: preview.authorHandle || item.authorHandle,
+    authorAvatar: preview.authorAvatar || item.authorAvatar,
+    content: !item.content || item.content === item.postUrl || item.content === 'Post on X' || /^Post by @\w+ on X$/.test(item.content) ? preview.description || item.content : item.content,
+    imageUrl: preview.imageUrl || item.imageUrl,
+    likes: preview.likes ?? item.likes,
+    reposts: preview.reposts ?? item.reposts,
+  };
+  if (item.type === 'reddit_post') return {
+    ...item,
+    title: !item.title || item.title === item.subreddit || item.title === 'Reddit post' ? preview.title : item.title,
+    author: preview.author || item.author,
+    content: item.content || preview.description || '',
+    imageUrl: preview.imageUrl || item.imageUrl,
+  };
+  if (item.type === 'instagram_post') return {
+    ...item,
+    handle: preview.authorHandle || item.handle,
+    caption: item.caption || preview.description || '',
+    imageUrl: preview.imageUrl || item.imageUrl,
+  };
+  return item;
 }

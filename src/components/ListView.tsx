@@ -1,3 +1,4 @@
+import { getItemTitle } from '../utils/itemTitle';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -78,8 +79,8 @@ export const ListView: React.FC<ListViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto py-2">
-      <div className={`rounded-2xl border overflow-hidden divide-y transition-colors ${
+    <div className="memory-list w-full mx-auto py-2">
+      <div className={`memory-list-surface rounded-2xl border overflow-hidden divide-y transition-colors ${
         isDark 
           ? 'bg-[#18181B] border-zinc-800 divide-zinc-800/80 shadow-md' 
           : 'bg-white border-zinc-200/90 divide-zinc-100 shadow-xs'
@@ -99,8 +100,11 @@ export const ListView: React.FC<ListViewProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                tabIndex={0}
+                aria-label={`Open ${getItemTitle(item)}`}
+                onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onOpenItem?.(item); } }}
                 onClick={() => onOpenItem?.(item)}
-                className={`group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 transition-colors gap-3 cursor-pointer ${
+                className={`memory-list-row ${item.isPinned ? 'is-pinned' : ''} group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 transition-colors gap-3 cursor-pointer ${
                   isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-50/80'
                 }`}
               >
@@ -117,17 +121,17 @@ export const ListView: React.FC<ListViewProps> = ({
                       <span className={`font-medium text-xs sm:text-sm truncate ${
                         isDark ? 'text-zinc-100' : 'text-zinc-900'
                       }`}>
-                        {item.title || ('content' in item ? (item as any).content.slice(0, 40) : 'Untitled')}
+                        {getItemTitle(item) || ('content' in item ? (item as any).content.slice(0, 40) : 'Untitled')}
                       </span>
                       {item.isPinned && (
-                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded shrink-0 ${
+                        <span className={`memory-list-pin text-[9px] font-mono px-1.5 py-0.2 rounded shrink-0 ${
                           isDark ? 'bg-zinc-100 text-zinc-950 font-semibold' : 'bg-zinc-900 text-white'
                         }`}>
-                          pinned
+                          <Pin aria-hidden="true" />Pinned
                         </span>
                       )}
                       {folders.find((f) => f.id === item.folderId) && (
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                        <span className={`memory-list-folder inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
                           isDark ? 'bg-indigo-950/40 text-indigo-300 border border-indigo-900/60' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                         }`}>
                           <FolderIcon className="w-2.5 h-2.5 text-indigo-400" />

@@ -32,6 +32,7 @@ export interface BaseItem {
   tags: string[];
   folderId?: string; // Folder association
   colorTint?: string; // Subtle aesthetic tint e.g. '#FAFAFA'
+  mediaAspectRatio?: number;
 }
 
 export interface XPostItem extends BaseItem {

@@ -1,0 +1,10 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { CreativeEmptyView } from './src/components/CreativeEmptyView';
+import { FloatingCaptureBar } from './src/components/FloatingCaptureBar';
+import type { CloudAccount } from './src/hooks/useCloudAccount';
+import './src/index.css';
+import './src/design.css';
+document.documentElement.classList.add('dark');
+const account: CloudAccount = { user: null, loading: false, busy: false, error: '', enabled: false, status: 'local', configured: true, signIn: async () => {}, signOut: async () => {}, toggleSync: () => {}, retry: () => {} };
+createRoot(document.getElementById('root')!).render(<div className="anything-app min-h-screen"><div className="collection-surface"><header className="mind-header welcome-header"><span className="welcome-wordmark">Anything.</span></header><main className="collection-main welcome-main"><CreativeEmptyView account={account} onOpenCapture={() => {}} onDirectPaste={() => {}} onLoadStarters={() => {}} /></main></div><FloatingCaptureBar hidden={false} onOpenCapture={() => {}} onQuickSave={() => false} onPasteLinks={() => {}} status="" /></div>);

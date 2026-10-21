@@ -1,15 +1,27 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M9 9h6'/><path d='M9 13h6'/><path d='M9 17h4'/></svg>" />
+    <script id="theme-init">
+      (() => {
+        let dark = false;
+        try {
+          const saved = localStorage.getItem('anything_theme');
+          dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        } catch {}
+        document.documentElement.classList.add(dark ? 'dark' : 'light');
+      })();
+    </script>
+    <style>html { background: #f4f5f7; color-scheme: light; } html.dark { background: #0d0d0f; color-scheme: dark; }</style>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Anything. — Universal Personal Canvas</title>
+    <meta name="description" content="A calm home for your links, notes, images, and ideas. Save what catches your eye and find it when you need it." />
+    <title>Anything. — Good finds. One place.</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=optional" rel="stylesheet">
   </head>
-  <body class="bg-[#09090B] text-[#F4F4F5] antialiased selection:bg-zinc-800 selection:text-white">
+  <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

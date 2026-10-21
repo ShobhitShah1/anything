@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Folder as FolderIcon, ChevronDown, Check, Plus, X } from 'lucide-react';
+import React, { useState, useRef, useEffect, useId } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { Folder as FolderIcon, ChevronDown, Check, Plus } from 'lucide-react';
 import { Folder } from '../types';
 import { sound } from '../utils/sound';
 
@@ -12,6 +12,8 @@ interface FolderDropdownProps {
   isDark: boolean;
   className?: string;
   emptyLabel?: string;
+  folderCounts?: Record<string, number>;
+  totalCount?: number;
 }
 
 export const FolderDropdown: React.FC<FolderDropdownProps> = ({
@@ -22,7 +24,11 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
   isDark,
   className = '',
   emptyLabel = 'No Folder',
+  folderCounts, totalCount,
 }) => {
+  const menuId = useId();
+  const reduceMotion = useReducedMotion();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -31,7 +37,7 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
   const selectedFolder = folders.find((f) => f.id === selectedFolderId);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: Event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsOpen(false);
         setIsCreating(false);
@@ -39,8 +45,18 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
     };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('focusin', handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('focusin', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const first = dropdownRef.current?.querySelector<HTMLButtonElement>('[data-folder-menu] button');
+    first?.focus();
   }, [isOpen]);
 
   const handleCreate = (e: React.FormEvent) => {
@@ -55,15 +71,33 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className={`relative ${className}`} ref={dropdownRef} onKeyDown={event => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        setIsOpen(false);
+        setIsCreating(false);
+        triggerRef.current?.focus();
+      }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if ((event.target as HTMLElement).tagName === 'INPUT') return;
+        event.preventDefault();
+        if (!isOpen) { setIsOpen(true); return; }
+        const buttons = Array.from(dropdownRef.current?.querySelectorAll<HTMLButtonElement>('[data-folder-menu] button:not(:disabled)') || []);
+        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        buttons[(index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
+      }
+    }}>
       {/* Trigger Button */}
       <button
+        ref={triggerRef}
+        aria-expanded={isOpen}
+        aria-controls={menuId}
         type="button"
         onClick={() => {
           sound.click();
           setIsOpen(!isOpen);
         }}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
           isDark
             ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-200'
             : 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-800'
@@ -80,9 +114,14 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            id={menuId}
+            data-folder-menu
+            role="group"
+            aria-label="Choose folder"
+            style={{ transformOrigin: 'top left' }}
+            initial={{ opacity: 0, transform: reduceMotion ? 'scale(1)' : 'scale(0.98)' }}
+            animate={{ opacity: 1, transform: 'scale(1)' }}
+            exit={{ opacity: 0, transform: reduceMotion ? 'scale(1)' : 'scale(0.98)' }}
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
             className={`absolute left-0 top-full mt-1.5 w-56 rounded-2xl border shadow-xl z-50 p-1.5 overflow-hidden ${
               isDark
@@ -95,6 +134,7 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
               type="button"
               onClick={() => {
                 sound.click();
+                triggerRef.current?.focus();
                 onSelectFolder(null);
                 setIsOpen(false);
               }}
@@ -106,7 +146,7 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
             >
               <div className="flex items-center gap-2">
                 <FolderIcon className="w-3.5 h-3.5 text-zinc-400" />
-                <span>{emptyLabel}</span>
+                <span>{emptyLabel}</span>{totalCount !== undefined && <span className="text-zinc-500 tabular-nums">{totalCount}</span>}
               </div>
               {!selectedFolderId && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />}
             </button>
@@ -122,6 +162,7 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
                       type="button"
                       onClick={() => {
                         sound.click();
+                        triggerRef.current?.focus();
                         onSelectFolder(f.id);
                         setIsOpen(false);
                       }}
@@ -133,7 +174,7 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
                     >
                       <div className="flex items-center gap-2 truncate">
                         <FolderIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                        <span className="truncate">{f.name}</span>
+                        <span className="truncate">{f.name}</span>{folderCounts && <span className="text-zinc-500 tabular-nums">{folderCounts[f.id] || 0}</span>}
                       </div>
                       {isSelected && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0" />}
                     </button>
@@ -160,6 +201,7 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
                       type="text"
                       value={newFolderName}
                       onChange={(e) => setNewFolderName(e.target.value)}
+                      aria-label="Folder name"
                       placeholder="Folder name..."
                       autoFocus
                       className={`w-full px-2.5 py-1.5 rounded-lg text-xs border focus:outline-none ${

@@ -3,17 +3,13 @@ import { SavedItem } from '../types';
 export const CURATED_STARTER_ITEMS: SavedItem[] = [
   {
     id: 'starter-x-1',
-    type: 'x_post',
-    title: '@heysatya_',
-    authorName: 'Satya',
-    authorHandle: '@heysatya_',
-    content: 'Onboarding designing for a vlog app. Focus on high-craft micro-interactions and tactile physics.',
-    postUrl: 'https://x.com/heysatya_/status/184729104829',
-    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-    likes: 184,
-    reposts: 22,
+    type: 'link',
+    title: 'Say hello to Shobhit',
+    url: 'https://x.com/Shobhit940',
+    domain: 'x.com',
+    description: 'The person behind Anything. Share a thought, an idea, or something you’d love to see next.',
     isPinned: true,
-    tags: ['design', 'craft'],
+    tags: ['anything'],
     createdAt: Date.now() - 1000 * 60 * 60 * 3,
   },
   {
