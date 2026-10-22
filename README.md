@@ -3,11 +3,11 @@
 </p>
 
 <h1 align="center">Anything.</h1>
-<p align="center"><strong>Good finds. One place.</strong></p>
+<p align="center"><strong>Good finds. Yours to keep.</strong></p>
 
 <p align="center">
   A calm place for the things you want to keep.<br />
-  Links, notes, images, code, and ideas — together in your browser.
+  Links, notes, images, code, and ideas — in one personal collection.
 </p>
 
 <p align="center">
@@ -29,9 +29,13 @@ Anything gives them a home, so you can get back to what you were doing.
 - **Set the mood.** Switch between porcelain light and matte black. Your theme choice stays with you.
 - **Take it with you.** Export a JSON backup and import it when you need it.
 
-No account to create. No workspace to set up. Just open it and keep something.
+Start without an account, or continue with Google and choose whether to sync your collection. Signing in alone does not upload your saves.
 
 ## A look inside
+
+**A simple place to start.**
+
+![Welcome screen with the Anything logo, Google login, an account-free option, and the bottom quick-save bar](docs/images/welcome.jpg)
 
 **Your collection, at a glance.**
 
@@ -39,13 +43,13 @@ No account to create. No workspace to set up. Just open it and keep something.
 
 **Or give your collection a little light.**
 
-![Porcelain light collection with bookmarks, notes, Markdown, and a checklist](docs/images/collection-light.jpg)
+![Light collection with pinned saves, public posts, uncropped images, and the compact quick-save bar](docs/images/collection-light.jpg)
 
 **A little room to think.**
 
 ![Simple capture dialog with automatic content detection, an optional title, and a clear save action](docs/images/capture-new.jpg)
 
-<sub>Real app screenshots with example saves and public links.</sub>
+<sub>Current web app screenshots. Collection screenshots show public links and posts; the capture dialog uses example text.</sub>
 
 ## A few keys worth knowing
 
@@ -102,11 +106,11 @@ Inside Anything, the compact bottom bar also accepts one or several links. Paste
 
 Copy capture works with website text while the browser is running. It does not monitor other desktop apps or provide cloud sync. Use the same browser profile and Anything address as your collection; a different origin or profile has separate storage.
 
-## Your collection stays in this browser
+## Storage and optional sync
 
-Items are saved in browser storage. Export a backup before clearing browser data or moving to another device. Optional Google sign-in and Firebase cloud sync can be configured with the [Firebase setup guide](docs/FIREBASE.md). Signing in alone does not upload your collection; enable **Sync this collection** from your profile to merge saves and folders across devices.
+Anything saves items in your browser. Export a backup before clearing browser data or moving to a different browser or device. Optional Google sign-in and Firebase cloud sync can be configured with the [Firebase setup guide](docs/FIREBASE.md). Enable **Cloud sync** from your profile/settings to merge saves and folders across devices.
 
-Link previews may contact the linked site and external metadata or image services. Microlink provides general metadata, FxTwitter handles X posts, and Noembed handles supported video links. Preview requests have a five-second deadline; you can save immediately and use Refresh preview in the item details to try again. Some sites do not provide a usable cover image. Masked secret fields are stored locally; masking is **not encryption**.
+Link previews may contact the linked site and external metadata or image services. Microlink provides general metadata, FxTwitter handles X posts, and Noembed handles supported video links. Preview requests have a five-second deadline; you can save immediately and use Refresh preview in the item details to try again. Some sites do not provide a usable cover image. Secret fields are included when you enable collection sync; masking is **not encryption**, and cloud secrets are not end-to-end encrypted. Uploaded images over the app’s Firestore record limit remain local and report a sync error.
 
 ---
 

@@ -603,14 +603,11 @@ export function App() {
       {/* Main Content Area */}
       <main className={`flex-1 w-full collection-main max-w-[1600px] mx-auto px-5 sm:px-9 pt-2 pb-10 ${items.length === 0 ? 'welcome-main' : ''}`}>
         
-        {/* Creative Empty Canvas (Centered, with on-screen motion canvas) */}
         {items.length === 0 ? (
           <CreativeEmptyView
             account={account}
             onOpenCapture={() => handleOpenCapture('note')}
             onDirectPaste={handleDirectPaste}
-            onLoadStarters={handleImportItems}
-            isDark={isDark}
           />
         ) : (
           <>
