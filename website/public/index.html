@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -58,9 +58,90 @@
           </figure>
         </fieldset>
       </div>
-      <div class="wrap closing-line reveal"><span>A home for your next good find.</span><div class="platform-links"><a class="button" data-link="webApp" hidden>Make it yours <span aria-hidden="true">&#8599;</span></a><a class="text-link" data-link="googlePlay" hidden>Google Play &#8599;</a><a class="text-link" data-link="appStore" hidden>App Store &#8599;</a></div></div>
     </section>
   </main>
-  <footer class="site-footer wrap"><div><a class="wordmark" href="./"><span class="site-symbol" aria-hidden="true"></span>anything.</a><p>© <span data-year>2026</span> <span data-owner>Anything</span></p></div><nav class="legal-nav" aria-label="Legal"><a href="privacy.html">Privacy</a><a href="permissions.html">Permissions</a><a href="terms.html">Terms</a><a href="delete-account.html">Data &amp; deletion</a><a data-contact hidden>Contact</a><a data-link="sourceCode" hidden>Source ↗</a></nav></footer>
+  <footer class="site-footer space-footer" id="site-footer">
+    <div class="space-backdrop" aria-hidden="true">
+      <picture>
+        <source media="(max-width:700px)" srcset="assets/footer-space-mobile.webp" />
+        <img class="footer-bg-img" src="assets/footer-space.webp" width="1376" height="768" alt="" loading="lazy" />
+      </picture>
+      <div class="space-overlay"></div>
+    </div>
+
+    <div class="footer-content">
+      <!-- Top Section: Brand & 3 Columns (matching reference layout) -->
+      <div class="footer-header">
+        <div class="footer-brand">
+          <a class="wordmark" href="./" aria-label="Anything home">
+            <span class="site-symbol" aria-hidden="true"></span>anything.
+          </a>
+          <p class="brand-desc">
+            A calm, local-first space for everything worth keeping. Save links, notes, images, and fleeting ideas with ease.
+          </p>
+          <div class="brand-socials" aria-label="Quick links">
+            <a class="social-link" data-link="sourceCode" href="https://github.com/ShobhitShah1/anything" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            </a>
+            <a class="social-link" data-link="webApp" href="#collection" aria-label="Web application">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20M12 2a14.5 14.5 0 010 20M2 12h20"/></svg>
+            </a>
+            <a class="social-link" data-contact hidden aria-label="Contact operator">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
+            </a>
+            <a class="social-link" href="#collection" aria-label="Explore collection">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2v16z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- 3 Columns Matching Reference -->
+        <nav class="footer-columns" aria-label="Footer navigation">
+          <div class="footer-col">
+            <span class="col-title">Product</span>
+            <ul class="col-list" role="list">
+              <li><a data-link="webApp" href="#collection">Web application</a></li>
+              <li><a href="#collection">Features</a></li>
+              <li><a href="#anywhere">Mobile app</a></li>
+              <li><a data-link="sourceCode" href="https://github.com/ShobhitShah1/anything" target="_blank" rel="noopener noreferrer">Source code</a></li>
+              <li><span class="col-item-muted" data-fallback="googlePlay">Android (Preview)</span></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <span class="col-title">Information</span>
+            <ul class="col-list" role="list">
+              <li><a href="privacy.html">Privacy policy</a></li>
+              <li><a href="permissions.html">Permissions</a></li>
+              <li><a href="terms.html">Terms of service</a></li>
+              <li><a href="delete-account.html">Data &amp; deletion</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <span class="col-title">Support</span>
+            <ul class="col-list" role="list">
+              <li><a href="#collection">Collection preview</a></li>
+              <li><a data-contact hidden>Contact operator</a></li>
+              <li><a data-link="sourceCode" href="https://github.com/ShobhitShah1/anything" target="_blank" rel="noopener noreferrer">GitHub repo</a></li>
+              <li><a href="#main" class="jump-top">Back to top ↑</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Spacious Middle Scenic Horizon (Revealing the pixel ringed planet and observatory landscape) -->
+      <div class="footer-scenic-space" aria-hidden="true"></div>
+
+      <!-- Bottom Line & Bar (matching reference layout) -->
+      <div class="footer-bottom-divider"></div>
+      <div class="footer-bottom-bar">
+        <div class="bar-left">
+          <p>© <span data-year>2026</span> <span data-owner>Anything</span>. All Rights Reserved</p>
+        </div>
+        <div class="bar-right">
+          <span>A space for everything</span>
+        </div>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
