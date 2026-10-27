@@ -19,7 +19,7 @@ Store pricing is deliberately read from the purchase flow, not invented on the s
 
 From this folder: `npm run check`, then `npm run preview`. The local URL is `http://127.0.0.1:5182`. No install or build is needed. `public/` is the complete static site, intentionally tracked here.
 
-The landscape artwork in `public/assets/hero-landscape.webp` is original, generated for Anything in charcoal and ivory. The foreground images are unaltered app captures. The landscape has a small CSS scroll-driven drift when supported; sections reveal once through IntersectionObserver. Reduced-motion preferences remove the motion. Content remains readable if animation APIs are unsupported.
+The original monochrome pixel-art observatory is `public/assets/pixel-space.webp` (198 KB), generated with the built-in imagegen tool. Prompt: a charcoal-and-ivory pixel-art space scene, ringed planet, lunar observatory, square stars and open dark space for the headline; no text, logos or neon. CSS adds a subtle scroll-driven drift where supported, three fading stars and once-only section reveals. Reduced-motion preferences remove movement. No animation library or scroll event loop is required.
 
 ## Legal pages
 
@@ -36,6 +36,8 @@ GitHub Pages uses the repository's existing `.github/workflows/deploy.yml`. It b
 
 To publish a website edit, commit the changed files under `website/` and push to `main`. The **Deploy to GitHub Pages** action publishes the app and website together. Check the action's deployment result before treating an update as live. No separate website build, hosting account or access token is needed. `store-listing/` stays local, is ignored by Git, and is never copied into the Pages artifact.
 
-Design references: [Are.na](https://www.are.na/about) for collection-first presentation and [Kinopio](https://kinopio.club/) for making saved ideas tangible. Product images are real captures of the Android and web apps with the same fictional sample collection. There are no invented endorsements, ratings or download links.
+Design references: [Are.na](https://www.are.na/about) for collection-first presentation and [Kinopio](https://kinopio.club/) for making saved ideas tangible. The existing published app images are retained unchanged at the owner?s request. Replace `public/assets/web-dark.png`, `mobile-home.png` and `mobile-folders.png` with approved local-data captures later. No new demo records or screenshot replacements are shipped in this redesign.
 
 Visual direction for the illustrated redesign: [Surfsky on Behance](https://www.behance.net/gallery/256361907/Surfsky-Website-Branding-for-Antidetect-Browser/modules/1495010417), adapted through original neutral artwork and Anything?s real interface. No reference images or third-party branding are included in the shipped assets.
+
+Space art reference: [NASA?s retrofuturistic space art](https://www.nasa.gov/image-article/retrofuturistic-nasa-space-art/) for the observatory atmosphere. The shipped pixel illustration is original; no NASA imagery or branding is used.
