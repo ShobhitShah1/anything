@@ -1,3 +1,4 @@
+param([switch]$NativeOnly)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $assetDirectory = Join-Path (Split-Path $PSScriptRoot -Parent) 'assets'
@@ -25,7 +26,13 @@ function Write-Icon($Source, $Destination, $Size, $ContentSize, $Background, $Mo
         $rect = [System.Drawing.Rectangle]::new($offset, $verticalOffset, $ContentSize, $ContentSize)
         $graphics.DrawImage($inputImage, $rect, 0, 0, $inputImage.Width, $inputImage.Height, [System.Drawing.GraphicsUnit]::Pixel, $attributes)
         $expectedAlpha = if ($Background) { 255 } else { 0 }
-        if ($bitmap.GetPixel(0, 0).A -ne $expectedAlpha -or $bitmap.GetPixel([int]($Size / 2), [int]($Height / 2)).A -eq 0) {
+        $visibleSamples = 0
+        for ($sampleY = 1; $sampleY -lt 8; $sampleY++) {
+            for ($sampleX = 1; $sampleX -lt 8; $sampleX++) {
+                if ($bitmap.GetPixel([int]($Size * $sampleX / 8), [int]($Height * $sampleY / 8)).A -gt 32) { $visibleSamples++ }
+            }
+        }
+        if ($bitmap.GetPixel(0, 0).A -ne $expectedAlpha -or $visibleSamples -lt 3) {
             throw "Invalid icon transparency or empty centre: $Destination"
         }
         $bitmap.Save($Destination, [System.Drawing.Imaging.ImageFormat]::Png)
@@ -36,19 +43,37 @@ function Write-Icon($Source, $Destination, $Size, $ContentSize, $Background, $Mo
         $inputImage.Dispose()
     }
 }
-# Use the same neutral mascot and charcoal canvas on every platform.
-foreach ($name in @('icon-source.png', 'icon.png', 'icon-ios-light.png', 'icon-ios-dark.png')) {
-    Write-Icon 'icon-mascot.png' (Join-Path $assetDirectory $name) 1024 940 $canvas
+# Selected monochrome a; retain its transparent openings and folded corner.
+foreach ($name in @('icon.png', 'icon-ios-light.png', 'icon-ios-dark.png')) {
+    Write-Icon 'app-icon-mark.png' (Join-Path $assetDirectory $name) 1024 1024 $canvas
 }
 # Keep adaptive foreground artwork within the launcher's central safe zone.
-Write-Icon 'icon-mascot.png' (Join-Path $assetDirectory 'icon-foreground.png') 1024 720 $null
-Write-Icon 'icon-mascot.png' (Join-Path $assetDirectory 'android-icon-monochrome.png') 1024 720 $null $true
-Write-Icon 'icon-source.png' (Join-Path $assetDirectory 'favicon.png') 64 64 $canvas
-Write-Icon 'icon-mascot.png' (Join-Path $webDirectory 'anything-mascot.png') 256 256 $null
-Write-Icon 'icon-source.png' (Join-Path $webDirectory 'anything-icon.png') 512 512 $canvas
-Write-Icon 'icon-source.png' (Join-Path $webDirectory 'favicon-32.png') 32 32 $canvas
-Write-Icon 'icon-source.png' (Join-Path $webDirectory 'favicon-64.png') 64 64 $canvas
-Write-Icon 'icon-source.png' (Join-Path $webDirectory 'apple-touch-icon.png') 180 180 $canvas
-Write-Icon 'icon-mascot.png' (Join-Path $assetDirectory 'splash-art.png') 1080 420 $canvas $false 2400
+Write-Icon 'app-icon-mark.png' (Join-Path $assetDirectory 'icon-foreground.png') 1024 760 $null
+Write-Icon 'app-icon-mark.png' (Join-Path $assetDirectory 'android-icon-monochrome.png') 1024 760 $null $true
+Write-Icon 'app-icon-mark.png' (Join-Path $assetDirectory 'brand-mark.png') 512 512 $null
+if ($NativeOnly) { Write-Output 'Generated selected app icons only; web and splash assets were not rewritten.'; return }
+Write-Icon 'app-icon-mark.png' (Join-Path $webDirectory 'anything-mark.png') 512 512 $null
+Write-Icon 'icon.png' (Join-Path $webDirectory 'anything-icon.png') 512 512 $canvas
+Write-Icon 'icon.png' (Join-Path $webDirectory 'favicon-32.png') 32 32 $canvas
+Write-Icon 'icon.png' (Join-Path $webDirectory 'favicon-64.png') 64 64 $canvas
+Write-Icon 'icon.png' (Join-Path $webDirectory 'apple-touch-icon.png') 180 180 $canvas
+$websiteAssets = Join-Path $webDirectory '../website/public/assets'
+if (Test-Path -LiteralPath $websiteAssets) {
+    Copy-Item -LiteralPath (Join-Path $webDirectory 'anything-mark.png') -Destination (Join-Path $websiteAssets 'mark.png')
+    Copy-Item -LiteralPath (Join-Path $webDirectory 'anything-icon.png') -Destination (Join-Path $websiteAssets 'icon.png')
+}
+$splashBitmap = [System.Drawing.Bitmap]::new(1080, 2400, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$splashGraphics = [System.Drawing.Graphics]::FromImage($splashBitmap)
+$launchMark = [System.Drawing.Image]::FromFile((Join-Path $assetDirectory 'app-icon-mark.png'))
+try {
+    $splashGraphics.Clear([System.Drawing.ColorTranslator]::FromHtml($canvas))
+    $splashGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $splashGraphics.DrawImage($launchMark, [System.Drawing.Rectangle]::new(390, 1050, 300, 300))
+    $splashBitmap.Save((Join-Path $assetDirectory 'splash-art.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+} finally {
+    $splashGraphics.Dispose()
+    $splashBitmap.Dispose()
+    $launchMark.Dispose()
+}
 Copy-Item -LiteralPath (Join-Path $assetDirectory 'splash-art.png') -Destination (Join-Path $assetDirectory '../modules/anything-launch/android/src/main/res/drawable-nodpi/anything_launch_art.png')
 Write-Output 'Generated neutral native/web icons and matching splash; alpha and content checks passed.'

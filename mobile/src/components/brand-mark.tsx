@@ -1,66 +1,38 @@
-import { useEffect, useId } from 'react';
-import Svg, {
-  Circle,
-  Defs,
-  Ellipse,
-  G,
-  Mask,
-  Path,
-  RadialGradient,
-  Rect,
-  Stop,
-} from 'react-native-svg';
+import { useEffect } from 'react';
 import Animated, {
   cancelAnimation,
   Easing,
-  useAnimatedProps,
+  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { useCollection } from '../state/collection';
-const AnimatedGroup = Animated.createAnimatedComponent(G);
+
 export function BrandMark({ size = 36, animate = false }: { size?: number; animate?: boolean }) {
-  const id = useId().replace(/:/g, '');
   const { colors } = useCollection();
   const reduced = useReducedMotion();
-  const rotation = useSharedValue(0);
+  const progress = useSharedValue(animate && !reduced ? 0 : 1);
   useEffect(() => {
-    if (animate && !reduced)
-      rotation.value = withRepeat(
-        withTiming(360, { duration: 14000, easing: Easing.linear }),
-        -1,
-        false,
-      );
-    return () => cancelAnimation(rotation);
-  }, [animate, reduced, rotation]);
-  const flow = useAnimatedProps(() => ({ rotation: rotation.value, originX: 20, originY: 20 }));
+    progress.set(
+      animate && !reduced
+        ? withTiming(1, { duration: 520, easing: Easing.bezier(0.23, 1, 0.32, 1) })
+        : 1,
+    );
+    return () => cancelAnimation(progress);
+  }, [animate, reduced, progress]);
+  const motion = useAnimatedStyle(() => ({
+    opacity: 0.85 + progress.get() * 0.15,
+    transform: [{ translateY: (1 - progress.get()) * 4 }, { scale: 0.96 + progress.get() * 0.04 }],
+  }));
   return (
-    <Svg width={size} height={size} viewBox="0 0 40 40" accessibilityLabel="Anything logo">
-      <Defs>
-        <Mask id={`${id}mark`}>
-          <Circle cx="16" cy="22" r="10" stroke="white" strokeWidth="5" fill="none" />
-          <Path d="M26 12v20" stroke="white" strokeWidth="5" strokeLinecap="round" />
-          <Circle cx="35" cy="32" r="2.5" fill="white" />
-        </Mask>
-        <RadialGradient id={`${id}pearl`}>
-          <Stop stopColor="#bdadf4" />
-          <Stop offset={0.5} stopColor="#84bdcc" stopOpacity={0.9} />
-          <Stop offset="1" stopColor="#84bdcc" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id={`${id}warm`}>
-          <Stop stopColor="#f0c6aa" />
-          <Stop offset="1" stopColor="#d9b4cc" stopOpacity="0" />
-        </RadialGradient>
-      </Defs>
-      <G mask={`url(#${id}mark)`}>
-        <Rect width="40" height="40" fill={colors.ink} />
-        <AnimatedGroup animatedProps={flow} opacity={0.85}>
-          <Ellipse cx="10" cy="13" rx="24" ry="17" fill={`url(#${id}pearl)`} />
-          <Ellipse cx="30" cy="30" rx="21" ry="17" fill={`url(#${id}warm)`} />
-        </AnimatedGroup>
-      </G>
-    </Svg>
+    <Animated.Image
+      source={require('../../assets/brand-mark.png')}
+      accessibilityRole="image"
+      accessibilityLabel="Anything logo"
+      resizeMode="contain"
+      fadeDuration={0}
+      style={[{ width: size, height: size, tintColor: colors.ink }, motion]}
+    />
   );
 }

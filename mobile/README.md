@@ -23,19 +23,19 @@ On this computer, a standalone copy lives at `C:\Users\Preneel\Desktop\AnythingM
 
 ## Launch splash
 
-Android uses the local `modules/anything-launch` module, without Expo SplashScreen. `MainActivity` attaches an `ImageView` containing the approved artwork directly to the window before React draws. It fills the entire window with `CENTER_CROP`, plays a 720 ms settle, and stays in place until collection storage and the first React view are ready. Native code then fades it out for 240 ms and releases the bitmap. Reduced motion skips the animation. A storage error reveals the retry screen instead of trapping the user behind the artwork.
+Android uses the local `modules/anything-launch` module, without Expo SplashScreen. `MainActivity` attaches an `ImageView` containing the approved artwork directly to the window before React draws. It fills the entire window with `CENTER_CROP`, plays a 420 ms settle, and stays in place until collection storage and the first React view are ready. Native code then fades it out for 180 ms and releases the bitmap. Reduced motion skips the animation. A storage error reveals the retry screen instead of trapping the user behind the artwork.
 
 Android 12+ still creates a system starting window. The custom launch theme gives it a transparent drawable instead of the app icon and the same charcoal background. The first Activity frame displays the full artwork. The JavaScript artwork animation remains as a fallback for iOS and development clients that do not yet contain the custom Android module.
 
 If building locally with an existing `android/` directory, run `npm run prepare:android` before your build. The plugin removes the old Expo splash registration and applies the custom launch theme. This synchronizes configuration without compiling or installing the app. EAS generates the ignored native project automatically. The replacement native launcher requires a new binary; testing JavaScript in an old client does not verify the replacement native code. Verify a cold launch from the installed preview/release app icon, rather than Fast Refresh or returning to an already open app.
 
-## Smaller release output
-
 ## Icon and splash artwork
 
-The app uses the neutral pocket mascot on the same `#0d0d0f` charcoal as its UI. `assets/icon-mascot.png` is the transparent source; the launcher adds the charcoal background separately. iOS/store icons are opaque. The text-free splash uses the same mascot and retains the custom launch animation.
+The selected brand is the custom lowercase “a” with a folded corner, in neutral off-white and grey on `#0d0d0f`. `assets/app-icon-mark.png` is the single transparent source for launcher icons, the in-app mark, web branding and the splash emblem. Theme-aware marks use its alpha silhouette so the same shape remains visible in light and dark themes. The generator creates the required iOS/store, Android adaptive/monochrome and web sizes; superseded mascot and Fold assets have been removed. The text-free splash places the selected mark on solid charcoal and settles/fades into the loaded app. Run the generator with `-NativeOnly` only when deliberately updating native icon sizes without rewriting website or splash assets.
 
 Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-icons.ps1` from `mobile/` to regenerate native icons, web icons and both copies of the splash bitmap. Afterward run `npm run prepare:android` to sync an existing generated Android project, then build when ready. JavaScript reloads cannot update an installed launcher icon or native splash.
+
+## Smaller release output
 
 From `mobile/`, run `yarn compress` (or `npm run compress`) to export the Android JavaScript bundle with production minification and Hermes bytecode into ignored `dist/`. This exports JavaScript and assets; it does not rebuild or compress an installed APK.
 

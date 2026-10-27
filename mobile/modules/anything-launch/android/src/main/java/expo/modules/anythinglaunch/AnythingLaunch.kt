@@ -46,13 +46,13 @@ private class LaunchArtwork(context: Context) : ImageView(context) {
 
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
-    scaleX = if (motionEnabled) 1.04f else 1f
+    scaleX = if (motionEnabled) 0.98f else 1f
     scaleY = scaleX
-    animate().scaleX(1f).scaleY(1f).setDuration(if (motionEnabled) 720L else 0L)
+    animate().scaleX(1f).scaleY(1f).setDuration(if (motionEnabled) 420L else 0L)
       .setInterpolator(PathInterpolator(0.23f, 1f, 0.32f, 1f))
       .withEndAction {
         introFinished = true
-        if (onHidden != null) fadeOut(if (motionEnabled) 240L else 0L)
+        if (onHidden != null) fadeOut(if (motionEnabled) 180L else 0L)
       }.start()
   }
 
@@ -63,8 +63,9 @@ private class LaunchArtwork(context: Context) : ImageView(context) {
       introFinished = true
       scaleX = 1f
       scaleY = 1f
+      translationY = 0f
     }
-    if (introFinished) fadeOut(if (reducedMotion || !motionEnabled) 0L else 240L)
+    if (introFinished) fadeOut(if (reducedMotion || !motionEnabled) 0L else 180L)
   }
 
   private fun fadeOut(duration: Long) {

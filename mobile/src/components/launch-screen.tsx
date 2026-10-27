@@ -51,7 +51,7 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
       withTiming(
         1,
         {
-          duration: reduced ? 0 : 720,
+          duration: reduced ? 0 : 420,
           easing: Easing.bezier(0.23, 1, 0.32, 1),
         },
         (finished) => {
@@ -66,7 +66,7 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
     if (nativeLaunch || !showContent || !contentLaidOut || !introFinished) return;
     // Keep the bitmap mounted until the fade ends; unmounting first can clear exit frames.
     opacity.set(
-      withTiming(0, { duration: reduced ? 0 : 240 }, (finished) => {
+      withTiming(0, { duration: reduced ? 0 : 180 }, (finished) => {
         if (finished) scheduleOnRN(setDismissed, true);
       }),
     );
@@ -76,7 +76,7 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
   const artworkStyle = useAnimatedStyle(() => ({
     transform: reduced
       ? []
-      : [{ translateY: (1 - intro.get()) * 8 }, { scale: 1 + (1 - intro.get()) * 0.04 }],
+      : [{ scale: 0.98 + intro.get() * 0.02 }],
   }));
   const coverStyle = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 
