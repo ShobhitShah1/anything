@@ -11,13 +11,21 @@
 </p>
 
 <p align="center">
-  <a href="https://shobhitshah1.github.io/anything/about/">Website</a> ·
+  <a href="https://shobhitshah1.github.io/anything/about/">Promotional website</a> ·
   <a href="https://shobhitshah1.github.io/anything/">Open web app</a> ·
   <a href="#a-look-inside">Take a look</a> ·
   <a href="#run-it-locally">Get started</a> ·
   <a href="#save-from-your-browser">Browser extension</a> ·
   <a href="https://github.com/ShobhitShah1/anything/issues">Share an idea</a>
 </p>
+
+## Website links
+
+- **Promotional website:** [shobhitshah1.github.io/anything/about/](https://shobhitshah1.github.io/anything/about/) ? the app introduction, web preview, mobile gallery, and policy links.
+- **Web app:** [shobhitshah1.github.io/anything/](https://shobhitshah1.github.io/anything/) ? open your collection and sign in.
+- **Local promotional preview:** [127.0.0.1:5501/website/public/index.html](http://127.0.0.1:5501/website/public/index.html) when Live Server is running on port 5501. This address works only on your computer.
+
+The public hostname is `shobhitshah1.github.io`; `/anything/about/` is the promotional site's path. Edit its files in [`website/public/`](website/public/) and its links/support details in [`site-config.json`](website/public/site-config.json). See the [website guide](website/README.md) for the standalone preview command. Push to `main` to deploy both sites through [GitHub Actions](https://github.com/ShobhitShah1/anything/actions/workflows/deploy.yml).
 
 ## Less scattered. More saved.
 

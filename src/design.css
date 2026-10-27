@@ -438,29 +438,32 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 /* Keep the welcome as one open composition, without decorative UI. */
 .mind-empty { display: flex; flex-direction: column; justify-content: center; width: 100%; max-width: 1080px; min-height: calc(100dvh - 220px); margin: 0 auto; padding: 40px clamp(12px, 4vw, 64px); text-align: center; }
 .welcome-inner { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 0; }
-.mind-empty-art, .mind-empty-art > .brand-glass { width: 88px; height: 88px; }
-.mind-empty-art { margin: 0 0 30px; }
-.mind-empty .welcome-headline { margin: 0; color: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-size: clamp(42px, 4.5vw, 64px); font-weight: 400; line-height: 1.05; letter-spacing: -.065em; text-wrap: balance; }
-.welcome-description { margin-top: 22px; color: var(--muted); font-size: 16px; line-height: 1.6; }
-.mind-empty-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 400px; margin-top: 32px; }
+.mind-empty-art, .mind-empty-art > .brand-glass { width: 56px; height: 56px; }
+.mind-empty-art { margin: 0 0 24px; }
+.mind-empty .welcome-headline { margin: 0; color: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-size: clamp(38px, 4vw, 52px); font-weight: 400; line-height: 1.1; letter-spacing: -.045em; text-wrap: balance; }
+.welcome-description { max-width: 280px; margin-top: 18px; color: var(--muted); font-size: 14px; line-height: 1.65; }
+.mind-empty-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 280px; margin-top: 26px; }
 .mind-empty .google-sign-in, .mind-empty .mind-save-button, .mind-empty .welcome-ghost { display: inline-flex; align-items: center; justify-content: center; flex: auto; width: 100%; min-height: 48px; border-radius: 10px; font-size: 13px; }
 .mind-empty .mind-save-button { background: var(--ink); color: var(--canvas); border: none; cursor: pointer; transition: opacity 140ms; }
 .mind-empty .mind-save-button:hover { opacity: .82; }
-.mind-empty .google-sign-in { background: #fff; color: #1f1f1f; border: 1px solid #dadce0; }
+.mind-empty .google-sign-in { align-self: center; flex: none; width: auto; min-height: 44px; padding: 10px 14px; background: transparent; color: var(--ink); border: 0; font-size: 12px; }
+.mind-empty .google-sign-in > span { color: inherit; }
+.mind-empty .google-sign-in svg { width: 16px; height: 16px; flex-shrink: 0; }
+.mind-empty .google-sign-in:hover { background: var(--paper); }
 .welcome-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 0 20px; cursor: pointer; }
 .welcome-ghost:hover { background: var(--paper); }
 .welcome-inner > .account-error { max-width: 560px; margin-top: 16px; color: var(--danger-ink); font-size: 12px; }
-.welcome-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; margin-top: 24px; color: var(--muted); font-size: 11px; }
+.welcome-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 22px; color: var(--muted); font-size: 10px; }
 .welcome-links a:hover { color: var(--ink); }
 @media (max-width: 767px) {
   .mind-empty { min-height: calc(100dvh - 210px); padding: 32px 8px; }
   .welcome-inner { padding-bottom: 28px; }
-  .mind-empty-art, .mind-empty-art > .brand-glass { width: 76px; height: 76px; }
+  .mind-empty-art, .mind-empty-art > .brand-glass { width: 48px; height: 48px; }
   .mind-empty-art { margin-bottom: 24px; }
-  .mind-empty .welcome-headline { font-size: clamp(38px, 7vw, 52px); }
+  .mind-empty .welcome-headline { font-size: clamp(32px, 7vw, 42px); }
   .welcome-description { margin-top: 18px; font-size: 14px; }
   .mind-empty-actions { flex-direction: column; margin-top: 28px; }
-  .mind-empty .google-sign-in, .mind-empty .mind-save-button, .mind-empty .welcome-ghost { flex: auto; width: 100%; }
+  .mind-empty .mind-save-button, .mind-empty .welcome-ghost { flex: auto; width: 100%; }
 }
 .mind-options { inset: auto auto 24px 80px; width: min(380px, calc(100vw - 92px)); max-height: calc(100dvh - 48px); margin: 0; padding: 18px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-radius: 20px; box-shadow: 0 16px 60px #11182720; }
 .settings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 2px 2px 16px; }
