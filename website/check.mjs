@@ -1,8 +1,8 @@
 ﻿import assert from "node:assert/strict";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
-import { safeWebUrl, safeEmail, legalReady } from "./dist/shared.js";
-const root = resolve(import.meta.dirname, "dist");
+import { safeWebUrl, safeEmail, legalReady } from "./public/shared.js";
+const root = resolve(import.meta.dirname, "public");
 const config = JSON.parse(
   (await readFile(resolve(root, "site-config.json"), "utf8")).replace(
     /^\uFEFF/,
@@ -50,7 +50,7 @@ for (const filename of await readdir(root))
     }
   }
 console.log(
-  "Showcase checks passed: links/assets, policy completeness gates, URL/email safety.",
+  "Website checks passed: links/assets, policy completeness gates, URL/email safety.",
 );
 console.log(
   legalReady(config)

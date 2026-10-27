@@ -1,4 +1,2 @@
-﻿!dist/
-!dist/**
 artifacts/
 .openai/

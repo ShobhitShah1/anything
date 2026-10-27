@@ -10,7 +10,7 @@ assert.ok(
   "Build the web app before packaging Pages.",
 );
 await mkdir(target, { recursive: true });
-await cp(resolve(import.meta.dirname, "dist"), target, { recursive: true });
+await cp(resolve(import.meta.dirname, "public"), target, { recursive: true });
 for (const name of [
   "index.html",
   "privacy.html",
@@ -21,5 +21,5 @@ for (const name of [
 ])
   assert.ok((await stat(resolve(target, name))).isFile());
 console.log(
-  "Pages package ready: web app at /, showcase and policies at /about/.",
+  "Pages package ready: web app at /, website and policies at /about/.",
 );

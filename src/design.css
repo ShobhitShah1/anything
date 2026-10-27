@@ -443,9 +443,10 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 .mind-empty .welcome-headline { margin: 0; color: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-size: clamp(42px, 4.5vw, 64px); font-weight: 400; line-height: 1.05; letter-spacing: -.065em; text-wrap: balance; }
 .welcome-description { margin-top: 22px; color: var(--muted); font-size: 16px; line-height: 1.6; }
 .mind-empty-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 400px; margin-top: 32px; }
-.mind-empty .google-sign-in, .mind-empty .mind-save-button, .mind-empty .welcome-ghost, .mind-empty .welcome-local { display: inline-flex; align-items: center; justify-content: center; flex: auto; width: 100%; min-height: 48px; border-radius: 10px; font-size: 13px; }
+.mind-empty .google-sign-in, .mind-empty .mind-save-button, .mind-empty .welcome-ghost { display: inline-flex; align-items: center; justify-content: center; flex: auto; width: 100%; min-height: 48px; border-radius: 10px; font-size: 13px; }
 .mind-empty .mind-save-button { background: var(--ink); color: var(--canvas); border: none; cursor: pointer; transition: opacity 140ms; }
 .mind-empty .mind-save-button:hover { opacity: .82; }
+.mind-empty .google-sign-in { background: transparent; color: var(--ink); border: 1px solid var(--line); }
 .welcome-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 0 20px; cursor: pointer; }
 .welcome-ghost:hover { background: var(--paper); }
 .welcome-inner > .account-error { max-width: 560px; margin-top: 16px; color: var(--danger-ink); font-size: 12px; }
@@ -459,7 +460,7 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
   .mind-empty .welcome-headline { font-size: clamp(38px, 7vw, 52px); }
   .welcome-description { margin-top: 18px; font-size: 14px; }
   .mind-empty-actions { flex-direction: column; margin-top: 28px; }
-  .mind-empty .google-sign-in, .mind-empty .mind-save-button, .mind-empty .welcome-ghost, .mind-empty .welcome-local { flex: auto; width: 100%; }
+  .mind-empty .google-sign-in, .mind-empty .mind-save-button, .mind-empty .welcome-ghost { flex: auto; width: 100%; }
 }
 .mind-options { inset: auto auto 24px 80px; width: min(380px, calc(100vw - 92px)); max-height: calc(100dvh - 48px); margin: 0; padding: 18px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-radius: 20px; box-shadow: 0 16px 60px #11182720; }
 .settings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 2px 2px 16px; }
@@ -578,5 +579,3 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
   .capture-note-composer > div:first-child > button { font-size: 10px; padding-inline: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .account-spinner { animation: none; } }
-.mind-empty .welcome-local { min-height: 40px; border: 0; padding: 8px 12px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
-@media (hover: hover) { .mind-empty .welcome-local:hover { color: var(--ink); } }

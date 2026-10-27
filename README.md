@@ -37,14 +37,14 @@ Start without an account, or continue with Google and choose whether to sync you
 
 **On the web.**
 
-![Anything web collection with the folded a logo and sample notes, a checklist, an image and a reading guide](showcase/dist/assets/web-dark.png)
+![Anything web collection with the folded a logo and sample notes, a checklist, an image and a reading guide](website/public/assets/web-dark.png)
 
 **On mobile.**
 
 <p align="center">
-  <img src="showcase/dist/assets/mobile-home.png" alt="Anything Android collection with search, filters and quick capture" width="280" />
+  <img src="website/public/assets/mobile-home.png" alt="Anything Android collection with search, filters and quick capture" width="280" />
   &nbsp;
-  <img src="showcase/dist/assets/mobile-folders.png" alt="Anything Android folders showing Inspiration, Everyday, Reading and Build ideas" width="280" />
+  <img src="website/public/assets/mobile-folders.png" alt="Anything Android folders showing Inspiration, Everyday, Reading and Build ideas" width="280" />
 </p>
 
 <sub>Unaltered captures of the running web and Android apps using fictional sample content. No personal account or private saves are shown.</sub>
@@ -53,7 +53,9 @@ Start without an account, or continue with Google and choose whether to sync you
 
 The Android app lives in [`mobile/`](mobile/README.md). See its setup guide for development builds and [purchase setup](mobile/PURCHASES.md) before configuring subscriptions. A public store download is not linked until the release is available.
 
-The [showcase website](https://shobhitshah1.github.io/anything/about/) introduces mobile and web together. Its [source and editing guide](showcase/README.md) cover the static pages, product images and the single [configuration file](showcase/dist/site-config.json) for support details, store links and policy text. Privacy, permissions, terms and data-deletion pages remain explicitly marked as drafts until the operator completes the release details.
+The [product website](https://shobhitshah1.github.io/anything/about/) introduces mobile and web together. Its [source and editing guide](website/README.md) cover the static pages, product images and the single [configuration file](website/public/site-config.json) for support details, store links and policy text. Privacy, permissions, terms and data-deletion pages remain explicitly marked as drafts until the operator completes the release details.
+
+Project folders: `src/` and `public/` contain the collection web app, `mobile/` contains Android/iOS app code, and `website/public/` contains the product website. Push changes to `main` to publish through the existing GitHub Pages workflow. The local `store-listing/` screenshot studio is ignored and is not deployed.
 
 ## A few keys worth knowing
 

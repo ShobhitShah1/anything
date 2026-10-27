@@ -51,8 +51,8 @@ jobs:
       - name: Check capture, previews, and sync
         run: node --test src/utils/*.test.mjs public/sw.test.mjs extension/*.test.mjs
 
-      - name: Check showcase links and release configuration
-        run: node showcase/check.mjs
+      - name: Check product website and release configuration
+        run: node website/check.mjs
 
       - name: Build production bundle
         env:
@@ -64,8 +64,8 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
         run: npm run build
 
-      - name: Include app showcase and policies
-        run: node showcase/pages.mjs
+      - name: Include product website and policies
+        run: node website/pages.mjs
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

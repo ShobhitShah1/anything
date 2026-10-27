@@ -68,6 +68,7 @@ import { toggleSelection, toggleVisibleSelection } from '../utils/selection';
 import { QuickCaptureToolbar } from '../components/quick-capture-toolbar';
 import { AiEditorLight } from '../components/ai-editor-light';
 import { MarkdownContent } from '../components/markdown-content';
+import { AiResponseStatus } from '../components/ai-response-status';
 import type { SavedItem } from '../shared/types';
 import { fonts, space, type } from '../theme';
 
@@ -104,6 +105,8 @@ export default function Home() {
   }, []);
   const [saving, setSaving] = useState(false);
   const aiWorking = ai.phase !== 'idle';
+  const generationPhase = ai.phase === 'thinking' || ai.phase === 'streaming' ? ai.phase : 'idle';
+  const generating = generationPhase !== 'idle';
   const [controlsHeight, setControlsHeight] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
   const [deleteIds, setDeleteIds] = useState<readonly string[] | null>(null);
@@ -899,7 +902,7 @@ export default function Home() {
                 numberOfLines={captureOpen ? undefined : 1}
                 textAlignVertical={captureOpen ? 'top' : 'center'}
                 style={{
-                  display: rendered ? 'none' : 'flex',
+                  display: rendered || generating ? 'none' : 'flex',
                   flex: 1,
                   minWidth: 0,
                   paddingHorizontal: captureOpen ? 20 : 0,
@@ -910,7 +913,7 @@ export default function Home() {
                   color: colors.ink,
                 }}
               />
-              {rendered && (
+              {(rendered || generating) && (
                 <ScrollView
                   ref={responseRef}
                   style={{ flex: 1 }}
@@ -927,7 +930,15 @@ export default function Home() {
                       responseRef.current?.scrollToEnd({ animated: false });
                   }}
                 >
-                  <MarkdownContent text={quickText} streaming={ai.phase === 'streaming'} />
+                  <AiResponseStatus
+                    prompt={
+                      generating && ai.phase === 'thinking' ? quickText : ai.generated?.prompt || ''
+                    }
+                    phase={generationPhase}
+                  />
+                  {ai.phase !== 'thinking' && (
+                    <MarkdownContent text={quickText} streaming={ai.phase === 'streaming'} />
+                  )}
                 </ScrollView>
               )}
               <Pressable

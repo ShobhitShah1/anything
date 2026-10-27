@@ -11,6 +11,7 @@ node_modules
 mobile-template-history/
 dist
 dist-ssr
+/store-listing/
 *.local
 .env
 .env.*

@@ -15,11 +15,14 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({ account, o
       <div className="mind-empty-art" aria-hidden="true"><BrandMark /></div>
 
       <h1 className="welcome-headline">
-        Good finds.<br />Yours to keep.
+        Your collection<br />starts here.
       </h1>
-      <p className="welcome-description">Your links, notes and ideas. All together.</p>
+      <p className="welcome-description">Save a link, a note, or an idea for later.</p>
 
       <div className="mind-empty-actions">
+        <button type="button" className="mind-save-button" onClick={onOpenCapture}>
+          Save your first find
+        </button>
         {!account.user && (
           <GoogleSignInButton
             onClick={() => void account.signIn()}
@@ -27,19 +30,10 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({ account, o
           />
         )}
 
-        {account.user ? (
-          <>
-            <button type="button" className="mind-save-button" onClick={onOpenCapture}>
-              Save your first find
-            </button>
+        {account.user && (
             <button type="button" className="welcome-ghost" onClick={onDirectPaste}>
               Paste a link
             </button>
-          </>
-        ) : (
-          <button type="button" className="welcome-local" onClick={onOpenCapture}>
-            Start without an account
-          </button>
         )}
       </div>
 

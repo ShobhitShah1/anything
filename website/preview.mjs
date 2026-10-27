@@ -1,7 +1,7 @@
 ﻿import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
-const root = resolve(import.meta.dirname, "dist");
+const root = resolve(import.meta.dirname, "public");
 const port = Number(process.env.PORT || 5182);
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -9,6 +9,7 @@ const types = {
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".png": "image/png",
+  ".webp": "image/webp",
   ".jpg": "image/jpeg",
   ".svg": "image/svg+xml",
 };
@@ -36,5 +37,5 @@ createServer(async (req, res) => {
     res.writeHead(404, { "Content-Type": "text/plain" }).end("Not found");
   }
 }).listen(port, "127.0.0.1", () =>
-  console.log(`Anything showcase: http://127.0.0.1:${port}`),
+  console.log(`Anything website: http://127.0.0.1:${port}`),
 );
