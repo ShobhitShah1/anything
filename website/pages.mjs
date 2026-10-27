@@ -1,3 +1,4 @@
+import { renderLegalPages } from './render-legal.mjs';
 import { cp, mkdir, stat } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import assert from "node:assert/strict";
@@ -9,6 +10,7 @@ assert.ok(
   (await stat(resolve(output, "index.html"))).isFile(),
   "Build the web app before packaging Pages.",
 );
+await renderLegalPages();
 await mkdir(target, { recursive: true });
 await cp(resolve(import.meta.dirname, "public"), target, { recursive: true });
 for (const name of [

@@ -45,7 +45,7 @@ Start without an account, or continue with Google and choose whether to sync you
 
 **On the web.**
 
-![Anything web collection with the folded a logo and sample notes, a checklist, an image and a reading guide](website/public/assets/web-dark.png)
+![Anything web collection with the folded a logo and sample notes, a checklist, an image and a reading guide](website/public/assets/web-collection-1d403b273595.png)
 
 **On mobile.**
 

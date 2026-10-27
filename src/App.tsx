@@ -606,8 +606,6 @@ export function App() {
         {items.length === 0 ? (
           <CreativeEmptyView
             account={account}
-            onOpenCapture={() => handleOpenCapture('note')}
-            onDirectPaste={handleDirectPaste}
           />
         ) : (
           <>

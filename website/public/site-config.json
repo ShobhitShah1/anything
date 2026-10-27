@@ -30,7 +30,7 @@
   },
   "pages": {
     "privacy": {
-      "title": "Your collection. Your choices.",
+      "title": "Privacy Policy",
       "subtitle": "What Anything stores, what leaves your device, and the controls you have.",
       "sections": [
         {
@@ -68,7 +68,7 @@
         {
           "title": "Service providers",
           "paragraphs": [
-            "Firebase/Google provides authentication and optional collection sync. Cloudflare hosts the AI gateway and may host this site. Groq processes AI requests. RevenueCat checks purchase entitlements; Apple and Google operate checkout. Preview and remote-image services receive the requests needed to load those resources.",
+            "Firebase/Google provides authentication and optional collection sync. GitHub Pages hosts the web app and this website. Cloudflare hosts the AI gateway. Groq processes AI requests. RevenueCat checks purchase entitlements; Apple and Google operate checkout. Preview and remote-image services receive the requests needed to load those resources.",
             "Providers have their own privacy terms and may retain operational records under their policies. Anything does not promise that provider processing is anonymous, end-to-end encrypted, or used for no purpose beyond processing; review the providers' current policies before sending sensitive content."
           ]
         },
@@ -98,7 +98,7 @@
       ]
     },
     "permissions": {
-      "title": "Only when you ask.",
+      "title": "Permissions & Device Access",
       "subtitle": "A plain-language guide to Anything’s device and browser access.",
       "sections": [
         {
@@ -134,7 +134,7 @@
       ]
     },
     "terms": {
-      "title": "The things to know.",
+      "title": "Terms & Conditions",
       "subtitle": "Terms for using Anything, its web app, and optional paid features.",
       "sections": [
         {
@@ -184,7 +184,7 @@
       ]
     },
     "delete-account": {
-      "title": "Leave with your things.",
+      "title": "Account & Data Deletion",
       "subtitle": "Export your collection, remove saves, and understand what account deletion requires.",
       "sections": [
         {

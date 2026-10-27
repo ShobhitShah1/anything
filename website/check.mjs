@@ -2,6 +2,7 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { safeWebUrl, safeEmail, legalReady } from "./public/shared.js";
+import { policyNames, renderLegalPage } from './render-legal.mjs';
 const root = resolve(import.meta.dirname, "public");
 const config = JSON.parse(
   (await readFile(resolve(root, "site-config.json"), "utf8")).replace(
@@ -32,6 +33,24 @@ for (const value of Object.values(config.links))
     );
 for (const page of ["privacy", "terms", "permissions", "delete-account"])
   assert.ok(config.pages[page]?.sections?.length);
+for (const [key, title] of Object.entries(policyNames)) {
+  const html = await readFile(resolve(root, `${key}.html`), 'utf8');
+  assert.equal(html, renderLegalPage(config, key), `Run node website/render-legal.mjs after editing ${key} policy settings.`);
+  assert.ok(html.includes(`<h1>${title.replaceAll('&', '&amp;')}</h1>`));
+  assert.ok(!html.includes('Enable JavaScript to read'));
+}
+const untrusted = structuredClone(config);
+untrusted.pages.privacy.sections[0].paragraphs = ['<script>alert("unsafe")</script>'];
+untrusted.pages.privacy.sections[0].link = { href: 'javascript:alert(1)', label: 'Unsafe' };
+const escaped = renderLegalPage(untrusted, 'privacy');
+assert.ok(escaped.includes('&lt;script&gt;'));
+assert.ok(!escaped.includes('<script>') && !escaped.includes('javascript:'));
+const deletion = structuredClone(config);
+deletion.operator.privacyEmail = 'privacy@example.com';
+deletion.legal.accountDeletionRequestsEnabled = false;
+assert.ok(!renderLegalPage(deletion, 'delete-account').includes('?subject='));
+deletion.legal.accountDeletionRequestsEnabled = true;
+assert.ok(renderLegalPage(deletion, 'delete-account').includes('mailto:privacy@example.com?subject='));
 for (const filename of await readdir(root))
   if (filename.endsWith(".html")) {
     const html = await readFile(resolve(root, filename), "utf8");

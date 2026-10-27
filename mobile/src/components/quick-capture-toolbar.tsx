@@ -71,19 +71,6 @@ export const QuickCaptureToolbar = memo(function QuickCaptureToolbar({
         >
           {status}
         </Text>
-        {result && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={rendered ? 'Edit Markdown' : 'Preview Markdown'}
-            disabled={saving}
-            accessibilityState={{ disabled: saving }}
-            onPress={onEdit}
-            hitSlop={6}
-            style={styles.preview}
-          >
-            <EditorIcon size={17} color={colors.muted} strokeWidth={1.8} />
-          </Pressable>
-        )}
       </View>
       <View style={styles.row}>
         <View style={styles.side}>
@@ -170,7 +157,24 @@ export const QuickCaptureToolbar = memo(function QuickCaptureToolbar({
             )}
           </Pressable>
         </View>
-        <View style={[styles.side, { alignItems: 'flex-end' }]}>
+        <View
+          style={[
+            styles.side,
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+          ]}
+        >
+          {result && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={rendered ? 'Edit Markdown' : 'Preview Markdown'}
+              disabled={saving}
+              accessibilityState={{ disabled: saving }}
+              onPress={onEdit}
+              style={styles.preview}
+            >
+              <EditorIcon size={17} color={colors.muted} strokeWidth={1.8} />
+            </Pressable>
+          )}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={label}
@@ -237,7 +241,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   statusRow: { height: 28, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  preview: { width: 32, height: 28, alignItems: 'center', justifyContent: 'center' },
+  preview: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   side: { flex: 1 },
   button: {

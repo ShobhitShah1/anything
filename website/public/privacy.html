@@ -1,40 +1,32 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <meta name="theme-color" content="#f7f7f4" />
-    <title>privacy — Anything</title>
-    <link rel="icon" type="image/png" href="assets/icon.png?v=folded-a-1" />
-    <link rel="stylesheet" href="site.css" />
-    <script src="legal.js" type="module"></script>
-  </head>
-  <body data-page="privacy">
-    <a class="skip" href="#legal-content">Skip to policy</a>
-    <header class="site-header legal-header">
-      <a class="wordmark" href="./"
-        ><span class="site-symbol" aria-hidden="true"></span>Anything<span
-          >.</span
-        ></a
-      ><a class="header-action" href="./">Back to the showcase ↗</a>
-    </header>
-    <main class="legal-main wrap" id="legal-content">
-      <noscript
-        ><h1>Enable JavaScript to read this policy.</h1>
-        <p>
-          These policies load from the editable
-          <a href="site-config.json">site configuration</a>.
-        </p></noscript
-      >
-    </main>
-    <footer class="site-footer wrap">
-      <a class="wordmark" href="./">Anything<span>.</span></a>
-      <nav class="legal-nav" aria-label="Legal">
-        <a href="privacy.html">Privacy</a
-        ><a href="permissions.html">Permissions</a><a href="terms.html">Terms</a
-        ><a href="delete-account.html">Data & deletion</a>
-      </nav>
-    </footer>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#101011" />
+  <meta name="description" content="Privacy Policy for Anything. What Anything stores, what leaves your device, and the controls you have." />
+  <title>Privacy Policy — Anything</title>
+  <link rel="canonical" href="https://shobhitshah1.github.io/anything/about/privacy.html" />
+  <link rel="icon" type="image/png" href="assets/icon.png?v=folded-a-1" />
+  <link rel="stylesheet" href="site.css" />
+  <link rel="stylesheet" href="legal.css?v=20261027-centered" />
+</head>
+<body class="legal-page">
+  <a class="skip" href="#legal-content">Skip to content</a>
+  <header class="site-header legal-header"><a class="wordmark" href="./"><span class="site-symbol" aria-hidden="true"></span>anything.</a><a class="header-action" href="./">Back to website <span aria-hidden="true">↗</span></a></header>
+  <main class="legal-main wrap" id="legal-content">
+    <header class="policy-heading"><p class="eyebrow">Anything / Legal & support</p><h1>Privacy Policy</h1><p class="legal-intro">What Anything stores, what leaves your device, and the controls you have.</p><p class="legal-meta">Updated October 27, 2026</p></header>
+    <div class="policy-layout">
+      <nav class="policy-pages" aria-label="Policy pages"><a href="privacy.html" aria-current="page">Privacy Policy</a><a href="permissions.html">Permissions &amp; Device Access</a><a href="terms.html">Terms &amp; Conditions</a><a href="delete-account.html">Account &amp; Data Deletion</a></nav>
+      <article class="policy-body" aria-label="Privacy Policy">
+        <aside class="draft-notice"><strong>Draft — release details pending.</strong> Operator/contact details, retention, legal bases, transfer safeguards and deletion handling need confirmation before these policies are final.</aside>
+        <div class="operator-info"><p>Operator: Not yet supplied</p><p>Privacy contact: not yet supplied.</p></div>
+        <section class="legal-section" id="section-1"><h2>The short version</h2><p>You can keep a local collection without signing in. Optional cloud sync, AI, dictation and purchases involve service providers. Masked secret fields are not encryption; avoid storing credentials or highly sensitive information.</p><p>This showcase has no advertising pixels or analytics scripts added by us. Its hosting provider receives ordinary network information, such as IP address and browser information, to serve and protect the site. The Anything app uses local storage and provider SDKs for its features.</p></section><section class="legal-section" id="section-2"><h2>What is stored</h2><p>On your device or browser: saved content, folders, tags, preferences and local image/cache data. With Google sign-in: Firebase Authentication account identifiers and profile information. With sync enabled: eligible saved content and folders in Cloud Firestore. Large local images may remain on the original device.</p><p>For paid AI: Firebase account ID, subscription access checks, usage counts and an expiring request reservation. RevenueCat receives subscription/customer information; Google Play or Apple processes your purchase. Anything does not receive your full payment-card number or CVV.</p></section><section class="legal-section" id="section-3"><h2>When content leaves your device</h2><p>Cloud sync sends eligible collection content to Firebase when you enable it. Optional AI sends the prompt you submit through our Cloudflare Worker to Groq. It does not need your whole collection to answer that request. Do not put information into an AI prompt that you do not want sent to these services.</p><p>Link previews can send the saved URL to Microlink, Noembed or platform-specific preview services such as FxTwitter. Loading remote images or opening saved links contacts those hosts and may reveal ordinary network information. Speech recognition uses the device/platform recognition service and may use remote processing depending on the device; offline processing is not guaranteed.</p></section><section class="legal-section" id="section-4"><h2>Permissions and local storage</h2><p>Microphone access is requested when you start dictation. Photo access is used when you choose an image. Clipboard access supports explicit paste/save actions and optional clipboard capture; it is not a system-wide clipboard monitor. You can deny or revoke permissions in your device or browser settings.</p><p>The web app uses browser storage to retain your collection and preferences and an image cache to reduce repeat downloads. Clearing site data can remove local-only saves. Export a backup first. This showcase does not require an account or optional cookies.</p><a class="policy-crosslink" href="permissions.html">Read the permissions guide <span aria-hidden="true">↗</span></a></section><section class="legal-section" id="section-5"><h2>Service providers</h2><p>Firebase/Google provides authentication and optional collection sync. GitHub Pages hosts the web app and this website. Cloudflare hosts the AI gateway. Groq processes AI requests. RevenueCat checks purchase entitlements; Apple and Google operate checkout. Preview and remote-image services receive the requests needed to load those resources.</p><p>Providers have their own privacy terms and may retain operational records under their policies. Anything does not promise that provider processing is anonymous, end-to-end encrypted, or used for no purpose beyond processing; review the providers&#39; current policies before sending sensitive content.</p></section><section class="legal-section" id="section-6"><h2>Retention, transfers and your rights</h2><p>Local content remains until you delete it or clear the app/browser data. Deleting a synced save can remove the corresponding cloud record, but local collection deletion does not delete your Firebase account, purchase records or all server usage records. Signing out or uninstalling does not cancel a subscription.</p><p>Retention periods, backup expiry and deletion procedures must be confirmed by the operator before public release.</p><p>Service providers may process information outside your country. The operator must confirm applicable transfer safeguards before public release.</p><p>The operator must confirm the lawful bases for account services, optional AI, billing, security and support for the jurisdictions served.</p><p>Contact the operator to request access, correction, export or deletion, subject to applicable law and identity verification.</p><a class="policy-crosslink" href="delete-account.html">Data and account deletion <span aria-hidden="true">↗</span></a></section><section class="legal-section" id="section-7"><h2>Children and changes</h2><p>Anything is a general-purpose collection tool and is not designed to solicit personal information from children. The operator must confirm the age requirements and consent process for the markets served before public release. Contact the operator if you believe a child&#39;s data has been submitted without appropriate consent.</p><p>Material changes to this notice will be reflected in its effective date. The operator is responsible for providing any additional notice or consent required by applicable law.</p></section>
+
+      </article>
+    </div>
+  </main>
+  <footer class="site-footer wrap"><a class="wordmark" href="./">anything.</a><nav class="legal-nav" aria-label="Legal"><a href="privacy.html" aria-current="page">Privacy Policy</a><a href="permissions.html">Permissions &amp; Device Access</a><a href="terms.html">Terms &amp; Conditions</a><a href="delete-account.html">Account &amp; Data Deletion</a></nav></footer>
+</body>
 </html>

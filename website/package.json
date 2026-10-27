@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "check": "node check.mjs",
-    "preview": "node preview.mjs"
+    "preview": "node preview.mjs",
+    "render:legal": "node render-legal.mjs"
   }
 }

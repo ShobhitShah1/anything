@@ -17,7 +17,7 @@ Store pricing is deliberately read from the purchase flow, not invented on the s
 
 ## Check and preview
 
-From this folder: `npm run check`, then `npm run preview`. The local URL is `http://127.0.0.1:5182`. No install or build is needed. `public/` is the complete static site, intentionally tracked here.
+After editing policy settings, run `node website/render-legal.mjs` from the repository root (or `npm run render:legal` from this folder). Then run `npm run check` and `npm run preview` from this folder. The local URL is `http://127.0.0.1:5182`. No install or build is needed. `public/` is the complete static site, intentionally tracked here.
 
 The hero artwork is `public/assets/hero-space.webp` (132 KB), made with the built-in imagegen tool using the owner's existing `footer-space.webp` as the visual reference. Prompt: match the two-tone ivory/charcoal pixel clusters and ordered dithering; create a 3:1 panorama with a modest ringed planet, lunar observatory on the right, low crater landscape, and clear left starfield for type; no text, logos or color. The mobile hero reuses `footer-space-mobile.webp`. The desktop hero stays at a readable height without zooming the art. The app preview rises over it on scroll.
 
@@ -36,12 +36,18 @@ GitHub Pages uses the repository's existing `.github/workflows/deploy.yml`. It b
 
 To publish a website edit, commit the changed files under `website/` and push to `main`. The **Deploy to GitHub Pages** action publishes the app and website together. Check the action's deployment result before treating an update as live. No separate website build, hosting account or access token is needed. `store-listing/` stays local, is ignored by Git, and is never copied into the Pages artifact.
 
-Design references: [Are.na](https://www.are.na/about) for collection-first presentation and [Kinopio](https://kinopio.club/) for making saved ideas tangible. The existing published app images are retained unchanged at the owner's request. Replace `public/assets/web-dark.png`, `mobile-home.png` and `mobile-folders.png` with approved local-data captures later. No new demo records or screenshot replacements are shipped in this redesign.
+Design references: [Are.na](https://www.are.na/about) for collection-first presentation and [Kinopio](https://kinopio.club/) for making saved ideas tangible. The existing published app images are retained unchanged at the owner's request. Replace `public/assets/web-collection-1d403b273595.png`, `mobile-home.png` and `mobile-folders.png` with approved local-data captures later. No new demo records or screenshot replacements are shipped in this redesign.
 
 Visual direction for the illustrated redesign: [Surfsky on Behance](https://www.behance.net/gallery/256361907/Surfsky-Website-Branding-for-Antidetect-Browser/modules/1495010417), adapted through original neutral artwork and Anything's real interface. No reference images or third-party branding are included in the shipped assets.
 
 Space art reference: [NASA's retrofuturistic space art](https://www.nasa.gov/image-article/retrofuturistic-nasa-space-art/) for the observatory atmosphere. The shipped pixel illustration is original; no NASA imagery or branding is used.
 
-The mobile section is a full-width gallery of five unaltered 1080x2400 emulator captures: collection, the owner-approved Expo post detail, folders, Expo search and empty capture. No records were added, edited or deleted. Images open at full size. The web preview is the exact screenshot supplied by the owner on October 27, 2026, copied byte-for-byte. No secret card or unapproved detail screen is included.
+The mobile section is a full-width gallery of five unaltered 1080x2400 emulator captures: collection, the owner-approved Expo post detail, folders, Expo search and empty capture. No records were added, edited or deleted. Screenshots are presentation-only images and do not open when clicked. The web preview is the exact screenshot supplied by the owner on October 27, 2026, copied byte-for-byte. No secret card or unapproved detail screen is included.
 
 The owner's original three-column footer layout is retained. Only its background is replaced by `footer-valley.webp` (159 KB): original imagegen artwork in the same two-tone dithered style, showing a rover trail, stone arch and lunar valley, without the hero's planet or observatory. The mobile hero still uses the original footer mobile artwork.
+
+Policy pages use the same charcoal/ivory theme as the showcase. Their complete contents, page titles, section navigation and contact links are generated into static HTML, so they remain readable without JavaScript. Edit their source in `public/site-config.json`, then regenerate the pages; `check.mjs` catches stale generated output. Preview startup and Pages packaging also regenerate them.
+
+The web preview uses the approved image unchanged. Its content fingerprint is included in the filename to prevent browsers from reusing an older screenshot. The preview keeps the complete image (`object-fit: contain`) within the viewport height, with no clickable image link, frame or added background. A taller source image may need horizontal breathing room to fit completely without cropping.
+
+The local empty-collection welcome uses original quiet crescent-moon and low lunar-horizon scenery (`public/welcome-moon.webp` in the repository root) as a full-viewport decorative background, with a prominent Google sign-in action. No generated arch illustration is used. UI edits remain local until the owner approves publishing.

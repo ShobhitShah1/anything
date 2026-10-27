@@ -1,6 +1,8 @@
+import { renderLegalPages } from './render-legal.mjs';
 ﻿import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
+await renderLegalPages();
 const root = resolve(import.meta.dirname, "public");
 const port = Number(process.env.PORT || 5182);
 const types = {

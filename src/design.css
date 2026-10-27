@@ -583,3 +583,32 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
   .capture-note-composer > div:first-child > button { font-size: 10px; padding-inline: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .account-spinner { animation: none; } }
+
+/* Original full-bleed artwork leaves quiet space for the welcome controls. */
+.anything-app:has(.welcome-scene) { isolation: isolate; }
+.welcome-scene { max-width: 1440px; padding: 48px clamp(24px,5vw,72px); }
+.welcome-scene .welcome-inner { display: block; text-align: center; }
+.welcome-copy { max-width: 700px; margin-inline: auto; }
+.welcome-scene .welcome-headline { font-size: clamp(48px,4.6vw,84px); line-height: 1.05; letter-spacing: -.045em; }
+.welcome-scene .welcome-description { max-width: 400px; margin: 26px auto 0; font-size: 17px; color: var(--ink); opacity: .72; }
+.welcome-scene .mind-empty-actions { max-width: 360px; margin: 32px auto 0; gap: 12px; }
+.welcome-scene .google-sign-in { align-self: stretch; width: 100%; min-height: 54px; padding: 14px 22px; border: 1px solid var(--ink); border-radius: 12px; background: var(--ink); color: var(--canvas); font-size: 15px; font-weight: 550; }
+.welcome-scene .google-sign-in > span { color: inherit; }
+.welcome-scene .google-sign-in svg { width: 20px; height: 20px; }
+.welcome-scene .google-sign-in:hover { background: var(--ink); opacity: .9; transform: none; }
+.welcome-scene .welcome-links { justify-content: center; gap: 24px; font-size: 12px; margin-top: 28px; }
+.welcome-space-art { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background: var(--canvas); }
+.welcome-space-art picture,.welcome-space-art img { display: block; width: 100%; height: 100%; }
+.welcome-space-art img { object-fit: cover; object-position: right center; filter: invert(1); opacity: .7; }
+.welcome-space-art:after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg,color-mix(in srgb,var(--canvas) 65%,transparent),transparent 15%); }
+.dark .welcome-space-art img { filter: none; opacity: 1; }
+@media (max-width:850px) {
+  .welcome-scene { padding: 32px 16px; }
+  .welcome-scene .welcome-headline { font-size: clamp(42px,7vw,64px); }
+  .welcome-scene .welcome-description { margin-top: 22px; font-size: 15px; max-width: 310px; }
+  .welcome-scene .mind-empty-actions { margin-top: 28px; }
+  .welcome-space-art:after { background: linear-gradient(90deg,color-mix(in srgb,var(--canvas) 75%,transparent),transparent),linear-gradient(0deg,var(--canvas),transparent 25%); }
+  .welcome-scene .welcome-links { gap: 12px 22px; font-size: 11px; }
+}
+
+@media (max-width:700px) { .welcome-space-art img { object-position: left center; } }
