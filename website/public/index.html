@@ -38,7 +38,6 @@
       </div>
     </section>
     <section class="platform-section" id="anywhere" aria-labelledby="platform-title">
-      <div class="format-line wrap reveal" aria-label="Save links, notes, images and code"><span>Links.</span><span>Notes.</span><span>Images.</span><span>Code.</span></div>
       <div class="wrap platform-layout">
         <div class="product-copy reveal">
           <p class="eyebrow">02 / Take your collection with you</p>
@@ -47,10 +46,17 @@
           <a class="text-link" data-link="webApp" hidden>Open Anything <span aria-hidden="true">&#8599;</span></a>
           <span id="mobile-availability">Mobile release in progress</span>
         </div>
-        <div class="phone-gallery reveal">
-          <figure class="phone"><img src="assets/mobile-home.png" width="1080" height="2400" loading="lazy" alt="The full Anything Android collection screen" /><figcaption><span>01</span> Every find, together.</figcaption></figure>
-          <figure class="phone"><img src="assets/mobile-folders.png" width="1080" height="2400" loading="lazy" alt="The full Anything Android folders screen" /><figcaption><span>02</span> A little order, your way.</figcaption></figure>
-        </div>
+        <fieldset class="mobile-console reveal">
+          <legend>Explore the mobile app</legend>
+          <input class="preview-radio" type="radio" name="mobile-preview" id="mobile-collection" checked />
+          <input class="preview-radio" type="radio" name="mobile-preview" id="mobile-folders" />
+          <div class="mobile-tabs"><label for="mobile-collection">01 <span>Collection</span></label><label for="mobile-folders">02 <span>Folders</span></label></div>
+          <figure class="mobile-window">
+            <img class="collection-screen" src="assets/mobile-home.png" width="1080" height="2400" loading="lazy" alt="The full Anything Android collection screen" />
+            <img class="folders-screen" src="assets/mobile-folders.png" width="1080" height="2400" loading="lazy" alt="The full Anything Android folders screen" />
+            <figcaption><span class="collection-screen">Every kind of find. One collection.</span><span class="folders-screen">Bring your projects together.</span></figcaption>
+          </figure>
+        </fieldset>
       </div>
       <div class="wrap closing-line reveal"><span>A home for your next good find.</span><div class="platform-links"><a class="button" data-link="webApp" hidden>Make it yours <span aria-hidden="true">&#8599;</span></a><a class="text-link" data-link="googlePlay" hidden>Google Play &#8599;</a><a class="text-link" data-link="appStore" hidden>App Store &#8599;</a></div></div>
     </section>
