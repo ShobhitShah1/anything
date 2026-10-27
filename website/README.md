@@ -19,7 +19,7 @@ Store pricing is deliberately read from the purchase flow, not invented on the s
 
 From this folder: `npm run check`, then `npm run preview`. The local URL is `http://127.0.0.1:5182`. No install or build is needed. `public/` is the complete static site, intentionally tracked here.
 
-The original monochrome pixel-art observatory is `public/assets/pixel-space.webp` (198 KB), generated with the built-in imagegen tool. Prompt: a charcoal-and-ivory pixel-art space scene, ringed planet, lunar observatory, square stars and open dark space for the headline; no text, logos or neon. CSS adds a subtle scroll-driven drift where supported, three fading stars and once-only section reveals. Reduced-motion preferences remove movement. No animation library or scroll event loop is required.
+The original panoramic space artwork is `public/assets/pixel-space.webp` (321 KB), with a separate mobile composition in `pixel-space-mobile.webp`. Built-in imagegen prompt: a charcoal-and-ivory pixel-art panorama, complete ringed planet inset on the right, lunar observatory and crater landscape, open left starfield for typography; no text or logos. The full-width hero stays in place as the actual app preview rises over it. CSS view timelines fade the headline and dim the scene; unsupported browsers retain a normal scroll layout. Reduced-motion preferences use a static hero and no transforms. No animation library or scroll event loop is added.
 
 ## Legal pages
 
@@ -40,4 +40,4 @@ Design references: [Are.na](https://www.are.na/about) for collection-first prese
 
 Visual direction for the illustrated redesign: [Surfsky on Behance](https://www.behance.net/gallery/256361907/Surfsky-Website-Branding-for-Antidetect-Browser/modules/1495010417), adapted through original neutral artwork and Anything?s real interface. No reference images or third-party branding are included in the shipped assets.
 
-Space art reference: [NASA?s retrofuturistic space art](https://www.nasa.gov/image-article/retrofuturistic-nasa-space-art/) for the observatory atmosphere. The shipped pixel illustration is original; no NASA imagery or branding is used.
+Space art reference: [NASA's retrofuturistic space art](https://www.nasa.gov/image-article/retrofuturistic-nasa-space-art/) for the observatory atmosphere. The shipped pixel illustration is original; no NASA imagery or branding is used.
