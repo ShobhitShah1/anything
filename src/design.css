@@ -21,11 +21,7 @@ input:focus-visible, textarea:focus-visible { outline-color: var(--accent); }
 .mind-rail { position: fixed; inset: 0 auto 0 0; width: 64px; z-index: 35; background: var(--canvas); border-right: 1px solid var(--line); display: flex; align-items: center; flex-direction: column; padding: 22px 0 18px; }
 .mind-mark { color: var(--ink); display: grid; place-items: center; flex-shrink: 0; margin-bottom: 24px; }
 .brand-glass { display: grid; place-items: center; width: 38px; height: 38px; color: var(--ink); }
-.brand-glass > svg { width: 33px; height: 33px; }
-.brand-flow { transform-box: view-box; transform-origin: 20px 20px; opacity: .85; animation: brand-flow 18s linear infinite; }
-.brand-flow-warm { animation-direction: reverse; animation-duration: 24s; }
-@keyframes brand-flow { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .brand-flow { animation: none; } }
+.brand-glass > img { width: 100%; height: 100%; object-fit: contain; }
 .mind-rail-links, .mind-rail-bottom { display: flex; align-items: center; flex-direction: column; gap: 10px; }
 .mind-rail-bottom { margin-top: auto; }
 .mind-rail button { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: #8f8b81; cursor: pointer; transition: color 150ms, background-color 150ms; }
@@ -439,10 +435,8 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 /* Keep the welcome as one open composition, without decorative UI. */
 .mind-empty { display: flex; flex-direction: column; justify-content: center; width: 100%; max-width: 1080px; min-height: calc(100dvh - 220px); margin: 0 auto; padding: 40px clamp(12px, 4vw, 64px); text-align: center; }
 .welcome-inner { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 0; }
-.mind-empty-art, .mind-empty-art > .brand-glass, .mind-empty-art .brand-glass > svg { width: 168px; height: 168px; }
+.mind-empty-art, .mind-empty-art > .brand-glass { width: 168px; height: 168px; }
 .mind-empty-art { margin: 0 0 30px; }
-.mind-empty-art .brand-flow { animation-duration: 10s; }
-.mind-empty-art .brand-flow-warm { animation-duration: 14s; }
 .mind-empty .welcome-headline { margin: 0; color: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-size: clamp(42px, 4.5vw, 64px); font-weight: 400; line-height: 1.05; letter-spacing: -.065em; text-wrap: balance; }
 .welcome-description { margin-top: 22px; color: var(--muted); font-size: 16px; line-height: 1.6; }
 .mind-empty-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 400px; margin-top: 32px; }
@@ -455,7 +449,7 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 @media (max-width: 767px) {
   .mind-empty { min-height: calc(100dvh - 210px); padding: 32px 8px; }
   .welcome-inner { padding-bottom: 28px; }
-  .mind-empty-art, .mind-empty-art > .brand-glass, .mind-empty-art .brand-glass > svg { width: 132px; height: 132px; }
+  .mind-empty-art, .mind-empty-art > .brand-glass { width: 132px; height: 132px; }
   .mind-empty-art { margin-bottom: 24px; }
   .mind-empty .welcome-headline { font-size: clamp(38px, 7vw, 52px); }
   .welcome-description { margin-top: 18px; font-size: 14px; }

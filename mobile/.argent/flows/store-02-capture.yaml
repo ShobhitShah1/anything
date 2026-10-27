@@ -1,0 +1,5 @@
+executionPrerequisite: Anything is open on the collection.
+steps:
+  - tap: { text: Save something }
+  - await: { visible: { text: Save something. } }
+  - wait: 700

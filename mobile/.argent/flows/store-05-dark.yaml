@@ -1,0 +1,5 @@
+executionPrerequisite: Anything is open on the collection with dark appearance selected.
+steps:
+  - tap: { text: All finds }
+  - tap: { text: Grid view }
+  - wait: 700

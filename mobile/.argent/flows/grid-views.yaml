@@ -1,0 +1,15 @@
+executionPrerequisite: >-
+  Anything is open on a populated collection, scrolled to the top in grid view.
+steps:
+  - tap: { text: List view }
+  - wait: 500
+  - tap: { text: Focus view }
+  - wait: 500
+  - tap: { text: List view }
+  - wait: 500
+  - tap: { text: Grid view }
+  - wait: 500
+  - tap: { text: Focus view }
+  - wait: 500
+  - tap: { text: Grid view }
+  - await: { idle: true }

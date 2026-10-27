@@ -1,0 +1,4 @@
+executionPrerequisite: Anything is open at the top of the unfiltered collection.
+steps:
+  - tap: { text: 'Open @lloydcreates, pinned' }
+  - wait: 700

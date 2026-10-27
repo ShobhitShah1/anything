@@ -1,0 +1,5 @@
+executionPrerequisite: Anything is open on a populated collection at the top.
+steps:
+  - tap: { text: All finds }
+  - tap: { text: Grid view }
+  - wait: 700

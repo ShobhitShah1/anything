@@ -1,0 +1,15 @@
+node_modules
+.tools
+dist
+dist-ios
+.expo
+android
+ios
+assets
+package-lock.json
+yarn.lock
+.yarn
+.env
+credentials
+credentials.json
+artifacts

@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="mind-header-inner">
           {items.length === 0 ? <span className="welcome-wordmark">Anything<span>.</span></span> : <div className="mind-search">
             <Search aria-hidden="true" />
-            <input aria-label="Search saves" type="search" value={searchQuery} onChange={event => onSearchChange(event.target.value)} placeholder="Search your mind..." />
+            <input aria-label="Search saved links, notes, and images" type="search" value={searchQuery} onChange={event => onSearchChange(event.target.value)} placeholder="Find something you saved…" />
             {searchQuery && <button type="button" aria-label="Clear search" onClick={() => onSearchChange('')}><X /></button>}
             {!searchQuery && <kbd aria-hidden="true">/</kbd>}
           </div>}

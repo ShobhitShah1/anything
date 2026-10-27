@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "anything-ai",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-25",
+  "workers_dev": true,
+  "vars": {
+    "FIREBASE_PROJECT_ID": "anything-66dbd",
+    "FIREBASE_API_KEY": "AIzaSyC_Ukm6L5Jq7o_8wlZLRxLisKDr1QPvwKI",
+    "ALLOW_SANDBOX_PURCHASES": "false",
+  },
+  "observability": { "enabled": false },
+}

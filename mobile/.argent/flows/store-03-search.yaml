@@ -1,0 +1,6 @@
+executionPrerequisite: Anything is open on the collection with an empty search.
+steps:
+  - tap: { text: Search saves }
+  - tool: keyboard
+    args: { text: design }
+  - wait: 700

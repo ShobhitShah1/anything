@@ -33,7 +33,15 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
   }
 }
 const keyOf = (entry: CloudEntry) => `${entry.kind}:${entry.id}`;
-const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+// Firestore map field order is not meaningful; normalize it before comparing snapshots.
+const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value, (_key, entry) =>
+  entry && typeof entry === 'object' && !Array.isArray(entry)
+    ? Object.fromEntries(Object.keys(entry).sort().map(key => [key, entry[key]]))
+    : entry,
+));
+function sameEntries(a: Map<string, CloudEntry>, b: Map<string, CloudEntry>) {
+  return a.size === b.size && [...a].every(([key, entry]) => JSON.stringify(entry) === JSON.stringify(b.get(key)));
+}
 function entriesOf(value: CloudCollection): Map<string, CloudEntry> {
   return new Map([...value.items.map(data => ({ kind: 'item' as const, id: data.id, deleted: false, data })),
     ...value.folders.map(data => ({ kind: 'folder' as const, id: data.id, deleted: false, data }))].map(entry => [keyOf(entry), clean(entry)]));
@@ -74,10 +82,10 @@ export function startCollectionSync(options: {
   };
   const fail = (error: unknown) => { clearTimeout(connectionTimer); if (!stopped) options.status('error', error); };
   const publish = (entries: Map<string, CloudEntry>) => {
-    if (JSON.stringify([...current]) === JSON.stringify([...entries])) return;
+    if (sameEntries(current, entries)) return false;
     current = entries;
     options.apply(localCollection());
-    options.persistBaseline?.(localCollection());
+    return true;
   };
   const flush = async () => {
     if (!ready || stopped || writing || !pending.size) return;
@@ -105,10 +113,11 @@ export function startCollectionSync(options: {
         for (const [key, entry] of current) if (!merged.has(key) && !pending.has(key)) pending.set(key, entry);
       }
       for (const [key, entry] of pending) merged.set(key, entry);
-      persist();
+      const initial = !ready;
       ready = true;
       clearTimeout(connectionTimer);
-      publish(merged);
+      const changed = publish(merged);
+      if (initial || changed || pending.size) persist();
       if (pending.size) void flush();
       else options.status('synced');
     } catch (error) { fail(error); }
@@ -125,6 +134,7 @@ export function startCollectionSync(options: {
       }
       // Keep tombstones in the baseline so a remote echo cannot resurrect deleted content.
       for (const [key, entry] of current) if (entry.deleted && !next.has(key)) next.set(key, entry);
+      if (sameEntries(current, next)) return;
       current = next;
       try { persist(); void flush(); } catch (error) { fail(error); }
     },
