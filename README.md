@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/favicon.svg" alt="Anything logo: a simple a and a dot" width="72" height="72" />
+  <img src="public/anything-icon.png" alt="Anything folded a logo" width="72" height="72" />
 </p>
 
 <h1 align="center">Anything.</h1>
