@@ -11,6 +11,8 @@
 </p>
 
 <p align="center">
+  <a href="https://shobhitshah1.github.io/anything/about/">Website</a> ·
+  <a href="https://shobhitshah1.github.io/anything/">Open web app</a> ·
   <a href="#a-look-inside">Take a look</a> ·
   <a href="#run-it-locally">Get started</a> ·
   <a href="#save-from-your-browser">Browser extension</a> ·
@@ -33,23 +35,25 @@ Start without an account, or continue with Google and choose whether to sync you
 
 ## A look inside
 
-**A simple place to start.**
+**On the web.**
 
-![Welcome screen with the Anything logo, Google login, an account-free option, and the bottom quick-save bar](docs/images/welcome.jpg)
+![Anything web collection with the folded a logo and sample notes, a checklist, an image and a reading guide](showcase/dist/assets/web-dark.png)
 
-**Your collection, at a glance.**
+**On mobile.**
 
-![Matte black collection with the new logo, rounded cards, compact source footers, and a full-width grid](docs/images/collection-dark.jpg)
+<p align="center">
+  <img src="showcase/dist/assets/mobile-home.png" alt="Anything Android collection with search, filters and quick capture" width="280" />
+  &nbsp;
+  <img src="showcase/dist/assets/mobile-folders.png" alt="Anything Android folders showing Inspiration, Everyday, Reading and Build ideas" width="280" />
+</p>
 
-**Or give your collection a little light.**
+<sub>Unaltered captures of the running web and Android apps using fictional sample content. No personal account or private saves are shown.</sub>
 
-![Light collection with pinned saves, public posts, uncropped images, and the compact quick-save bar](docs/images/collection-light.jpg)
+## Mobile and the showcase
 
-**A little room to think.**
+The Android app lives in [`mobile/`](mobile/README.md). See its setup guide for development builds and [purchase setup](mobile/PURCHASES.md) before configuring subscriptions. A public store download is not linked until the release is available.
 
-![Simple capture dialog with automatic content detection, an optional title, and a clear save action](docs/images/capture-new.jpg)
-
-<sub>Current web app screenshots. Collection screenshots show public links and posts; the capture dialog uses example text.</sub>
+The [showcase website](https://shobhitshah1.github.io/anything/about/) introduces mobile and web together. Its [source and editing guide](showcase/README.md) cover the static pages, product images and the single [configuration file](showcase/dist/site-config.json) for support details, store links and policy text. Privacy, permissions, terms and data-deletion pages remain explicitly marked as drafts until the operator completes the release details.
 
 ## A few keys worth knowing
 

@@ -9,7 +9,16 @@ npm ci
 npm run dev
 ```
 
-`npm run build` creates the production site in `dist`. `npm run preview` serves that build locally.
+`npm run build` creates the production web app in `dist`. To include the showcase and policy pages, run:
+
+```bash
+node showcase/check.mjs
+npm run build
+node showcase/pages.mjs
+npm run preview
+```
+
+The app is served at `/`; the showcase and policies are at `/about/`. To preview only the dependency-free showcase, run `node showcase/preview.mjs` and open `http://127.0.0.1:5182`.
 
 Google sign-in and cloud sync are optional. See [Firebase setup](FIREBASE.md) for web app configuration, authorized domains, private Firestore rules, and verification steps. Keep `.env.local` out of Git and provide the `VITE_FIREBASE_*` values to your production build environment when enabling accounts.
 
@@ -22,11 +31,25 @@ One-time repository setup (requires a repository admin or maintainer):
 3. Open **Actions → Deploy to GitHub Pages → Run workflow**, or re-run the failed job.
 4. Use the URL reported by the deployment job once it succeeds.
 
-The workflow installs dependencies, checks link previews, builds `dist`, and deploys it. It runs on pushes to `main` or `master`. Vite uses relative asset paths so it also works under a repository subpath.
+The workflow installs dependencies, runs the web/extension checks, validates the showcase, builds the app, copies `showcase/dist/` into `dist/about/`, and deploys the combined artifact. It runs on pushes to `main` or `master`. Vite uses relative asset paths so it also works under a repository subpath.
+
+For this repository:
+
+- Web app: https://shobhitshah1.github.io/anything/
+- Showcase: https://shobhitshah1.github.io/anything/about/
+- Editable public release details: [`showcase/dist/site-config.json`](../showcase/dist/site-config.json).
+
+Keep `legal.publicationReady` false until the operator identity, contacts and policy details are complete and reviewed. Missing store URLs stay hidden. The deletion page must not claim an operational request process until it has been configured and tested. See the [showcase guide](../showcase/README.md) for the fields and release checks.
 
 `Get Pages site failed / Not Found` usually means Pages has not been enabled for that repository. The workflow now checks this before building and links to the setup page. Do not add a personal access token just to bypass this step: `configure-pages` auto-enablement requires additional repository administration access. If Pages is unavailable, check repository visibility, your GitHub plan, and organization policy.
 
 Official setup: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
+
+## Documentation screenshots
+
+The README uses the actual app captures in `showcase/dist/assets/`. These files contain fictional sample content and the current branding. Keep documentation screenshots as unaltered captures: do not paint text, apologies, watermarks or replacement UI onto their pixels. Retake a screenshot from the running app when the UI changes. Keep store-listing headings and framing separate from the captured app image.
+
+To inspect or restore a suspicious local edit, use `git diff -- docs/images` and compare it with the committed original. Do not reuse a screenshot merely because its filename is familiar. Verify the full image, including all four corners, before publishing.
 
 ## Link preview behavior
 
