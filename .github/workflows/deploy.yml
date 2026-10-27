@@ -62,7 +62,14 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
-        run: npm run build
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFirebaseConfig } from './src/utils/firebaseConfig.ts';
+          if (!readFirebaseConfig(process.env)) {
+            throw new Error('Missing Firebase web configuration. Set VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID and VITE_FIREBASE_APP_ID in Settings > Secrets and variables > Actions > Variables, then redeploy.');
+          }
+          NODE
+          npm run build
 
       - name: Include product website and policies
         run: node website/pages.mjs

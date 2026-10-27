@@ -28,7 +28,7 @@ Anything works without Firebase. With a project configured, users can sign in us
 
    `firebase.json` points to `firestore.rules` and `firestore.indexes.json`. The rules allow each signed-in user to access only `users/{their uid}/collection/*`. All other paths are denied. The index exemption keeps saved content out of unnecessary indexes. Do not use public/test-mode rules.
 
-7. Restart `npm run dev`. For production, supply the same `VITE_FIREBASE_*` values in the build environment and rebuild. The GitHub Pages workflow reads them from repository **Settings → Secrets and variables → Actions → Variables** using the names above. Empty values keep the deployment local-only. Vite embeds the web configuration at build time. These are Firebase web app values; a service-account key is not needed.
+7. Restart `npm run dev`. For production, supply the same `VITE_FIREBASE_*` values in the build environment and rebuild. The GitHub Pages workflow reads them from repository **Settings → Secrets and variables → Actions → Variables** using the names above. The Pages workflow stops if required values are missing, so it cannot silently publish a build with sign-in disabled. Local development can still run without Firebase. Vite embeds the web configuration at build time. These are Firebase web app values; a service-account key is not needed.
 
 Official references: [Google sign-in](https://firebase.google.com/docs/auth/web/google-signin), [Firestore access rules](https://firebase.google.com/docs/firestore/security/rules-conditions).
 
@@ -64,3 +64,11 @@ If the profile stays on **Connecting**, Google Authentication may be configured 
 6. Verify rules using the Firebase Emulator Suite before publishing: unauthenticated and different-UID reads/writes must fail; an owner’s valid record should succeed.
 
 Live OAuth and Firestore permissions require your configured project. Until configuration is supplied, the app shows an honest setup message when Google sign-in is requested and continues working locally.
+
+## Local sign-in works but GitHub Pages does not
+
+The local `.env` file is ignored by Git and is not available to GitHub Actions. Add the six `VITE_FIREBASE_*` values above as repository **Actions variables**, not only on your computer. Re-run the Pages workflow after changing them; Vite embeds them during the build.
+
+For this deployment, Firebase Authentication's authorized domains must include `shobhitshah1.github.io` (hostname only, without `/anything/`). A missing web configuration produces the setup message; an unauthorized hostname produces a different `auth/unauthorized-domain` error after Firebase starts.
+
+Use only the Firebase **web app** configuration. Never upload a service-account JSON, private key, Gemini key, or `.env` file to the repository. See [Vite environment variables](https://vite.dev/guide/env-and-mode.html) and [Firebase API keys](https://firebase.google.com/docs/projects/api-keys).

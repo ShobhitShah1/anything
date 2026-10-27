@@ -446,7 +446,7 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 .mind-empty .google-sign-in, .mind-empty .mind-save-button, .mind-empty .welcome-ghost { display: inline-flex; align-items: center; justify-content: center; flex: auto; width: 100%; min-height: 48px; border-radius: 10px; font-size: 13px; }
 .mind-empty .mind-save-button { background: var(--ink); color: var(--canvas); border: none; cursor: pointer; transition: opacity 140ms; }
 .mind-empty .mind-save-button:hover { opacity: .82; }
-.mind-empty .google-sign-in { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.mind-empty .google-sign-in { background: #fff; color: #1f1f1f; border: 1px solid #dadce0; }
 .welcome-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 0 20px; cursor: pointer; }
 .welcome-ghost:hover { background: var(--paper); }
 .welcome-inner > .account-error { max-width: 560px; margin-top: 16px; color: var(--danger-ink); font-size: 12px; }
@@ -516,6 +516,7 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 .account-panel-heading > button:hover { background: var(--canvas); }
 .account-panel-heading > button svg { width: 14px; height: 14px; }
 .google-sign-in { display: inline-flex; align-items: center; justify-content: center; gap: 11px; min-height: 44px; padding: 11px 18px; border: 1px solid #dadce0; border-radius: 11px; background: #fff; color: #1f1f1f; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 150ms ease; }
+.google-sign-in > span { color: #1f1f1f; }
 .google-sign-in:hover { background: #f2f4f7; }
 .google-sign-in:disabled { opacity: .6; cursor: wait; }
 .account-panel .google-sign-in { width: 100%; }
