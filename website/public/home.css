@@ -11,7 +11,7 @@
 .space-art { position: absolute; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; display: flex; align-items: flex-end; background: #101011; }
 .space-art picture { display: block; width: 100%; mask-image: linear-gradient(transparent,#000 10%); }
 .space-art img { width: 100%; height: auto; max-width: none; }
-.space-art:after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,#101011ed 0%,#101011ba 24%,#10101140 45%,transparent 65%),linear-gradient(0deg,#10101155,transparent 28%); }
+.space-art:after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,#101011ed 0%,#101011ba 24%,#10101140 45%,transparent 65%),linear-gradient(0deg,#101011,transparent 15%); }
 .home .hero-copy { position: relative; width: calc(100% - 96px); padding-top: clamp(125px,7.5vw,190px); }
 .hero-copy .eyebrow { display: flex; align-items: center; gap: 12px; }
 .signal { width: 5px; height: 5px; background: #e6e4dc; box-shadow: 7px 0 #77776e; margin-right: 7px; }
