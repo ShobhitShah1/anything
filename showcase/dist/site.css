@@ -1,0 +1,268 @@
+:root {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #27272a;
+  background: #f5f4f0;
+  color-scheme: light;
+  font-synthesis: none;
+  --muted: #777770;
+  --line: #deddd7;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 28px;
+}
+body {
+  margin: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+img {
+  max-width: 100%;
+  display: block;
+}
+[hidden] {
+  display: none !important;
+}
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 5px;
+}
+.wrap {
+  width: min(1060px, calc(100% - 64px));
+  margin-inline: auto;
+}
+.skip {
+  position: fixed;
+  z-index: 99;
+  top: 8px;
+  left: 8px;
+  transform: translateY(-150%);
+  padding: 10px;
+  background: #fff;
+}
+.skip:focus {
+  transform: none;
+}
+.site-header {
+  width: min(1280px, calc(100% - 64px));
+  height: 88px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 24px;
+  letter-spacing: -1.2px;
+  font-weight: 650;
+}
+.wordmark > span:not(.site-symbol) {
+  margin-left: -8px;
+}
+.site-symbol {
+  display: inline-block;
+  flex: none;
+  width: 30px;
+  height: 34px;
+  background: currentColor;
+  mask: url("assets/mark.png?v=folded-a-1") center/contain no-repeat;
+  -webkit-mask: url("assets/mark.png?v=folded-a-1") center/contain no-repeat;
+}
+.site-header nav {
+  display: flex;
+  gap: 26px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.header-action {
+  font-size: 12px;
+  margin-left: auto;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.7px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+.site-footer {
+  padding-block: 35px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 30px;
+}
+.legal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 19px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.legal-main {
+  max-width: 760px;
+  padding-block: 60px 75px;
+}
+.legal-main h1 {
+  font:
+    400 48px/1.1 Georgia,
+    serif;
+  letter-spacing: -2px;
+  margin: 25px 0;
+}
+.legal-intro {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--muted);
+  max-width: 600px;
+}
+.legal-meta {
+  font-size: 11px;
+  color: #8b8b83;
+  margin-top: 22px;
+}
+.draft-notice {
+  margin-top: 30px;
+  padding: 17px 20px;
+  background: #eae9e3;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #66665f;
+}
+.operator-info {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 30px 0 40px;
+}
+.operator-info p {
+  margin: 4px 0;
+}
+.operator-info a {
+  text-decoration: underline;
+}
+.legal-section {
+  border-top: 1px solid var(--line);
+  padding-block: 22px;
+}
+.legal-section summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.legal-section summary::-webkit-details-marker {
+  display: none;
+}
+.legal-section summary:after {
+  content: "+";
+  color: #91918a;
+}
+.legal-section[open] summary:after {
+  content: "−";
+}
+.legal-section p {
+  font-size: 13px;
+  line-height: 1.95;
+  color: #72726b;
+  margin-top: 20px;
+}
+.text-link {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1.6;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  margin-top: 15px;
+}
+.legal-contact {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin-top: 30px;
+}
+.legal-contact a {
+  display: inline-block;
+  text-decoration: underline;
+  margin-top: 15px;
+}
+.motion-ready .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.65s var(--ease),
+    transform 0.65s var(--ease);
+}
+.motion-ready .reveal[data-visible] {
+  opacity: 1;
+  transform: none;
+}
+@media (max-width: 620px) {
+  .wrap,
+  .site-header {
+    width: calc(100% - 40px);
+  }
+  .site-header {
+    height: 75px;
+    gap: 20px;
+  }
+  .wordmark {
+    font-size: 21px;
+    gap: 8px;
+  }
+  .header-action {
+    font-size: 10px;
+  }
+  .legal-main {
+    padding-block: 35px 45px;
+  }
+  .legal-main h1 {
+    font-size: 38px;
+    letter-spacing: -1.5px;
+  }
+  .legal-intro {
+    font-size: 14px;
+  }
+  .legal-section summary {
+    font-size: 15px;
+  }
+  .legal-section p {
+    font-size: 13px;
+  }
+  .site-footer {
+    flex-direction: column;
+    gap: 24px;
+    padding-block: 30px;
+  }
+  .legal-nav {
+    font-size: 10px;
+    gap: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .motion-ready .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

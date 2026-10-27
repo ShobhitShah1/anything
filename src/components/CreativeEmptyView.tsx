@@ -15,9 +15,9 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({ account, o
       <div className="mind-empty-art" aria-hidden="true"><BrandMark /></div>
 
       <h1 className="welcome-headline">
-        Good finds. Yours to keep.
+        Good finds.<br />Yours to keep.
       </h1>
-      <p className="welcome-description">Links you love. Thoughts you don’t want to lose.</p>
+      <p className="welcome-description">Your links, notes and ideas. All together.</p>
 
       <div className="mind-empty-actions">
         {!account.user && (
@@ -44,6 +44,11 @@ export const CreativeEmptyView: React.FC<CreativeEmptyViewProps> = ({ account, o
       </div>
 
       {account.error && <p className="account-error" role="alert">{account.error}</p>}
+      <nav className="welcome-links" aria-label="About Anything">
+        <a href={`${import.meta.env.BASE_URL}about/`}>About Anything</a>
+        <a href={`${import.meta.env.BASE_URL}about/privacy.html`}>Privacy</a>
+        <a href={`${import.meta.env.BASE_URL}about/terms.html`}>Terms</a>
+      </nav>
     </div>
 
   </section>

@@ -1,0 +1,218 @@
+{
+  "product": {
+    "name": "Anything",
+    "tagline": "A place for your finds.",
+    "description": "Save links, notes, images, and ideas. Keep a collection that makes sense to you."
+  },
+  "links": {
+    "webApp": "https://shobhitshah1.github.io/anything/",
+    "googlePlay": "",
+    "appStore": "",
+    "sourceCode": "https://github.com/ShobhitShah1/anything"
+  },
+  "operator": {
+    "legalName": "",
+    "country": "",
+    "postalAddress": "",
+    "supportEmail": "",
+    "privacyEmail": ""
+  },
+  "legal": {
+    "publicationReady": false,
+    "effectiveDate": "2026-10-27",
+    "minimumAge": null,
+    "accountDeletionRequestsEnabled": false,
+    "retentionDetails": "Retention periods, backup expiry and deletion procedures must be confirmed by the operator before public release.",
+    "internationalTransferDetails": "Service providers may process information outside your country. The operator must confirm applicable transfer safeguards before public release.",
+    "legalBases": "The operator must confirm the lawful bases for account services, optional AI, billing, security and support for the jurisdictions served.",
+    "disputeJurisdiction": "",
+    "rightsContactInstructions": "Contact the operator to request access, correction, export or deletion, subject to applicable law and identity verification."
+  },
+  "pages": {
+    "privacy": {
+      "title": "Your collection. Your choices.",
+      "subtitle": "What Anything stores, what leaves your device, and the controls you have.",
+      "sections": [
+        {
+          "title": "The short version",
+          "paragraphs": [
+            "You can keep a local collection without signing in. Optional cloud sync, AI, dictation and purchases involve service providers. Masked secret fields are not encryption; avoid storing credentials or highly sensitive information.",
+            "This showcase has no advertising pixels or analytics scripts added by us. Its hosting provider receives ordinary network information, such as IP address and browser information, to serve and protect the site. The Anything app uses local storage and provider SDKs for its features."
+          ]
+        },
+        {
+          "title": "What is stored",
+          "paragraphs": [
+            "On your device or browser: saved content, folders, tags, preferences and local image/cache data. With Google sign-in: Firebase Authentication account identifiers and profile information. With sync enabled: eligible saved content and folders in Cloud Firestore. Large local images may remain on the original device.",
+            "For paid AI: Firebase account ID, subscription access checks, usage counts and an expiring request reservation. RevenueCat receives subscription/customer information; Google Play or Apple processes your purchase. Anything does not receive your full payment-card number or CVV."
+          ]
+        },
+        {
+          "title": "When content leaves your device",
+          "paragraphs": [
+            "Cloud sync sends eligible collection content to Firebase when you enable it. Optional AI sends the prompt you submit through our Cloudflare Worker to Groq. It does not need your whole collection to answer that request. Do not put information into an AI prompt that you do not want sent to these services.",
+            "Link previews can send the saved URL to Microlink, Noembed or platform-specific preview services such as FxTwitter. Loading remote images or opening saved links contacts those hosts and may reveal ordinary network information. Speech recognition uses the device/platform recognition service and may use remote processing depending on the device; offline processing is not guaranteed."
+          ]
+        },
+        {
+          "title": "Permissions and local storage",
+          "paragraphs": [
+            "Microphone access is requested when you start dictation. Photo access is used when you choose an image. Clipboard access supports explicit paste/save actions and optional clipboard capture; it is not a system-wide clipboard monitor. You can deny or revoke permissions in your device or browser settings.",
+            "The web app uses browser storage to retain your collection and preferences and an image cache to reduce repeat downloads. Clearing site data can remove local-only saves. Export a backup first. This showcase does not require an account or optional cookies."
+          ],
+          "link": {
+            "label": "Read the permissions guide",
+            "href": "permissions.html"
+          }
+        },
+        {
+          "title": "Service providers",
+          "paragraphs": [
+            "Firebase/Google provides authentication and optional collection sync. Cloudflare hosts the AI gateway and may host this site. Groq processes AI requests. RevenueCat checks purchase entitlements; Apple and Google operate checkout. Preview and remote-image services receive the requests needed to load those resources.",
+            "Providers have their own privacy terms and may retain operational records under their policies. Anything does not promise that provider processing is anonymous, end-to-end encrypted, or used for no purpose beyond processing; review the providers' current policies before sending sensitive content."
+          ]
+        },
+        {
+          "title": "Retention, transfers and your rights",
+          "paragraphs": [
+            "Local content remains until you delete it or clear the app/browser data. Deleting a synced save can remove the corresponding cloud record, but local collection deletion does not delete your Firebase account, purchase records or all server usage records. Signing out or uninstalling does not cancel a subscription."
+          ],
+          "settings": [
+            "retentionDetails",
+            "internationalTransferDetails",
+            "legalBases",
+            "rightsContactInstructions"
+          ],
+          "link": {
+            "label": "Data and account deletion",
+            "href": "delete-account.html"
+          }
+        },
+        {
+          "title": "Children and changes",
+          "paragraphs": [
+            "Anything is a general-purpose collection tool and is not designed to solicit personal information from children. The operator must confirm the age requirements and consent process for the markets served before public release. Contact the operator if you believe a child's data has been submitted without appropriate consent.",
+            "Material changes to this notice will be reflected in its effective date. The operator is responsible for providing any additional notice or consent required by applicable law."
+          ]
+        }
+      ]
+    },
+    "permissions": {
+      "title": "Only when you ask.",
+      "subtitle": "A plain-language guide to Anything’s device and browser access.",
+      "sections": [
+        {
+          "title": "Microphone & speech recognition",
+          "paragraphs": [
+            "Used when you tap the microphone to dictate a draft. Your device may ask for microphone and speech-recognition access. The recognition service may process audio remotely. Denying access leaves typed capture available; dictation needs the permission."
+          ]
+        },
+        {
+          "title": "Photos & files",
+          "paragraphs": [
+            "Used to select an image, import a backup or export a collection. Availability and the scope of photo access depend on the operating system and picker. The app does not need camera permission for its current image-picker flow. Choose only the files you want to save or import."
+          ]
+        },
+        {
+          "title": "Clipboard",
+          "paragraphs": [
+            "Used for paste/save and optional clipboard capture while the app is active. Clipboard text can contain sensitive information: leave automatic capture off unless you want it. The desktop extension has separate optional permissions and captures copied content only when its feature is enabled. Password fields are excluded by the extension, but clipboard capture cannot guarantee detection of every secret."
+          ]
+        },
+        {
+          "title": "Network & sign-in",
+          "paragraphs": [
+            "Network access loads link previews and remote images and enables optional sync, AI and billing. Google sign-in establishes your Firebase account. It does not grant the app general access to your Gmail or Drive. Local saves and typed notes can be used without signing in; online features require a connection."
+          ]
+        },
+        {
+          "title": "Change your mind",
+          "paragraphs": [
+            "Manage app access from your operating system's Settings → Apps → Anything → Permissions, or use the browser's site settings. Names vary by device. Turning off a permission stops the related feature; it does not automatically erase information already saved or sent to a provider."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "The things to know.",
+      "subtitle": "Terms for using Anything, its web app, and optional paid features.",
+      "sections": [
+        {
+          "title": "Using Anything",
+          "paragraphs": [
+            "These terms describe the service provided by the operator identified below. Use Anything only where you can lawfully agree to these terms and meet applicable age requirements. Your mandatory consumer and privacy rights are not limited by these terms.",
+            "Keep account access secure. Do not use the service for unlawful content, infringement, abuse, bypassing quotas, interfering with other users, or attacking the service. The operator may restrict abusive activity, subject to applicable law."
+          ]
+        },
+        {
+          "title": "Your content stays yours",
+          "paragraphs": [
+            "You retain the rights you hold in your saved content. You are responsible for having permission to save, sync, share or submit it. You give the operator only the permission needed to store, process and transmit content for the features you choose. Saving a link does not transfer ownership of the linked work.",
+            "Local data can be lost if you uninstall, clear browser storage or lose a device. Export backups. Sync is not a promise of permanent archival storage, and remote content may disappear or become inaccessible."
+          ]
+        },
+        {
+          "title": "AI and third-party content",
+          "paragraphs": [
+            "AI responses can be inaccurate, incomplete or unsuitable. Check important output before relying on it. Do not treat generated text as professional medical, legal or financial advice. Third-party links and media remain subject to their owners' terms and availability."
+          ]
+        },
+        {
+          "title": "Anything Pro & billing",
+          "paragraphs": [
+            "The purchase screen shows the actual store price, currency, billing period and available terms before checkout. Auto-renewing subscriptions renew under the applicable store terms unless cancelled through that store. Deleting the app or an account does not cancel a subscription. Refund requests are handled under the store's rules and applicable law.",
+            "The current AI allowance is three successful free responses per account and, while Pro is active, 100 successful paid responses per UTC calendar month. Paid quota resets on the first of the month, not the purchase anniversary. Unused responses do not roll over. Failed generation does not spend quota. Yearly billing still uses the monthly AI allowance. Restore using the original store account and Anything sign-in.",
+            "Features, price and allowance changes must be disclosed as required before they affect an existing paid commitment. Nothing here promises an unavailable store release, lifetime access or unlimited AI."
+          ]
+        },
+        {
+          "title": "Availability and responsibility",
+          "paragraphs": [
+            "Features depend on your device, connectivity and third-party services and may be interrupted or changed. The operator must exercise the care required by applicable law. No term excludes liability, refunds, warranties or remedies that cannot lawfully be excluded. Back up important content and do not use the app as your only record of critical information."
+          ]
+        },
+        {
+          "title": "Ending use & contacting the operator",
+          "paragraphs": [
+            "You can stop using Anything at any time. Export content before deleting local saves. Account and associated-data requests follow the deletion guide. Any governing law or dispute details must be supplied by the operator for the markets served; mandatory local consumer rights continue to apply."
+          ],
+          "link": {
+            "label": "Data and account deletion",
+            "href": "delete-account.html"
+          }
+        }
+      ]
+    },
+    "delete-account": {
+      "title": "Leave with your things.",
+      "subtitle": "Export your collection, remove saves, and understand what account deletion requires.",
+      "sections": [
+        {
+          "title": "1. Export first",
+          "paragraphs": [
+            "In the mobile app, open Settings → Export collection. On the web, use the export control in Settings. Keep the JSON backup somewhere safe. A local-only collection can be lost after uninstalling or clearing site data."
+          ]
+        },
+        {
+          "title": "2. Remove your saves",
+          "paragraphs": [
+            "Use Settings → Delete all saves, or remove individual saves. If cloud sync is enabled, the corresponding collection changes are synced to that account. This removes saved content; it is not a complete account deletion. Signing out only ends your session."
+          ]
+        },
+        {
+          "title": "3. Request account and associated-data deletion",
+          "paragraphs": [
+            "The current app does not include an automated account-deletion control. The operator must provide and test an in-app request route plus an external request method before a store release that requires them. Until those are operational, this page must not be presented as a completed deletion service.",
+            "Once the operator enables requests below, send a request from the email associated with your Anything account. Do not send a password, payment-card number, ID document or private key. The operator may need to verify account ownership before deleting Firebase identity and associated cloud records. Subscription and provider records may have separate retention obligations."
+          ]
+        },
+        {
+          "title": "4. Cancel a subscription separately",
+          "paragraphs": [
+            "Manage or cancel an active subscription through Google Play or Apple. Account deletion or uninstalling does not cancel store billing. Purchase history and records required by the store or applicable law may remain with those providers."
+          ]
+        }
+      ]
+    }
+  }
+}
