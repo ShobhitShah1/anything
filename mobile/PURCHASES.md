@@ -24,7 +24,7 @@ The purchase flow is **store checkout → RevenueCat entitlement → authenticat
 
 1. Create/activate the real subscription products and base plans in the correct Play/App Store app. Connect store credentials and server notifications to the same RevenueCat project.
 2. Attach those products to the exact entitlement **`anything_pro`**, and to monthly/yearly packages in the **current offering**. The app uses localized prices from those packages.
-3. Set `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` (`goog_…`) and, for iOS, `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (`appl_…`). Set actual public HTTPS URLs for `EXPO_PUBLIC_TERMS_URL` and `EXPO_PUBLIC_PRIVACY_URL`. Put the same values in the EAS environment used for the release; `.env` alone does not configure a cloud build.
+3. Set `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` (`goog_…`) and, for iOS, `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (`appl_…`). Put the same values in the EAS environment used for the release; `.env` alone does not configure a cloud build.
 4. Confirm `REVENUECAT_SECRET_API_KEY` is a server API key from that same RevenueCat project and can access the v1 subscriber endpoint. Keep `ALLOW_SANDBOX_PURCHASES=false` in production. Never change production to accept sandbox access just to make a test pass.
 5. Deploy/check the Firestore rules and verify the Worker service account has the intended database permissions. Review customer purchase history in the RevenueCat dashboard, and actual charges/refunds in Play Console or App Store Connect.
 6. Follow the isolated sandbox setup below and test a store-distributed build: successful purchase, pending payment approval, cancelled checkout, reinstall/restore, account change, refund/revocation, renewal, offline/server failure after checkout, and the 100-response limit. A local code test does not replace these store tests.
@@ -33,7 +33,7 @@ The offer is **3 successful free AI responses per account**, then **100 successf
 
 References: [RevenueCat customer information](https://www.revenuecat.com/docs/customers/customer-info), [Google real-time notifications](https://www.revenuecat.com/docs/platform-resources/server-notifications/google-server-notifications), [RevenueCat user identity](https://www.revenuecat.com/docs/customers/identifying-customers).
 
-The app uses our custom React Native membership screen and `react-native-purchases`. There are no example prices, preview flags, fake memberships, or fallback products in the app. Missing store products show an unavailable state. The entitlement checked by both the mobile app and Worker is **`anything_pro`**.
+The app uses our custom React Native membership screen and `react-native-purchases`. Production uses real store prices and memberships, with no fallback products. Missing store products show an unavailable state. Signed-in development builds have **Enable Pro for my profile** in Settings only. This session-only, account-scoped preview updates the gold profile crowns, Settings membership card and member screen with 100 responses. It changes no stored collection data, RevenueCat entitlement, purchase, or backend AI allowance, and can be disabled from Settings. Real membership changes also update the shared profile status. The entitlement checked by both the mobile app and Worker is **`anything_pro`**.
 
 ## Will new subscription IDs appear automatically?
 
@@ -98,8 +98,6 @@ Add these public settings in the correct **EAS project environment** and in loca
 EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=goog_YOUR_ANDROID_PUBLIC_SDK_KEY
 EXPO_PUBLIC_REVENUECAT_IOS_KEY=appl_YOUR_IOS_PUBLIC_SDK_KEY
 EXPO_PUBLIC_AI_URL=https://YOUR_WORKER.workers.dev/ai
-EXPO_PUBLIC_TERMS_URL=https://YOUR_SITE/terms
-EXPO_PUBLIC_PRIVACY_URL=https://YOUR_SITE/privacy
 ```
 
 Replace every placeholder with your real value. The iOS key is needed only when building iOS. Keep the existing Firebase/Google login variables from `.env.example` in each matching EAS environment too. The app and Worker must use the same Firebase Auth project.
@@ -109,9 +107,9 @@ Replace every placeholder with your real value. The iOS key is needed only when 
 - Both are release builds. The local Test Store key has been removed so this setup uses the real store keys. An optional `EXPO_PUBLIC_REVENUECAT_TEST_KEY` can be supplied explicitly for **debug development builds only**. It is never selected by a store build. RevenueCat Test Store purchases do not create real Play/App Store products.
 - Public SDK keys are safe to embed. Never put RevenueCat server secrets, Groq keys, service-account JSON, or `.p8` files in `EXPO_PUBLIC_` variables.
 - Local `.env` is ignored by Git and is not automatically uploaded to EAS. Set cloud build values through the Expo dashboard's Environment Variables screen. An env/key change requires a new store build for this setup.
-- Live checkout requires published HTTPS Terms/Privacy pages and a successful server usage/access check. Do not ship placeholder URLs.
+- Checkout requires a successful server usage/access check. Remaining free responses do not block upgrading. Terms and Privacy links use the product website by default; optional `EXPO_PUBLIC_TERMS_URL` and `EXPO_PUBLIC_PRIVACY_URL` values override them. The free-response footer remains removed.
 
-The local AI URL is configured. Platform SDK keys and Terms/Privacy URLs still need configuration, as confirmed by the owner. Remote EAS values and store/RevenueCat dashboards were not inspected. Supply and verify them before building.
+Verify platform SDK keys and the AI URL in the selected EAS environment before building. Local environment values do not verify the cloud build configuration.
 
 [RevenueCat Test Store release restrictions](https://www.revenuecat.com/docs/test-and-launch/sandbox/test-store), [EAS environment variables](https://docs.expo.dev/eas/environment-variables/).
 
@@ -203,4 +201,4 @@ Use the `appl_` public SDK key for both sandbox and production. A `store-test` i
 - `src/app/subscription.tsx`: custom paywall, purchase/restore/manage, customer-info listener with cleanup, foreground refresh, server verification, usage and renewal date.
 - `worker/src/access.ts`: entitlement validation, production sandbox rejection, free and paid quotas. No client purchase flag grants paid AI access.
 
-No plans: check **real platform SDK key → connected store credentials → active products/base plans/countries → entitlement → default/current offering packages**, then refresh. Missing SDK key/backend/legal URLs intentionally prevent checkout. Store-confirmed but unverified means fix entitlement/project/Firebase UID/staging flag, then refresh; it does not mean purchase again. No hosted RevenueCat paywall is installed. Customer Center is optional and currently requires RevenueCat Pro/Enterprise; direct store management and explicit Restore are already supported.
+No plans: check **real platform SDK key → connected store credentials → active products/base plans/countries → entitlement → default/current offering packages**, then refresh. Missing SDK key/backend prevents checkout. Store-confirmed but unverified means fix entitlement/project/Firebase UID/staging flag, then refresh; it does not mean purchase again. No hosted RevenueCat paywall is installed. Customer Center is optional and currently requires RevenueCat Pro/Enterprise; direct store management and explicit Restore are already supported.

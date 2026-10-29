@@ -9,12 +9,46 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { CollectionProvider, useCollection } from '../state/collection';
 import { Feedback, FeedbackHost } from '../components/feedback';
 import { LaunchScreen } from '../components/launch-screen';
+import { loadSubscription } from '../services/subscription';
+import { SignInSheet } from '../components/sign-in-sheet';
+import { billingClient } from '../services/billing';
+import { hasPro } from '../utils/billing-config';
 
 function Routes() {
   const state = useCollection();
   const segments = useSegments();
   const reduced = useReducedMotion();
   const { colors, dark, ready, error } = state;
+  const uid = state.user?.uid;
+  const { setMembership } = state;
+  useEffect(() => {
+    if (!uid) return;
+    let disposed = false;
+    let client: Awaited<ReturnType<typeof billingClient>> | undefined;
+    const changed = (info: Parameters<typeof hasPro>[0]) => {
+      if (!disposed) setMembership({ uid, active: hasPro(info) });
+    };
+    void loadSubscription(uid).then(([usage, billing]) => {
+      if (!disposed)
+        setMembership({
+          uid,
+          active:
+            (usage.status === 'fulfilled' && usage.value.paid) ||
+            (billing.status === 'fulfilled' && billing.value.active),
+        });
+    });
+    void billingClient()
+      .then((value) => {
+        if (disposed) return;
+        client = value;
+        client.addCustomerInfoUpdateListener(changed);
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      client?.removeCustomerInfoUpdateListener(changed);
+    };
+  }, [uid, setMembership]);
   useEffect(() => {
     Appearance.setColorScheme(state.data.theme === 'system' ? 'unspecified' : state.data.theme);
     void SystemUI.setBackgroundColorAsync(colors.canvas).catch(() => {});
@@ -77,6 +111,7 @@ function Routes() {
         <Stack.Screen name="folders" options={{ title: 'Folders' }} />
       </Stack>
       {segments[0] !== 'capture' && <FeedbackHost />}
+      <SignInSheet />
     </>
   );
 }

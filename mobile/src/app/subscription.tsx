@@ -1,10 +1,19 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { auth } from '../services/auth';
-import { ActivityIndicator, AppState, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  Image,
+  useWindowDimensions,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
-import { ArrowRight, Check, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { useCollection } from '../state/collection';
 import { GoogleMark } from '../components/ui';
 import { getAiAccess, type AiAccess } from '../services/ai';
@@ -12,24 +21,51 @@ import { billingClient, REVENUECAT_TEST_MODE } from '../services/billing';
 import { billingError, ENTITLEMENT_ID, hasPro } from '../utils/billing-config';
 import { openLink } from '../utils/open-link';
 import { subscriptionPlans } from '../utils/subscription-plans';
-import { fonts } from '../theme';
 import { MembershipBackdrop } from '../components/membership-backdrop';
+import { fonts } from '../theme';
 import { verifySubscription } from '../utils/verify-subscription';
+import {
+  loadSubscription,
+  rememberSubscription,
+  subscriptionSnapshot,
+} from '../services/subscription';
 
-const terms = process.env.EXPO_PUBLIC_TERMS_URL || '';
-const privacy = process.env.EXPO_PUBLIC_PRIVACY_URL || '';
-const legalReady = /^https:\/\//.test(terms) && /^https:\/\//.test(privacy);
+const terms =
+  process.env.EXPO_PUBLIC_TERMS_URL || 'https://shobhitshah1.github.io/anything/about/terms.html';
+const privacy =
+  process.env.EXPO_PUBLIC_PRIVACY_URL ||
+  'https://shobhitshah1.github.io/anything/about/privacy.html';
 
 export default function Subscription() {
+  const { user } = useCollection();
+  return <Membership key={user?.uid || 'guest'} />;
+}
+
+function Membership() {
   const state = useCollection();
-  const { colors, user } = state;
+  const { user } = state;
+  // The Pro screen uses the About site's nocturnal palette in either app theme.
+  const colors = {
+    ...state.colors,
+    canvas: '#10120F',
+    paper: '#191C17',
+    ink: '#F1EFE3',
+    muted: '#A9ACA1',
+    line: '#383D32',
+    soft: '#292F23',
+    accent: '#E2E8CC',
+    aiBlue: '#CEDBB2',
+  };
   const insets = useSafeAreaInsets();
-  const [access, setAccess] = useState<AiAccess | null>(null);
-  const [plans, setPlans] = useState<PurchasesPackage[]>([]);
-  const [customer, setCustomer] = useState<CustomerInfo | null>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const artWidth = Math.max(380, screenWidth);
+  const cached = subscriptionSnapshot(user?.uid);
+  const [access, setAccess] = useState<AiAccess | null>(cached?.access ?? null);
+  const [plans, setPlans] = useState<PurchasesPackage[]>(cached?.plans ?? []);
+  const [customer, setCustomer] = useState<CustomerInfo | null>(cached?.customer ?? null);
   const storeActive = !!customer && hasPro(customer);
-  const [selected, setSelected] = useState('');
-  const [loading, setLoading] = useState(!!user);
+  const [selected, setSelected] = useState(cached?.plans[0]?.identifier || '');
+  const [loading, setLoading] = useState(!!user && !cached);
   const [working, setWorking] = useState(false);
   const [pending, setPending] = useState<'approval' | 'verification' | null>(null);
   const [error, setError] = useState('');
@@ -37,25 +73,19 @@ export default function Subscription() {
   const operation = useRef(false);
   const focusController = useRef<AbortController | null>(null);
   const refreshVersion = useRef(0);
+  useEffect(() => {
+    if (user) rememberSubscription(user.uid, { access, customer, plans });
+  }, [user, access, customer, plans]);
 
   const refresh = useCallback(
     async (signal: AbortSignal) => {
       if (!user) return;
       const version = ++refreshVersion.current;
-      setLoading(true);
+      const cached = subscriptionSnapshot(user.uid);
+      setLoading(!cached?.access || (!cached.customer && !cached.plans.length));
       setError('');
       setNotice('');
-      const results = await Promise.allSettled([
-        getAiAccess(signal),
-        billingClient().then(async (client) => {
-          await client.invalidateCustomerInfoCache();
-          const [offerings, customer] = await Promise.all([
-            client.getOfferings(),
-            client.getCustomerInfo(),
-          ]);
-          return { offerings, customer, active: hasPro(customer) };
-        }),
-      ]);
+      const results = await loadSubscription(user.uid);
       if (
         signal.aborted ||
         version !== refreshVersion.current ||
@@ -85,6 +115,23 @@ export default function Subscription() {
         const available = subscriptionPlans(current?.availablePackages || []).map(
           (plan) => plan.storePackage,
         );
+        if (__DEV__)
+          console.info('[billing] Offerings response', {
+            currentOffering: current?.identifier ?? null,
+            offerings: Object.values(offerings.value.offerings.all).map((offering) => ({
+              id: offering.identifier,
+              packages: offering.availablePackages.map((pkg) => ({
+                packageId: pkg.identifier,
+                productId: pkg.product.identifier,
+                title: pkg.product.title,
+                period: pkg.product.subscriptionPeriod,
+                price: pkg.product.price,
+                priceString: pkg.product.priceString,
+                currency: pkg.product.currencyCode,
+              })),
+            })),
+            displayedPackages: available.map((pkg) => pkg.identifier),
+          });
         setPlans(available);
         setSelected((value) =>
           available.some((plan) => plan.identifier === value)
@@ -100,7 +147,11 @@ export default function Subscription() {
             'Plans are not available from the store yet. You can still use any free AI responses.',
           );
       } else {
-        setPlans([]);
+        if (__DEV__)
+          console.warn('[billing] Offerings request failed', {
+            code: offerings.reason?.code,
+            message: offerings.reason?.message,
+          });
         messages.push(offerings.reason?.message || 'Could not load subscription plans.');
       }
       setError(messages.join('\n'));
@@ -113,11 +164,6 @@ export default function Subscription() {
     useCallback(() => {
       const controller = new AbortController();
       focusController.current = controller;
-      setAccess(null);
-      setPlans([]);
-      setCustomer(null);
-      setPending(null);
-      setLoading(false);
       setNotice('');
       setError('');
       void refresh(controller.signal);
@@ -156,6 +202,7 @@ export default function Subscription() {
 
   const run = async (action: () => Promise<void>) => {
     if (operation.current) return;
+    refreshVersion.current++;
     operation.current = true;
     setWorking(true);
     setError('');
@@ -193,14 +240,17 @@ export default function Subscription() {
   const options = subscriptionPlans(plans);
   const plan = options.find((value) => value.id === selected);
   const paid = access?.paid === true;
+  const previewing = __DEV__ && state.devPro;
+  const showMember = paid || storeActive || previewing;
+  const displayedAccess = previewing ? { remaining: 100, limit: 100 } : access;
   const canPurchase =
     !!user &&
     !!plan?.storePackage &&
     (!!access || REVENUECAT_TEST_MODE) &&
     !paid &&
+    !previewing &&
     !storeActive &&
     !pending &&
-    (legalReady || REVENUECAT_TEST_MODE) &&
     !loading &&
     !working &&
     !state.busy;
@@ -274,8 +324,34 @@ export default function Subscription() {
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   return (
     <View style={{ flex: 1, backgroundColor: colors.canvas }}>
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: false, statusBarStyle: 'light' }} />
       <MembershipBackdrop />
+      <View
+        pointerEvents="none"
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 340, overflow: 'hidden' }}
+      >
+        <Image
+          source={require('../../assets/pro-space/outpost-top.png')}
+          resizeMode="cover"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: artWidth,
+            height: (artWidth * 19) / 9,
+          }}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            inset: 0,
+            experimental_backgroundImage:
+              'linear-gradient(to right, rgba(16,18,15,0.8) 0%, rgba(16,18,15,0.7) 55%, rgba(16,18,15,0) 100%), linear-gradient(to bottom, rgba(16,18,15,0) 75%, #10120F 100%)',
+          }}
+        />
+      </View>
       <View
         style={{
           paddingTop: insets.top + 4,
@@ -303,8 +379,8 @@ export default function Subscription() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Restore purchases"
-          accessibilityState={{ disabled: working || loading || !user }}
-          disabled={working || loading || !user}
+          accessibilityState={{ disabled: working || loading || !user || previewing }}
+          disabled={working || loading || !user || previewing}
           onPress={restore}
           style={({ pressed }) => ({
             minHeight: 44,
@@ -324,91 +400,100 @@ export default function Subscription() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: 26,
-          paddingTop: 22,
-          paddingBottom: 18,
-          gap: 24,
+          paddingHorizontal: 24,
+          paddingTop: 12,
+          paddingBottom: 16,
+          gap: 16,
           maxWidth: 560,
           width: '100%',
           alignSelf: 'center',
         }}
       >
-        <View style={{ gap: 14 }}>
+        <View style={{ minHeight: 212, justifyContent: 'center', paddingBottom: 24, gap: 3 }}>
           <Text
             allowFontScaling={false}
             style={{
-              color: colors.accent,
+              color: colors.muted,
               fontSize: 10,
-              lineHeight: 16,
-              letterSpacing: 2.2,
-              fontWeight: '700',
+              fontFamily: fonts.mono,
+              letterSpacing: 2,
+              marginBottom: 10,
             }}
           >
-            ANYTHING PRO
+            ANYTHING / PRO
           </Text>
           <Text
             allowFontScaling={false}
             accessibilityRole="header"
             style={{
               color: colors.ink,
-              fontSize: 37,
-              lineHeight: 43,
-              fontWeight: '600',
-              letterSpacing: -1.5,
+              fontSize: 48,
+              lineHeight: 54,
+              letterSpacing: -2,
+              fontWeight: '400',
             }}
           >
-            {paid || storeActive ? 'Your creative space.' : 'More from'}
-            {!paid && !storeActive && (
-              <Text
-                allowFontScaling={false}
-                style={{
-                  fontFamily: fonts.editorial,
-                  fontStyle: 'italic',
-                  fontWeight: '400',
-                  letterSpacing: -1,
-                }}
-              >
-                {'\n'}every idea.
-              </Text>
-            )}
+            A space for
           </Text>
           <Text
             allowFontScaling={false}
-            style={{ color: colors.accent, fontSize: 14, lineHeight: 22 }}
+            style={{
+              color: colors.ink,
+              fontSize: 58,
+              lineHeight: 66,
+              letterSpacing: -2,
+              fontFamily: fonts.editorial,
+              fontStyle: 'italic',
+            }}
           >
-            {paid
-              ? 'Your membership, usage, and next chapter.'
-              : '100 AI responses a month. A little help to write, explore, and make things happen.'}
+            more.
           </Text>
         </View>
-
-        <View style={{ gap: 13 }}>
-          {[
-            'Turn a thought into notes, lists, and plans',
-            'Refine a draft while keeping your voice',
-            'Explore ideas with sources you can open',
-          ].map((title) => (
-            <View key={title} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Check size={15} strokeWidth={1.8} color={colors.accent} />
-              <Text
-                allowFontScaling={false}
-                style={{ flex: 1, color: colors.ink, fontSize: 13, lineHeight: 20 }}
-              >
-                {title}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {paid || storeActive ? (
+        {!showMember && (
           <View
             style={{
-              padding: 20,
-              gap: 16,
-              borderRadius: 22,
+              paddingVertical: 4,
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <Text
+                allowFontScaling={false}
+                style={{
+                  color: colors.ink,
+                  fontSize: 44,
+                  lineHeight: 50,
+                  letterSpacing: -2,
+                  fontWeight: '700',
+                }}
+              >
+                100
+              </Text>
+              <View style={{ gap: 3, flex: 1 }}>
+                <Text allowFontScaling={false} style={{ color: colors.ink, fontSize: 14 }}>
+                  AI responses
+                </Text>
+                <Text allowFontScaling={false} style={{ color: colors.muted, fontSize: 12 }}>
+                  A fresh allowance every month.
+                </Text>
+              </View>
+            </View>
+            <Text
+              allowFontScaling={false}
+              style={{ color: colors.muted, fontSize: 12, lineHeight: 19 }}
+            >
+              Write, refine and research with your collection.
+            </Text>
+          </View>
+        )}
+
+        {showMember ? (
+          <View
+            style={{
+              padding: 22,
+              gap: 20,
+              borderRadius: 12,
               backgroundColor: colors.paper,
-              borderWidth: 1,
-              borderColor: colors.line,
             }}
           >
             <View
@@ -426,10 +511,10 @@ export default function Subscription() {
                 Anything Pro
               </Text>
               <Text allowFontScaling={false} style={{ color: colors.accent, fontSize: 12 }}>
-                {paid ? 'Active' : 'Verifying access'}
+                {previewing ? 'Preview' : paid ? 'Active' : 'Verifying access'}
               </Text>
             </View>
-            {paid && access && (
+            {(paid || previewing) && displayedAccess && (
               <>
                 <Text
                   allowFontScaling={false}
@@ -442,18 +527,22 @@ export default function Subscription() {
                     letterSpacing: -1.5,
                   }}
                 >
-                  {access.remaining}
+                  {displayedAccess.remaining}
                   <Text
                     allowFontScaling={false}
                     style={{ color: colors.muted, fontSize: 13, letterSpacing: 0 }}
                   >
                     {' '}
-                    / {access.limit} responses left
+                    / {displayedAccess.limit} responses left
                   </Text>
                 </Text>
                 <View
                   accessibilityRole="progressbar"
-                  accessibilityValue={{ min: 0, max: access.limit, now: access.remaining }}
+                  accessibilityValue={{
+                    min: 0,
+                    max: displayedAccess.limit,
+                    now: displayedAccess.remaining,
+                  }}
                   style={{
                     height: 4,
                     borderRadius: 2,
@@ -464,7 +553,7 @@ export default function Subscription() {
                   <View
                     style={{
                       height: '100%',
-                      width: `${Math.max(0, Math.min(100, (access.remaining / Math.max(1, access.limit)) * 100))}%`,
+                      width: `${Math.max(0, Math.min(100, (displayedAccess.remaining / Math.max(1, displayedAccess.limit)) * 100))}%`,
                       backgroundColor: colors.aiBlue,
                     }}
                   />
@@ -474,7 +563,7 @@ export default function Subscription() {
                 </Text>
               </>
             )}
-            {!!billingDate && (
+            {!!billingDate && !previewing && (
               <Text allowFontScaling={false} style={muted}>
                 {membership?.willRenew ? 'Renews' : 'Access until'} {billingDate}
               </Text>
@@ -482,23 +571,11 @@ export default function Subscription() {
           </View>
         ) : (
           <View style={{ gap: 10 }}>
-            <Text
-              allowFontScaling={false}
-              style={{ color: colors.muted, fontSize: 11, lineHeight: 17, marginBottom: 2 }}
-            >
-              Same possibilities. Your preferred pace.
-            </Text>
-            {loading && (
-              <ActivityIndicator color={colors.accent} accessibilityLabel="Loading store prices" />
-            )}
             {!loading && !options.length && (
               <View
                 style={{
                   paddingVertical: 15,
                   gap: 5,
-                  borderTopWidth: 1,
-                  borderBottomWidth: 1,
-                  borderColor: colors.line,
                 }}
               >
                 <Text
@@ -517,105 +594,121 @@ export default function Subscription() {
             <View
               accessibilityRole="radiogroup"
               accessibilityLabel="Subscription plans"
-              style={{ gap: 10 }}
+              style={{ flexDirection: 'row', gap: 10 }}
             >
-              {options.map((item) => {
-                const chosen = selected === item.id;
-                return (
-                  <Pressable
-                    key={item.id}
-                    accessibilityRole="radio"
-                    accessibilityLabel={`${item.title}, ${item.price} per ${item.period}. ${item.detail}`}
-                    accessibilityState={{ checked: chosen, disabled: working || !!pending }}
-                    disabled={working || !!pending}
-                    onPress={() => setSelected(item.id)}
-                    style={({ pressed }) => ({
-                      paddingHorizontal: 17,
-                      paddingVertical: 16,
-                      borderRadius: 20,
-                      borderCurve: 'continuous',
-                      borderWidth: 1,
-                      borderColor: chosen ? colors.aiBlue : colors.line,
-                      backgroundColor: chosen ? colors.soft : colors.paper,
+              {options.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${item.title}, ${item.price} per ${item.period}. ${item.detail}`}
+                  accessibilityState={{
+                    checked: selected === item.id,
+                    disabled: working || !!pending,
+                  }}
+                  disabled={working || !!pending}
+                  onPress={() => setSelected(item.id)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    gap: 12,
+                    minHeight: 156,
+                    padding: 16,
+                    borderRadius: 20,
+                    backgroundColor: selected === item.id ? colors.ink : colors.paper,
+                    experimental_backgroundImage:
+                      selected === item.id
+                        ? 'linear-gradient(145deg, #F1EFE3 0%, #D9E0CC 100%)'
+                        : 'linear-gradient(145deg, #252B21 0%, #181C16 100%)',
+                    opacity: pressed ? 0.65 : 1,
+                  })}
+                >
+                  <View
+                    style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 12,
-                      opacity: pressed ? 0.75 : 1,
-                    })}
+                      justifyContent: 'space-between',
+                      gap: 6,
+                    }}
                   >
+                    <Text
+                      allowFontScaling={false}
+                      style={{
+                        color: selected === item.id ? colors.canvas : colors.ink,
+                        fontSize: 14,
+                        lineHeight: 20,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {item.title}
+                    </Text>
                     <View
                       style={{
-                        width: 19,
-                        height: 19,
-                        borderRadius: 10,
+                        width: 16,
+                        height: 16,
+                        borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: chosen ? colors.accent : colors.muted,
+                        borderColor: selected === item.id ? colors.canvas : colors.muted,
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      {chosen && (
+                      {selected === item.id && (
                         <View
                           style={{
-                            width: 9,
-                            height: 9,
-                            borderRadius: 5,
-                            backgroundColor: colors.accent,
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: colors.canvas,
                           }}
                         />
                       )}
                     </View>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text
-                        allowFontScaling={false}
-                        style={{ color: colors.ink, fontSize: 14, fontWeight: '600' }}
-                      >
-                        {item.title}
-                        {item.savings > 0 && (
-                          <Text
-                            allowFontScaling={false}
-                            style={{ color: colors.accent, fontSize: 11, fontWeight: '500' }}
-                          >
-                            {' '}
-                            · Save {item.savings}%
-                          </Text>
-                        )}
-                      </Text>
-                      <Text
-                        allowFontScaling={false}
-                        style={{ color: colors.muted, fontSize: 10, lineHeight: 16 }}
-                      >
-                        {item.detail}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end', maxWidth: '44%', gap: 2 }}>
-                      <Text
-                        allowFontScaling={false}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.75}
-                        numberOfLines={1}
-                        style={{
-                          color: colors.ink,
-                          fontSize: 23,
-                          lineHeight: 29,
-                          fontWeight: '500',
-                          letterSpacing: -0.8,
-                        }}
-                      >
-                        {item.price}
-                      </Text>
-                      <Text allowFontScaling={false} style={{ color: colors.muted, fontSize: 10 }}>
-                        per {item.period}
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
+                  </View>
+                  <View style={{ gap: 2 }}>
+                    <Text
+                      allowFontScaling={false}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.65}
+                      style={{
+                        color: selected === item.id ? colors.canvas : colors.ink,
+                        fontSize: 24,
+                        lineHeight: 30,
+                        fontWeight: '600',
+                        letterSpacing: -0.6,
+                      }}
+                    >
+                      {item.price}
+                    </Text>
+                    <Text
+                      allowFontScaling={false}
+                      style={{
+                        color: selected === item.id ? '#535C49' : colors.muted,
+                        fontSize: 11,
+                        lineHeight: 16,
+                      }}
+                    >
+                      per {item.period}
+                    </Text>
+                  </View>
+                  <Text
+                    allowFontScaling={false}
+                    style={{
+                      color: selected === item.id ? '#535C49' : colors.muted,
+                      fontSize: 10,
+                      lineHeight: 16,
+                      minHeight: 32,
+                    }}
+                  >
+                    {item.savings > 0 ? `Save ${item.savings}% · ` : ''}
+                    {item.detail}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
         )}
 
-        {!!(error || notice) && (
+        {!previewing && !!(error || notice) && (
           <View
             style={{
               gap: 4,
@@ -651,166 +744,143 @@ export default function Subscription() {
             )}
           </View>
         )}
-
-        <View style={{ gap: 9 }}>
-          {!paid && (
-            <Text allowFontScaling={false} style={{ ...muted, fontSize: 11 }}>
-              {access
-                ? `${access.remaining} of 3 free AI responses left.`
-                : '3 free AI responses per account.'}{' '}
-              Your collection and voice-to-text stay free.
-            </Text>
-          )}
-          <Text allowFontScaling={false} style={{ ...muted, fontSize: 10, lineHeight: 16 }}>
-            Both plans include 100 responses per UTC calendar month. Unused responses do not roll
-            over. Payment is charged at confirmation and renews automatically until canceled in your
-            store account.
-          </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              columnGap: 22,
-            }}
-          >
-            {[
-              [terms, 'Terms'],
-              [privacy, 'Privacy'],
-            ].map(([url, title]) => (
-              <Pressable
-                key={title}
-                accessibilityRole="link"
-                disabled={working || !/^https:\/\//.test(url)}
-                onPress={() =>
-                  void run(async () => {
-                    await openLink(url);
-                  })
-                }
-                style={({ pressed }) => ({
-                  minHeight: 44,
-                  justifyContent: 'center',
-                  opacity: pressed ? 0.5 : 1,
-                })}
-              >
-                <Text allowFontScaling={false} style={{ ...muted, fontSize: 11 }}>
-                  {title}
-                </Text>
-              </Pressable>
-            ))}
-            {!!user && (
-              <Pressable
-                accessibilityRole="button"
-                disabled={working || loading}
-                onPress={() => {
-                  if (focusController.current) void refresh(focusController.current.signal);
-                }}
-                style={{ minHeight: 44, justifyContent: 'center' }}
-              >
-                <Text allowFontScaling={false} style={{ ...muted, fontSize: 11 }}>
-                  Refresh
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-        {!REVENUECAT_TEST_MODE && !legalReady && (
-          <Text allowFontScaling={false} style={{ ...muted, fontSize: 11, textAlign: 'center' }}>
-            Purchases open once our terms and privacy policy are published.
-          </Text>
-        )}
-        {!!access?.remaining && !paid && (
-          <Pressable
-            accessibilityRole="button"
-            disabled={working}
-            onPress={close}
-            style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Text allowFontScaling={false} style={{ color: colors.muted, fontSize: 11 }}>
-              Use your free responses first
-            </Text>
-          </Pressable>
-        )}
       </ScrollView>
       <View
         style={{
-          paddingHorizontal: 26,
-          paddingTop: 12,
-          paddingBottom: Math.max(insets.bottom, 14),
-          backgroundColor: colors.canvas,
+          paddingHorizontal: 24,
+          paddingTop: 8,
+          paddingBottom: Math.max(insets.bottom, 8),
+          backgroundColor: 'transparent',
+          experimental_backgroundImage:
+            'linear-gradient(to bottom, rgba(16,18,15,0) 0%, rgba(16,18,15,0.95) 55%, #10120F 100%)',
         }}
       >
-        <View style={{ maxWidth: 508, width: '100%', alignSelf: 'center', gap: 9 }}>
+        <View style={{ maxWidth: 512, width: '100%', alignSelf: 'center' }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={
-              paid || storeActive
-                ? 'Manage subscription'
-                : !user
-                  ? 'Continue with Google'
-                  : `Subscribe to ${plan?.title || 'Anything Pro'}`
+              previewing
+                ? 'Back to collection'
+                : paid || storeActive
+                  ? 'Manage subscription'
+                  : !user
+                    ? 'Continue with Google'
+                    : `Subscribe to ${plan?.title || 'Anything Pro'}`
             }
-            accessibilityState={{ disabled, busy: working || loading }}
-            disabled={disabled}
-            onPress={subscribe}
+            accessibilityState={{
+              disabled: !previewing && disabled,
+              busy: !previewing && (working || loading),
+            }}
+            disabled={!previewing && disabled}
+            onPress={previewing ? () => router.replace('/') : subscribe}
             style={({ pressed }) => ({
               minHeight: 54,
-              borderRadius: 99,
+              borderRadius: 12,
               backgroundColor: colors.ink,
               paddingHorizontal: 22,
               paddingVertical: 15,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 12,
-              opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
+              opacity: !previewing && disabled ? 0.45 : pressed ? 0.8 : 1,
             })}
           >
-            {working || loading ? (
-              <ActivityIndicator color={colors.canvas} />
-            ) : !user ? (
-              <GoogleMark />
-            ) : null}
+            {!previewing && (working || loading || !user) && (
+              <View
+                style={{
+                  position: 'absolute',
+                  left: 20,
+                  top: 0,
+                  bottom: 0,
+                  justifyContent: 'center',
+                }}
+              >
+                {working || loading ? <ActivityIndicator color={colors.canvas} /> : <GoogleMark />}
+              </View>
+            )}
             <Text
               allowFontScaling={false}
               style={{
                 color: colors.canvas,
                 fontSize: 15,
+                lineHeight: 20,
                 fontWeight: '600',
                 flex: 1,
                 textAlign: 'center',
               }}
             >
-              {working || loading || state.busy
-                ? 'Please wait…'
-                : paid || storeActive
-                  ? 'Manage subscription'
-                  : pending === 'verification'
-                    ? 'Verifying your purchase'
-                    : pending === 'approval'
-                      ? 'Awaiting payment approval'
-                      : !user
-                        ? 'Continue with Google'
-                        : REVENUECAT_TEST_MODE
-                          ? 'Try test subscription'
-                          : 'Get Anything Pro'}
+              {previewing
+                ? 'Back to collection'
+                : working || loading || state.busy
+                  ? 'Please wait…'
+                  : paid || storeActive
+                    ? 'Manage subscription'
+                    : pending === 'verification'
+                      ? 'Verifying your purchase'
+                      : pending === 'approval'
+                        ? 'Awaiting payment approval'
+                        : !user
+                          ? 'Continue with Google'
+                          : REVENUECAT_TEST_MODE
+                            ? 'Try test subscription'
+                            : 'Get Anything Pro'}
             </Text>
-            {!working && !loading && (
-              <ArrowRight size={18} color={colors.canvas} strokeWidth={1.8} />
-            )}
           </Pressable>
           <Text
             allowFontScaling={false}
-            style={{ color: colors.muted, fontSize: 10, lineHeight: 16, textAlign: 'center' }}
+            style={{
+              color: colors.muted,
+              fontSize: 10,
+              lineHeight: 16,
+              textAlign: 'center',
+              marginTop: 14,
+            }}
           >
-            {REVENUECAT_TEST_MODE
-              ? 'Test Store only · no real charge'
-              : paid || storeActive
-                ? 'Manage or cancel in your store account.'
-                : plan
-                  ? `${plan.price} / ${plan.period} · Auto-renews. Cancel anytime.`
-                  : 'No payment until you confirm in the store.'}
+            {previewing
+              ? 'Development preview · no purchase or AI access change'
+              : REVENUECAT_TEST_MODE
+                ? 'Test Store only · no real charge'
+                : paid || storeActive
+                  ? 'Manage or cancel in your store account.'
+                  : plan
+                    ? `${plan.price} / ${plan.period} · Auto-renews. Cancel anytime.`
+                    : 'No payment until you confirm in the store.'}
           </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 20,
+            }}
+          >
+            {[
+              [terms, 'Terms'],
+              [privacy, 'Privacy'],
+            ].map(([url, label]) => (
+              <Pressable
+                key={label}
+                accessibilityRole="link"
+                accessibilityLabel={label === 'Terms' ? 'Terms and conditions' : 'Privacy policy'}
+                disabled={working}
+                onPress={() =>
+                  void openLink(url).catch((reason) =>
+                    setError(
+                      reason instanceof Error ? reason.message : 'Could not open this page.',
+                    ),
+                  )
+                }
+                style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 }}
+              >
+                <Text
+                  allowFontScaling={false}
+                  style={{ color: colors.muted, fontSize: 11, lineHeight: 16, textAlign: 'center' }}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </View>
     </View>

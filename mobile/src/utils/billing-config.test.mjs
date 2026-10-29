@@ -1,7 +1,41 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { billingKey, billingError, hasPro } from './billing-config.ts';
+
+test('early upgrades allow remaining free responses without policy URL configuration', () => {
+  const screen = readFileSync(new URL('../app/subscription.tsx', import.meta.url), 'utf8');
+  const expression = screen.match(/const canPurchase =([\s\S]*?);/)[1];
+  const ready = {
+    user: {},
+    plan: { storePackage: {} },
+    access: { paid: false, remaining: 3 },
+    REVENUECAT_TEST_MODE: false,
+    paid: false,
+    previewing: false,
+    storeActive: false,
+    pending: null,
+    loading: false,
+    working: false,
+    state: { busy: false },
+  };
+  assert.equal(runInNewContext(expression, ready), true);
+  for (const blocked of [
+    { user: null },
+    { plan: null },
+    { access: null },
+    { paid: true },
+    { previewing: true },
+    { storeActive: true },
+    { pending: 'approval' },
+    { pending: 'verification' },
+    { loading: true },
+    { working: true },
+    { state: { busy: true } },
+  ])
+    assert.equal(runInNewContext(expression, { ...ready, ...blocked }), false);
+});
 
 test('Test Store key is used only in development; release requires the correct store key', () => {
   const keys = { test: 'test_example', ios: 'appl_example', android: 'goog_example' };

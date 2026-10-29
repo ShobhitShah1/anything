@@ -135,7 +135,7 @@ export default function Folders() {
         contentContainerStyle={{
           paddingHorizontal: space.lg,
           paddingTop: topInset + 6,
-          paddingBottom: 116 + insets.bottom,
+          paddingBottom: insets.bottom + 100,
           maxWidth: 720,
           width: '100%',
           alignSelf: 'center',
@@ -372,12 +372,13 @@ export default function Folders() {
       )}
       <KeyboardStickyView
         pointerEvents="box-none"
+        offset={{ closed: 0, opened: insets.bottom }}
         style={{
           position: 'absolute',
           top: 0,
           left: 20,
           right: 20,
-          bottom: Math.max(insets.bottom, 16),
+          bottom: insets.bottom + 16,
           alignItems: 'center',
         }}
       >

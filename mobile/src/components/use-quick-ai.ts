@@ -161,7 +161,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
           error instanceof AiAccessError &&
           ['sign_in_required', 'subscription_required'].includes(error.code)
         ) {
-          router.push('/subscription');
+          router.push('/settings');
           return;
         }
         if (draft.content) {

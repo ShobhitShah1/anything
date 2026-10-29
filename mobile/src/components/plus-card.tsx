@@ -6,12 +6,18 @@ import { fonts } from '../theme';
 import { MembershipBackdrop } from './membership-backdrop';
 
 export function PlusCard({ compact = false }: { compact?: boolean }) {
-  const { colors } = useCollection();
+  const { colors, user, setSignInPrompt, pro } = useCollection();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Explore Anything Pro. 100 AI responses each month."
-      onPress={() => router.push('/subscription')}
+      accessibilityLabel={
+        pro
+          ? 'Manage Anything Pro'
+          : user
+            ? 'Explore Anything Pro. 100 AI responses each month.'
+            : 'Sign in to explore Anything Pro'
+      }
+      onPress={() => (user ? router.push('/subscription') : setSignInPrompt('pro'))}
       style={({ pressed }) => ({
         minHeight: compact ? 44 : 72,
         justifyContent: 'center',
@@ -29,18 +35,23 @@ export function PlusCard({ compact = false }: { compact?: boolean }) {
             gap: 5,
             paddingVertical: 8,
             borderRadius: 99,
-            backgroundColor: colors.soft,
+            backgroundColor: pro ? colors.ink : colors.soft,
           }}
         >
           <Text
             allowFontScaling={false}
             maxFontSizeMultiplier={1.1}
             numberOfLines={1}
-            style={{ color: colors.ink, fontSize: 12, lineHeight: 18, fontWeight: '600' }}
+            style={{
+              color: pro ? colors.canvas : colors.ink,
+              fontSize: 12,
+              lineHeight: 18,
+              fontWeight: '600',
+            }}
           >
-            Go Pro
+            {pro ? 'Pro' : 'Go Pro'}
           </Text>
-          <ArrowUpRight size={12} color={colors.accent} />
+          <ArrowUpRight size={12} color={pro ? colors.canvas : colors.accent} />
         </View>
       ) : (
         <View
@@ -77,7 +88,7 @@ export function PlusCard({ compact = false }: { compact?: boolean }) {
                 allowFontScaling={false}
                 style={{ flexShrink: 1, color: colors.accent, fontSize: 12, lineHeight: 18 }}
               >
-                Explore membership
+                {pro ? 'Manage membership' : 'Explore membership'}
               </Text>
               <ArrowUpRight size={13} strokeWidth={1.7} color={colors.accent} />
             </View>

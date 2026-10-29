@@ -120,14 +120,20 @@ export function CardContextMenu({
   const closing = useRef(false);
   const afterClose = useRef<(() => unknown) | undefined>(undefined);
   const [phase, dispatch] = useReducer(contextMenuPhase, 'loading');
+  const [shown, setShown] = useState(false);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
   const mounted = useRef(true);
   const disabled = phase === 'closing' || phase === 'finished';
   const previewReady = useCallback(() => {
-    if (mounted.current && !closing.current) {
+    if (mounted.current && !closing.current) setPreviewLoaded(true);
+  }, []);
+  useEffect(() => {
+    // Cached images can load before the native modal window is visible.
+    if (shown && previewLoaded && mounted.current && !closing.current) {
       dispatch('ready');
       onReady();
     }
-  }, [onReady]);
+  }, [shown, previewLoaded, onReady]);
   const [page, setPage] = useState<'actions' | 'folders' | 'delete'>('actions');
   const [actionsHeight, setActionsHeight] = useState(0);
   const [subpageHeight, setSubpageHeight] = useState(0);
@@ -158,7 +164,7 @@ export function CardContextMenu({
   );
 
   useEffect(() => {
-    if (phase === 'open' && ready)
+    if (phase === 'open' && ready && !closing.current)
       progress.set(reduced ? 1 : withSpring(1, { duration: 400, dampingRatio: 1 }));
   }, [phase, ready, reduced, progress]);
   useEffect(() => {
@@ -248,10 +254,11 @@ export function CardContextMenu({
   return (
     <Modal
       transparent
-      visible
+      visible={phase !== 'finished'}
       animationType="none"
       statusBarTranslucent
       navigationBarTranslucent
+      onShow={() => setShown(true)}
       onRequestClose={() => (page === 'actions' ? close() : navigate('actions'))}
     >
       <View accessibilityViewIsModal style={{ flex: 1 }}>
@@ -287,7 +294,6 @@ export function CardContextMenu({
                 width: anchor.rect.width,
                 height: anchor.rect.height,
                 transformOrigin: 'top left',
-                opacity: ready ? 1 : 0,
               },
               previewStyle,
             ]}

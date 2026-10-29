@@ -58,7 +58,7 @@ Collection writes use small storage chunks and publish a new index only after al
 
 The Firebase JavaScript client and native Google ID-token sign-in are integrated. Existing web Firebase configuration is mapped to `EXPO_PUBLIC_FIREBASE_*` in the ignored `.env` file on this computer. A fresh clone should copy `.env.example` to `.env` and fill in its public client configuration.
 
-**Google login on iOS/Android requires a development or production build. It cannot run inside Expo Go.** Local collection features work without login.
+**Google login on iOS/Android requires a development or production build. It cannot run inside Expo Go.** Guests can keep up to 10 local finds. Adding more asks for free Google sign-in and preserves the draft; editing and deleting existing finds remain available. Imports and automatic clipboard saves follow the same limit. Non-subscribers see a Go Pro chip in the collection header, with Google sign-in first for guests. Pro accounts replace that chip with a gold profile border and crown; they manage membership from Settings. Successful Google sign-in automatically enables cloud sync for that account; cancelling sign-in leaves sync unchanged.
 
 1. Use the same Firebase project as the web app. Enable Google in Authentication, create a Standard `(default)` Firestore database, and publish the supplied private rules and index exemptions at `../firestore.rules` and `../firestore.indexes.json`.
 2. In that project’s Google Cloud/Firebase console, register the Android package **`app.anything.mobile`** and add the SHA-1 fingerprint for the signing key of the build you install. Debug, EAS, and Play-distributed builds may use different certificates.

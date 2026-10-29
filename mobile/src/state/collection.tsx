@@ -21,6 +21,7 @@ import { cloudStore } from '../services/cloud-store';
 import { palettes } from '../theme';
 import { itemUrl } from '../utils/item';
 import { loadText, saveText } from '../utils/device-storage';
+import { guestLimitReached, GuestLimitError } from '../utils/guest-limit';
 
 import {
   emptyCollection as empty,
@@ -41,6 +42,9 @@ function useCollectionState() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!auth);
   const [busy, setBusy] = useState(false);
+  const [signInPrompt, setSignInPrompt] = useState<'saves' | 'pro' | null>(null);
+  const [membership, setMembership] = useState<{ uid: string; active: boolean } | null>(null);
+  const [devProUid, setDevProUid] = useState<string | null>(null);
   const [status, setStatus] = useState('local');
   const [attempt, setAttempt] = useState(0);
   const sync = useRef<ReturnType<typeof startCollectionSync> | null>(null);
@@ -56,6 +60,11 @@ function useCollectionState() {
           const previous = current.current;
           const next = update(previous);
           if (next === previous && !beforePublish) return;
+          if (guestLimitReached(previous.items, next.items, !!auth?.currentUser)) {
+            setNotice('');
+            setSignInPrompt('saves');
+            throw new GuestLimitError();
+          }
           await saveText(AsyncStorage, KEY, JSON.stringify(next));
           try {
             beforePublish?.();
@@ -69,11 +78,12 @@ function useCollectionState() {
           }
         });
       writes.current = task;
-      void task.catch((error) =>
+      void task.catch((error) => {
+        if (error instanceof GuestLimitError) return;
         setError(
           `Could not save on this device: ${error.message}. Your previous collection is unchanged.`,
-        ),
-      );
+        );
+      });
       return task;
     },
     [],
@@ -101,6 +111,8 @@ function useCollectionState() {
             auth,
             (user) => {
               setUser(user);
+              setDevProUid(null);
+              if (user) setSignInPrompt(null);
               setAuthReady(true);
             },
             (error) => {
@@ -290,6 +302,13 @@ function useCollectionState() {
     notice,
     setNotice,
     user,
+    signInPrompt,
+    setSignInPrompt,
+    pro:
+      !!uid && ((membership?.uid === uid && membership.active) || (__DEV__ && devProUid === uid)),
+    devPro: __DEV__ && !!uid && devProUid === uid,
+    setDevPro: (value: boolean) => setDevProUid(__DEV__ && value && uid ? uid : null),
+    setMembership,
     busy: busy || !authReady,
     status: enabled ? status : 'local',
     enabled,
@@ -300,7 +319,12 @@ function useCollectionState() {
     capture,
     save,
     enrich,
-    signIn: () => accountAction(login),
+    signIn: () =>
+      accountAction(async () => {
+        await login();
+        const signedIn = auth?.currentUser;
+        if (signedIn) await commit((value) => ({ ...value, syncUid: signedIn.uid }));
+      }),
     signOut: () =>
       accountAction(async () => {
         await commit((value) => ({ ...value, syncUid: '' }));

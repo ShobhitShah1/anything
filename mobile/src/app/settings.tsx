@@ -17,7 +17,7 @@ import { Action, Section, NativeGroup, SettingRow, GoogleMark } from '../compone
 import { BrandMark } from '../components/brand-mark';
 import { PlusCard } from '../components/plus-card';
 import { radius, space, type } from '../theme';
-import { LogOut, Trash2 } from 'lucide-react-native';
+import { Crown, LogOut, Trash2 } from 'lucide-react-native';
 
 export default function Settings() {
   const { targetRef, topInset, onScroll, options: headerOptions } = useScrollHeader('Settings');
@@ -98,22 +98,56 @@ export default function Settings() {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            {user?.photoURL ? (
-              <Image
-                source={{ uri: user.photoURL }}
-                style={{ width: 44, height: 44, borderRadius: 22 }}
-              />
-            ) : (
-              <BrandMark size={44} />
-            )}
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                borderWidth: state.pro ? 2 : 0,
+                borderColor: '#E8B849',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {user?.photoURL ? (
+                <Image
+                  source={{ uri: user.photoURL }}
+                  style={{
+                    width: state.pro ? 40 : 44,
+                    height: state.pro ? 40 : 44,
+                    borderRadius: 22,
+                  }}
+                />
+              ) : (
+                <BrandMark size={state.pro ? 40 : 44} />
+              )}
+            </View>
             <View style={{ flex: 1, gap: 5 }}>
-              <Text
-                allowFontScaling={false}
-                numberOfLines={1}
-                style={{ color: colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '600' }}
-              >
-                {user?.displayName || 'Your space, anywhere.'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                <Text
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                  style={{
+                    color: colors.ink,
+                    fontSize: 18,
+                    lineHeight: 23,
+                    fontWeight: '600',
+                    flexShrink: 1,
+                  }}
+                >
+                  {user?.displayName || 'Your space, anywhere.'}
+                </Text>
+                {state.pro && (
+                  <Crown
+                    size={17}
+                    color="#C18C20"
+                    fill="#F2C35B"
+                    strokeWidth={1.4}
+                    accessible
+                    accessibilityLabel="Pro member"
+                  />
+                )}
+              </View>
               <Text
                 allowFontScaling={false}
                 numberOfLines={2}
@@ -146,6 +180,7 @@ export default function Settings() {
           )}
         </View>
         <PlusCard />
+
         <View
           style={{ backgroundColor: colors.paper, borderRadius: radius.group, overflow: 'hidden' }}
         >

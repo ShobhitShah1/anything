@@ -20,6 +20,16 @@ function createAuth() {
   }
 }
 export const auth = createAuth();
+
+async function googleClient() {
+  const client = await import('@react-native-google-signin/google-signin');
+  // Firebase can restore a session before Google Sign-In has been configured in this process.
+  client.GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  });
+  return client;
+}
 export async function login() {
   if (!auth) throw new Error('Add your Firebase configuration to .env and restart Expo.');
   if (Constants.appOwnership === 'expo')
@@ -36,12 +46,7 @@ export async function login() {
     throw new Error(
       'Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID and register this app in the Firebase project.',
     );
-  const { GoogleSignin, isSuccessResponse } =
-    await import('@react-native-google-signin/google-signin');
-  GoogleSignin.configure({
-    webClientId,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  });
+  const { GoogleSignin, isSuccessResponse } = await googleClient();
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
   const result = await GoogleSignin.signIn();
   if (!isSuccessResponse(result)) return;
@@ -57,7 +62,7 @@ export async function login() {
 export async function logout() {
   if (auth) await FirebaseAuth.signOut(auth);
   if (Constants.appOwnership !== 'expo') {
-    const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+    const { GoogleSignin } = await googleClient();
     if (GoogleSignin.hasPreviousSignIn()) await GoogleSignin.signOut();
   }
 }

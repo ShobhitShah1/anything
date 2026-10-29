@@ -48,6 +48,7 @@ import {
   Folder,
   Plus,
   UserRound,
+  Crown,
 } from 'lucide-react-native';
 import * as ClipboardAPI from 'expo-clipboard';
 import { useCollection } from '../state/collection';
@@ -532,7 +533,14 @@ export default function Home() {
         </View>
       ),
       headerRight: () => (
-        <View style={{ width: 128, height: 44, alignItems: 'flex-end', justifyContent: 'center' }}>
+        <View
+          style={{
+            width: state.pro ? 44 : 128,
+            height: 44,
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+        >
           {/* Home Settings Icon */}
           <Animated.View
             pointerEvents={captureOpen ? 'none' : 'auto'}
@@ -542,20 +550,47 @@ export default function Home() {
               homeHeaderStyle,
             ]}
           >
-            <PlusCard compact />
+            {!state.pro && <PlusCard compact />}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Account and settings"
+              accessibilityLabel={
+                state.pro ? 'Account and settings, Pro member' : 'Account and settings'
+              }
               onPress={() => router.push('/settings')}
               style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
             >
-              {state.user?.photoURL ? (
-                <Image
-                  source={{ uri: state.user.photoURL }}
-                  style={{ width: 32, height: 32, borderRadius: 16 }}
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  borderWidth: state.pro ? 2 : 0,
+                  borderColor: '#E8B849',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {state.user?.photoURL ? (
+                  <Image
+                    source={{ uri: state.user.photoURL }}
+                    style={{
+                      width: state.pro ? 28 : 32,
+                      height: state.pro ? 28 : 32,
+                      borderRadius: 16,
+                    }}
+                  />
+                ) : (
+                  <UserRound size={21} color={colors.ink} strokeWidth={1.5} />
+                )}
+              </View>
+              {state.pro && (
+                <Crown
+                  size={15}
+                  color="#C18C20"
+                  fill="#F2C35B"
+                  strokeWidth={1.4}
+                  style={{ position: 'absolute', right: 0, bottom: 2 }}
                 />
-              ) : (
-                <UserRound size={21} color={colors.ink} strokeWidth={1.5} />
               )}
             </Pressable>
           </Animated.View>
@@ -589,6 +624,7 @@ export default function Home() {
       captureHeaderStyle,
       dismissCapture,
       state.user,
+      state.pro,
       ai.generated,
       saving,
       aiWorking,
