@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import Image from 'react-native-fast-image';
 import { CardFrame, MotionPosition } from './collection-motion';
 import { AdaptiveImage } from './adaptive-image';
+import { MarkdownContent } from './markdown-content';
 import {
   Pin,
   ArrowUpRight,
@@ -57,6 +58,9 @@ export const SaveCard = memo(function SaveCard({
   const image = itemImage(item);
   const { width: cardWidth, contentWidth } = cardWidths(width, list, !!image);
   const title = getItemTitle(item) || typeLabel(item);
+  const showTitle =
+    item.type !== 'markdown' ||
+    (!!item.title.trim() && !/^#{1,6}\s/.test(item.content.trimStart()));
   const note = item.type === 'note';
   const social =
     item.type === 'x_post' || item.type === 'instagram_post' || item.type === 'reddit_post';
@@ -114,7 +118,7 @@ export const SaveCard = memo(function SaveCard({
             )}
           </View>
         )}
-        {!(item.type === 'image' && !item.caption && image && !list) && (
+        {showTitle && !(item.type === 'image' && !item.caption && image && !list) && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
             {item.type === 'x_post' && !!item.authorAvatar && (
               <Image
@@ -163,6 +167,8 @@ export const SaveCard = memo(function SaveCard({
               ••••••••
             </Text>
           </View>
+        ) : item.type === 'markdown' ? (
+          <MarkdownContent text={item.content} previewLines={list ? 3 : 6} />
         ) : (
           !!text &&
           text.trim() !== title.trim() &&

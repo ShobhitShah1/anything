@@ -1,5 +1,6 @@
 import type { ExpoConfig } from 'expo/config';
 const iosUrlScheme = process.env.GOOGLE_IOS_URL_SCHEME;
+const compactApk = process.env.EAS_BUILD_PROFILE === 'preview-arm64';
 const config: ExpoConfig = {
   name: 'Anything',
   icon: './assets/icon.png',
@@ -28,7 +29,19 @@ const config: ExpoConfig = {
     [
       'expo-build-properties',
       {
-        android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true },
+        android: {
+          enableMinifyInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+          enableBundleCompression: true,
+          // Saved media uses FastImage/Glide; React Native Image only renders bundled artwork.
+          gifEnabled: false,
+          webpEnabled: false,
+          // Keep Play's native library packaging and device support; compact APKs are opt-in.
+          useLegacyPackaging: compactApk,
+          buildArchs: compactApk
+            ? ['arm64-v8a']
+            : ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'],
+        },
       },
     ],
     './plugins/with-cmake.cjs',

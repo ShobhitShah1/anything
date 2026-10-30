@@ -26,6 +26,7 @@ import { Folder, MoreHorizontal, Plus, X } from 'lucide-react-native';
 import { useScrollHeader } from '../components/use-scroll-header';
 import { Feedback } from '../components/feedback';
 import { DeleteSheet } from '../components/delete-sheet';
+import { MarkdownContent } from '../components/markdown-content';
 import type { Folder as FolderRecord, SavedItem } from '../shared/types';
 import { useCollection } from '../state/collection';
 import { Action, CollectionSearch, Field, IconButton } from '../components/ui';
@@ -234,18 +235,22 @@ export default function Folders() {
                       </>
                     ) : thought ? (
                       <View style={{ flex: 1, justifyContent: 'center', gap: 9, padding: 5 }}>
-                        <Text
-                          allowFontScaling={false}
-                          numberOfLines={3}
-                          style={{
-                            fontFamily: fonts.editorial,
-                            color: colors.ink,
-                            fontSize: 19,
-                            lineHeight: 25,
-                          }}
-                        >
-                          {itemText(thought) || getItemTitle(thought)}
-                        </Text>
+                        {thought.type === 'markdown' ? (
+                          <MarkdownContent text={thought.content} previewLines={3} />
+                        ) : (
+                          <Text
+                            allowFontScaling={false}
+                            numberOfLines={3}
+                            style={{
+                              fontFamily: fonts.editorial,
+                              color: colors.ink,
+                              fontSize: 19,
+                              lineHeight: 25,
+                            }}
+                          >
+                            {itemText(thought) || getItemTitle(thought)}
+                          </Text>
+                        )}
                         <View style={{ height: 2, width: 26, backgroundColor: colors.line }} />
                       </View>
                     ) : (

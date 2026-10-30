@@ -34,8 +34,10 @@ function restoredSession({
           },
         };
       if (name === './firebase-app') return { firebaseApp: {} };
-      if (name === '@react-native-async-storage/async-storage') return { default: {} };
-      if (name === 'expo-constants') return { default: { appOwnership: expo ? 'expo' : null } };
+      if (name === '@react-native-async-storage/async-storage')
+        return { __esModule: true, default: {} };
+      if (name === 'expo-constants')
+        return { __esModule: true, default: { appOwnership: expo ? 'expo' : null } };
       if (name === 'react-native') return { Platform: { OS: 'android' } };
       if (name === '@react-native-google-signin/google-signin') {
         events.push('google-import');

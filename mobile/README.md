@@ -41,6 +41,14 @@ From `mobile/`, run `yarn compress` (or `npm run compress`) to export the Androi
 
 For the Play Store, `yarn build:android:small` (or `npm run build:android:small`) starts the existing production EAS profile and produces an Android App Bundle. Play delivers device-specific packages instead of a universal development APK. Expo build properties enable release code and resource shrinking. No native source patch or experimental bundler flags are required.
 
+Release JavaScript bundles are compressed as well. This reduces packaged bytes but can add startup decompression work, so compare cold starts on release builds. React Native's unused GIF and WebP decoders are disabled; saved media uses FastImage. React Native Image renders bundled PNG artwork, including the subscription scenery.
+
+For a smaller sideloaded APK, `yarn build:android:apk:small` selects the opt-in `preview-arm64` profile. It targets **64-bit ARM devices only** and compresses native libraries. Other build profiles retain all default architectures and normal native-library packaging. Compressed native libraries make the APK download smaller, but Android may extract them during installation; this is not the same as reducing installed size. Use the production AAB for Google Play.
+
+The Pro artwork keeps the original PNG for reliable native rendering. Unused eclipse/voyager design alternatives were removed from `assets/pro-space/`. App icon source files and iOS icons remain because icon generation and iOS builds need them. `expo-linking`, `@expo/metro-runtime`, and `expo-asset` are required by Router/Expo even where the app does not import them directly; `expo-dev-client` remains for the development profile. No installed runtime library was confirmed unused.
+
+The size audit produced a signed **19.78 MiB ARM64 APK** at ignored `artifacts/anything-compact-arm64.apk`, before the subscription PNG compatibility fix and formatted card previews. That file is not a build of the latest source. The previously saved universal APK was 107.03 MiB, but it includes four architectures and was built earlier, so these are not a controlled same-commit comparison. Removing unreferenced design alternatives cleans the repository; those alternatives were already absent from Metro's bundle. Device rendering and cold-start performance still need verification in a current release build.
+
 ## What works locally
 
 - Centered welcome, animated vector logo, Google-first action, and an account-free start.

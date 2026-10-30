@@ -38,6 +38,7 @@ function render({
     process: { env: {} },
     __DEV__: development,
     require(name) {
+      if (name.endsWith('.png')) return name;
       if (name === 'react')
         return {
           useCallback: (fn) => fn,
@@ -118,6 +119,14 @@ test('cached plans stay visible and loading stays inside the purchase button', (
       ),
     );
   }
+});
+
+test('subscription artwork uses the standard native PNG image', () => {
+  const artwork = render().find(({ node }) => node.type === 'Artwork').node;
+  assert.equal(artwork.props.source, '../../assets/pro-space/outpost-top.png');
+  assert.equal(artwork.props.resizeMode, 'cover');
+  const png = readFileSync(new URL('../../assets/pro-space/outpost-top.png', import.meta.url));
+  assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
 });
 
 test('development preview shows the subscribed layout without exposing a checkout action', () => {

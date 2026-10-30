@@ -16,6 +16,9 @@
       },
       "environment": "preview"
     },
+    "preview-arm64": {
+      "extends": "preview"
+    },
     "production": {
       "android": {
         "credentialsSource": "local",

@@ -34,7 +34,7 @@
     "react": "19.3.0",
     "react-native": "0.88.0",
     "react-native-enriched-markdown": "^1.1.1",
-    "react-native-fast-image": "^10.9.0",
+    "react-native-fast-image": "^10.9.11",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-keyboard-controller": "1.22.7",
     "react-native-purchases": "^10.15.1",
@@ -64,7 +64,8 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "compress": "expo export --platform android --output-dir dist",
-    "build:android:small": "npx eas-cli@latest build --platform android --profile production"
+    "build:android:small": "npx eas-cli@latest build --platform android --profile production",
+    "build:android:apk:small": "npx eas-cli@latest build --platform android --profile preview-arm64"
   },
   "private": true,
   "resolutions": {
