@@ -70,7 +70,7 @@ export function App() {
   const [isWholeViewOpen, setIsWholeViewOpen] = useState(false);
 
   // Lightbox
-  const [lightbox, setLightbox] = useState<{ isOpen: boolean; imageUrl: string | null; title: string | null }>({
+  const [lightbox, setLightbox] = useState<{ isOpen: boolean; imageUrl: string | null; title: string | null; sourceId?: string }>({
     isOpen: false,
     imageUrl: null,
     title: null,
@@ -137,10 +137,10 @@ export function App() {
 
       // Esc -> Close any open modal or sheet
       if (e.key === 'Escape') {
-        if (isCaptureOpen) setIsCaptureOpen(false);
-        if (isDetailOpen) setIsDetailOpen(false);
-        if (isWholeViewOpen) setIsWholeViewOpen(false);
-        if (lightbox.isOpen) setLightbox({ isOpen: false, imageUrl: null, title: null });
+        if (lightbox.isOpen) setLightbox(previous => ({ ...previous, isOpen: false }));
+        else if (isWholeViewOpen) setIsWholeViewOpen(false);
+        else if (isDetailOpen) setIsDetailOpen(false);
+        else if (isCaptureOpen) setIsCaptureOpen(false);
         return;
       }
 
@@ -191,15 +191,15 @@ export function App() {
     return () => window.removeEventListener('paste', handlePaste);
   }, []);
 
-  const handleTogglePin = (id: string) => {
+  const handleTogglePin = useCallback((id: string) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, isPinned: !item.isPinned } : item))
     );
-  };
+  }, [setItems]);
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
-  };
+  }, [setItems]);
 
   const handleDeleteAll = () => {
     if (!saveItemsToStorage([])) {
@@ -218,15 +218,11 @@ export function App() {
     return true;
   };
 
-  const handleUpdateItem = (updated: SavedItem) => {
+  const handleUpdateItem = useCallback((updated: SavedItem) => {
     setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-    if (detailItem?.id === updated.id) {
-      setDetailItem(updated);
-    }
-    if (wholeViewItem?.id === updated.id) {
-      setWholeViewItem(updated);
-    }
-  };
+    setDetailItem(current => current?.id === updated.id ? updated : current);
+    setWholeViewItem(current => current?.id === updated.id ? updated : current);
+  }, [setItems]);
 
   const handleSaveNewItem = (newItem: SavedItem, enrichPreview = false) => {
     setItems((prev) => [newItem, ...prev]);
@@ -357,17 +353,11 @@ export function App() {
     setIsCaptureOpen(true);
   };
 
-  const handleOpenDetail = (item: SavedItem) => {
+  const handleOpenDetail = useCallback((item: SavedItem) => {
     sound.click();
-    // If it's a markdown or skill document, directly open Whole View for full distraction-free reading/editing!
-    if (item.type === 'markdown') {
-      setWholeViewItem(item);
-      setIsWholeViewOpen(true);
-    } else {
-      setDetailItem(item);
-      setIsDetailOpen(true);
-    }
-  };
+    setDetailItem(item);
+    setIsDetailOpen(true);
+  }, []);
 
   const handleOpenWholeView = (item: SavedItem) => {
     sound.click();
@@ -376,10 +366,14 @@ export function App() {
     setIsWholeViewOpen(true);
   };
 
-  const handleOpenImage = (imageUrl: string, title: string) => {
+  const handleOpenImage = useCallback((imageUrl: string, title: string, sourceId?: string) => {
     sound.click();
-    setLightbox({ isOpen: true, imageUrl, title });
-  };
+    setLightbox({ isOpen: true, imageUrl, title, sourceId });
+  }, []);
+
+  const closeDetail = useCallback(() => setIsDetailOpen(false), []);
+  const closeWholeView = useCallback(() => setIsWholeViewOpen(false), []);
+  const closeLightbox = useCallback(() => setLightbox(previous => ({ ...previous, isOpen: false })), []);
 
   // Folder Operations
   const handleCreateFolder = (name: string): Folder => {
@@ -594,7 +588,7 @@ export function App() {
         selectedFilter={selectedFilter}
         onFilterChange={setSelectedFilter}
         itemCounts={itemCounts}
-        folderCounts={Object.fromEntries(folders.map(folder => [folder.id, items.filter(item => item.folderId === folder.id).length]))}
+        folderCounts={folderCounts}
         sortOption={sortOption}
         onSortChange={setSortOption}
         isDark={isDark}
@@ -621,6 +615,7 @@ export function App() {
                       </div>
                     ) : (
                       <MasonryGrid
+                        activeId={detailItem?.id ?? wholeViewItem?.id ?? lightbox.sourceId ?? null}
                         items={gridItems}
                         folders={folders}
                         onTogglePin={handleTogglePin}
@@ -637,6 +632,7 @@ export function App() {
               {/* List View */}
               {viewMode === 'list' && (
                 <ListView
+                  activeId={detailItem?.id ?? wholeViewItem?.id ?? lightbox.sourceId ?? null}
                   items={filteredItems}
                   folders={folders}
                   onTogglePin={handleTogglePin}
@@ -686,13 +682,12 @@ export function App() {
       />
 
       {/* Card Detail Modal */}
-      <CardDetailModal
+      <AnimatePresence onExitComplete={() => { if (!isDetailOpen) setDetailItem(null); }}>
+      {isDetailOpen && detailItem && <CardDetailModal
+        key={detailItem.id}
         item={detailItem}
         isOpen={isDetailOpen}
-        onClose={() => {
-          setIsDetailOpen(false);
-          setDetailItem(null);
-        }}
+        onClose={closeDetail}
         onTogglePin={handleTogglePin}
         onDelete={handleDeleteItem}
         onUpdateItem={handleUpdateItem}
@@ -701,31 +696,36 @@ export function App() {
         folders={folders}
         onCreateFolder={handleCreateFolder}
         isDark={isDark}
-      />
+      />}
+      </AnimatePresence>
 
       {/* Whole View (Full Canvas / Page Reader & Editor for Skills & Markdown) */}
-      <WholeViewModal
+      <AnimatePresence onExitComplete={() => { if (!isWholeViewOpen) setWholeViewItem(null); }}>
+      {isWholeViewOpen && wholeViewItem && <WholeViewModal
+        key={wholeViewItem.id}
         item={wholeViewItem}
         isOpen={isWholeViewOpen}
-        onClose={() => {
-          setIsWholeViewOpen(false);
-          setWholeViewItem(null);
-        }}
+        onClose={closeWholeView}
         onTogglePin={handleTogglePin}
         onDelete={handleDeleteItem}
         onUpdateItem={handleUpdateItem}
         folders={folders}
         isDark={isDark}
-      />
+      />}
+      </AnimatePresence>
 
       {/* Lightbox Modal */}
-      <ImageViewerModal
+      <AnimatePresence onExitComplete={() => { if (!lightbox.isOpen) setLightbox({ isOpen: false, imageUrl: null, title: null }); }}>
+      {lightbox.isOpen && <ImageViewerModal
+        key={lightbox.sourceId ?? lightbox.imageUrl}
+        sourceId={lightbox.sourceId}
         isOpen={lightbox.isOpen}
         imageUrl={lightbox.imageUrl}
         title={lightbox.title}
-        onClose={() => setLightbox({ isOpen: false, imageUrl: null, title: null })}
+        onClose={closeLightbox}
         isDark={isDark}
-      />
+      />}
+      </AnimatePresence>
 
     </div>
   );

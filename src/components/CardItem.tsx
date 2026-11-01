@@ -13,12 +13,14 @@ interface CardItemProps {
   onTogglePin: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateItem: (updated: SavedItem) => void;
-  onOpenImage?: (imageUrl: string, title: string) => void;
+  onOpenImage?: (imageUrl: string, title: string, sourceId?: string) => void;
   onOpenDetail?: (item: SavedItem) => void;
   isDark?: boolean;
 }
 
-export const CardItem: React.FC<CardItemProps> = ({
+const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+
+export const CardItem = React.memo(function CardItem({
   item,
   folderName,
   onTogglePin,
@@ -27,8 +29,9 @@ export const CardItem: React.FC<CardItemProps> = ({
   onOpenImage,
   onOpenDetail,
   isDark = false,
-}) => {
+}: CardItemProps) {
   const [copied, setCopied] = useState(false);
+  const [decodedMedia, setDecodedMedia] = useState<{ source: string; ratio: number } | null>(null);
 
   const handleCopyLinkOrContent = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -73,14 +76,14 @@ export const CardItem: React.FC<CardItemProps> = ({
   };
 
   const displayTitle = getItemTitle(item);
-  const formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(item.createdAt));
+  const formattedDate = dateFormatter.format(new Date(item.createdAt));
   const media = item.type === 'link' ? item.previewImage : 'imageUrl' in item ? item.imageUrl : undefined;
-  const mediaAspectRatio = Number.isFinite(item.mediaAspectRatio) && item.mediaAspectRatio! > 0 ? item.mediaAspectRatio : item.type === 'link' ? 16 / 10 : 4 / 3;
+  const mediaAspectRatio = decodedMedia && decodedMedia.source === media ? decodedMedia.ratio : Number.isFinite(item.mediaAspectRatio) && item.mediaAspectRatio! > 0 ? item.mediaAspectRatio : item.type === 'link' ? 16 / 10 : 4 / 3;
   const labels = { note: 'Note', markdown: 'Markdown', link: 'Bookmark', image: 'Image', x_post: 'From X', reddit_post: 'From Reddit', instagram_post: 'From Instagram', code: 'Code', secret: 'Secret' };
   const Icon = item.type === 'note' ? FileText : item.type === 'markdown' ? BookOpen : item.type === 'code' ? Code2 : item.type === 'secret' ? KeyRound : media ? ImageIcon : Link2;
 
   return (
-    <article className={`memory-card memory-${item.type}${media ? ' has-media' : ''}${item.isPinned ? ' is-pinned' : ''}`} tabIndex={0} aria-label={`Open ${displayTitle || labels[item.type]}${item.isPinned ? ', pinned' : ''}`} onClick={() => onOpenDetail?.(item)} onKeyDown={event => {
+    <article data-card-id={item.id} className={`memory-card memory-${item.type}${media ? ' has-media' : ''}${item.isPinned ? ' is-pinned' : ''}`} tabIndex={0} aria-label={`Open ${displayTitle || labels[item.type]}${item.isPinned ? ', pinned' : ''}`} onClick={() => onOpenDetail?.(item)} onKeyDown={event => {
       if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onOpenDetail?.(item); }
     }}>
       <div className="memory-actions" onClick={event => event.stopPropagation()}>
@@ -95,11 +98,11 @@ export const CardItem: React.FC<CardItemProps> = ({
         <a className="memory-platform" href={item.postUrl} target="_blank" rel="noopener noreferrer" aria-label="Open original post on X" title="Open original post on X" onClick={event => event.stopPropagation()}>𝕏<ArrowUpRight className="memory-platform-arrow" /></a>
       </div>}
       {media && (
-        <button type="button" className="memory-media" style={{ aspectRatio: mediaAspectRatio }} aria-label={`View image: ${item.title}`} onClick={event => { event.stopPropagation(); onOpenImage?.(media, item.title); }}>
-          <img src={media} alt={item.title} loading="lazy" decoding="async" onLoad={event => {
+        <button type="button" data-image-id={item.id} className="memory-media" style={{ aspectRatio: mediaAspectRatio }} aria-label={`View image: ${item.title}`} onClick={event => { event.stopPropagation(); onOpenImage?.(media, item.title, item.id); }}>
+          <img src={media} alt={item.title} loading="eager" decoding="async" onLoad={event => {
             const image = event.currentTarget;
             const ratio = image.naturalWidth / image.naturalHeight;
-            if (Number.isFinite(ratio) && ratio > 0 && ratio !== item.mediaAspectRatio) onUpdateItem({ ...item, mediaAspectRatio: ratio });
+            if (Number.isFinite(ratio) && ratio > 0) setDecodedMedia({ source: media, ratio });
           }} onError={event => { event.currentTarget.parentElement!.style.display = 'none'; }} />
         </button>
       )}
@@ -140,4 +143,4 @@ export const CardItem: React.FC<CardItemProps> = ({
       </div>
     </article>
   );
-};
+});

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anything collection performance fixture</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <aside style="position:fixed;bottom:8px;right:8px;z-index:100;font:11px monospace;background:#fff;color:#111;padding:8px;max-width:calc(100vw - 90px)">
+      <button id="run-checks" disabled>Run collection checks</button>
+      <button id="release-checks" disabled>Run release checks</button>
+      <button id="hide-checks">Hide test tools</button>
+      <pre id="results" style="white-space:pre-wrap;max-height:180px;overflow:auto">Synthetic data only. Open on a separate localhost port; this fixture replaces that origin's local saves.</pre>
+    </aside>
+    <script type="module" src="./collection-performance.tsx"></script>
+  </body>
+</html>

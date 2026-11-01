@@ -1,6 +1,7 @@
 import { getItemTitle } from '../utils/itemTitle';
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useCardExpansion } from '../hooks/useCardExpansion';
 import { 
   X, 
   Pin, 
@@ -39,7 +40,7 @@ interface CardDetailModalProps {
   onTogglePin: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateItem: (updated: SavedItem) => void;
-  onOpenImage?: (imageUrl: string, title: string) => void;
+  onOpenImage?: (imageUrl: string, title: string, sourceId?: string) => void;
   onOpenWholeView?: (item: SavedItem) => void;
   folders?: Folder[];
   onCreateFolder?: (name: string) => Folder;
@@ -60,6 +61,8 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
   isDark = true,
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  useCardExpansion(contentRef, item?.id);
   const [copied, setCopied] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [previewStatus, setPreviewStatus] = useState<{ id: string; message: string } | null>(null);
@@ -67,19 +70,16 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
   latestItem.current = item;
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
+    const dialog = dialogRef.current;
     if (isOpen) {
       if (dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
-      window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      dialog?.close();
+      if (!document.querySelector('dialog[open]')) document.body.style.overflow = '';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen || !item) return null;
 
@@ -130,8 +130,7 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
   }).format(new Date(item.createdAt));
 
   return (
-    <AnimatePresence>
-      <dialog ref={dialogRef} aria-label={item.title} onCancel={event => { event.preventDefault(); onClose(); }} className="memory-dialog fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <dialog ref={node => { dialogRef.current = node; if (node && !node.open) node.showModal(); }} aria-label={item.title} onCancel={event => { event.preventDefault(); onClose(); }} className="memory-dialog fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -146,11 +145,10 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
         />
 
         {/* Modal Window */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        <div
+          ref={contentRef}
+          data-card-id={item.id}
+          style={{ borderRadius: 22, transformOrigin: '0 0' }}
           className={`memory-detail relative w-full max-w-3xl rounded-3xl border shadow-2xl p-6 sm:p-8 z-10 my-8 overflow-hidden transition-colors ${
             isDark 
               ? 'bg-[#18181B] border-zinc-800 text-[#F4F4F5]' 
@@ -338,7 +336,8 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
                 {item.imageUrl && (
                   <div 
-                    onClick={() => onOpenImage?.(item.imageUrl!, item.title || 'Post Media')}
+                    data-image-id={item.id}
+                    onClick={() => onOpenImage?.(item.imageUrl!, item.title || 'Post Media', item.id)}
                     className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800 cursor-zoom-in"
                   >
                     <img
@@ -380,7 +379,8 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
                 {item.imageUrl && (
                   <div 
-                    onClick={() => onOpenImage?.(item.imageUrl!, item.title)}
+                    data-image-id={item.id}
+                    onClick={() => onOpenImage?.(item.imageUrl!, item.title, item.id)}
                     className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800 cursor-zoom-in"
                   >
                     <img
@@ -420,7 +420,8 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
             {item.type === 'instagram_post' && (
               <div className="space-y-4">
                 <div 
-                  onClick={() => onOpenImage?.(item.imageUrl, item.caption || item.handle)}
+                  data-image-id={item.id}
+                  onClick={() => onOpenImage?.(item.imageUrl, item.caption || item.handle, item.id)}
                   className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 cursor-zoom-in"
                 >
                   <img
@@ -514,7 +515,8 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
             {item.type === 'image' && (
               <div className="space-y-4">
                 <div 
-                  onClick={() => onOpenImage?.(item.imageUrl, item.title)}
+                  data-image-id={item.id}
+                  onClick={() => onOpenImage?.(item.imageUrl, item.title, item.id)}
                   className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 cursor-zoom-in"
                 >
                   <img
@@ -591,8 +593,7 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
             )}
 
           </div>
-        </motion.div>
+        </div>
       </dialog>
-    </AnimatePresence>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useCardExpansion } from '../hooks/useCardExpansion';
 import { X, Copy, Check, ExternalLink } from 'lucide-react';
 import { sound } from '../utils/sound';
 
@@ -9,6 +10,7 @@ interface ImageViewerModalProps {
   title: string | null;
   onClose: () => void;
   isDark?: boolean;
+  sourceId?: string;
 }
 
 export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
@@ -17,26 +19,24 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   title,
   onClose,
   isDark = true,
+  sourceId,
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const imageFrameRef = useRef<HTMLDivElement>(null);
+  useCardExpansion(imageFrameRef, sourceId, 'data-image-id');
   const [copied, setCopied] = React.useState(false);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
+    const dialog = dialogRef.current;
     if (isOpen) {
       if (dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
-      window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      dialog?.close();
+      if (!document.querySelector('dialog[open]')) document.body.style.overflow = '';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen || !imageUrl) return null;
 
@@ -48,8 +48,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   };
 
   return (
-    <AnimatePresence>
-      <dialog ref={dialogRef} aria-label={title || 'Image preview'} onCancel={event => { event.preventDefault(); onClose(); }} className="memory-dialog fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+      <dialog ref={node => { dialogRef.current = node; if (node && !node.open) node.showModal(); }} aria-label={title || 'Image preview'} onCancel={event => { event.preventDefault(); onClose(); }} className="memory-dialog fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -64,10 +63,10 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
         {/* Modal Content */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 10 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
           className="relative max-w-5xl max-h-[90vh] w-full flex flex-col items-center z-10"
         >
           {/* Top Bar */}
@@ -116,7 +115,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
           </div>
 
           {/* Image Frame */}
-          <div className={`rounded-2xl overflow-hidden border shadow-2xl max-h-[80vh] flex items-center justify-center p-2 transition-colors ${
+          <div ref={imageFrameRef} style={{ transformOrigin: '0 0' }} className={`memory-image-frame rounded-2xl overflow-hidden border shadow-2xl max-h-[80vh] flex items-center justify-center p-2 transition-colors ${
             isDark ? 'bg-[#18181B] border-zinc-800' : 'bg-white border-zinc-200/90'
           }`}>
             <img
@@ -127,6 +126,5 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
           </div>
         </motion.div>
       </dialog>
-    </AnimatePresence>
   );
 };

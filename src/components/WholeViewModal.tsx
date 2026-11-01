@@ -1,6 +1,6 @@
 import { getItemTitle } from '../utils/itemTitle';
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCardExpansion } from '../hooks/useCardExpansion';
 import { 
   ArrowLeft, 
   Pin, 
@@ -44,6 +44,7 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
   isDark = true,
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  useCardExpansion(dialogRef, item?.id);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -64,19 +65,16 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
   }, [item]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
+    const dialog = dialogRef.current;
     if (isOpen) {
       if (dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
-      window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      dialog?.close();
+      if (!document.querySelector('dialog[open]')) document.body.style.overflow = '';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen || !item) return null;
 
@@ -122,15 +120,11 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
   }).format(new Date(item.createdAt));
 
   return (
-    <AnimatePresence>
-      <motion.dialog
-        ref={dialogRef}
+      <dialog
+        style={{ transformOrigin: '0 0' }}
+        ref={node => { dialogRef.current = node; if (node && !node.open) node.showModal(); }}
         aria-label={item.title}
         onCancel={event => { event.preventDefault(); onClose(); }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
         className={`memory-reader fixed inset-0 z-50 overflow-y-auto flex flex-col transition-colors ${
           isDark ? 'bg-[#121214] text-[#F4F4F5]' : 'bg-white text-[#111111]'
         }`}
@@ -407,7 +401,6 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
           ) : null}
 
         </main>
-      </motion.dialog>
-    </AnimatePresence>
+      </dialog>
   );
 };
