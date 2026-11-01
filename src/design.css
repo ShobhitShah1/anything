@@ -17,7 +17,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible, select:focus-vi
 input:focus-visible, textarea:focus-visible { outline-color: var(--accent); }
 .anything-app { background: var(--canvas); color: var(--ink); }
 .collection-surface { padding-left: 64px; }
-.collection-surface.capture-active { display: flex; }
 .mind-rail { position: fixed; inset: 0 auto 0 0; width: 64px; z-index: 35; background: var(--canvas); border-right: 1px solid var(--line); display: flex; align-items: center; flex-direction: column; padding: 22px 0 18px; }
 .mind-mark { color: var(--ink); display: grid; place-items: center; flex-shrink: 0; margin-bottom: 24px; }
 .brand-glass { display: grid; place-items: center; width: 38px; height: 38px; color: var(--ink); }
@@ -289,7 +288,7 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 .mind-save-button { background: #292d36; border-color: #292d36; color: #ffffff; }
 .mind-save-button:hover { background: #11141c; }
 .capture-footer > div:last-child > button:last-child:not(:disabled) { background: #292d36; border-color: #292d36; color: #ffffff; }
-.capture-screen:not([open]) { display: none; }
+dialog.capture-screen:not([open]) { display: none; }
 .capture-screen { position: fixed; inset: 0; margin: auto; width: calc(100% - 40px); max-width: 740px; height: fit-content; max-height: calc(100dvh - 48px); padding: 0 26px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: 0 24px 100px #11182724; overflow-y: auto; }
 .capture-screen::backdrop { background: #10131b66; backdrop-filter: blur(5px); }
 .capture-header { padding: 21px 0 15px; border: 0; }
@@ -579,6 +578,45 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
 .capture-clipboard-suggestion small { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .capture-clipboard-suggestion > button { border-radius: 7px; font-size: 10px; }
 .capture-tags { border-top: 1px solid var(--line); padding-top: 12px; }
+.capture-dialog { position: fixed; inset: 0; display: grid; place-items: center; width: 100vw; height: 100dvh; margin: 0; padding: 32px; }
+.capture-backdrop { position: fixed; inset: 0; background: #10131b66; backdrop-filter: blur(6px); }
+.dark .capture-backdrop { background: #0009; }
+.capture-dialog > .capture-screen { position: fixed; inset: auto; left: 50vw; top: 50dvh; translate: -50% -50%; z-index: 1; display: flex; flex-direction: column; width: min(900px, calc(100vw - 64px)); max-width: none; height: min(680px, calc(100dvh - 64px)); max-height: none; margin: 0; padding: 0 38px; overflow: hidden; border-radius: 30px 30px 18px 30px; box-shadow: 0 32px 100px #11182730, inset 0 1px 0 #ffffff80; backface-visibility: hidden; will-change: transform, clip-path; }
+.capture-editor { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; will-change: opacity; }
+.dark .capture-dialog > .capture-screen { box-shadow: 0 32px 100px #0009, inset 0 1px 0 #ffffff0c; }
+.capture-dialog .capture-header { padding: 29px 0 24px; }
+.capture-title-block { display: flex; flex-direction: column; gap: 10px; }
+.capture-overline { color: var(--muted); font-size: 9px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
+.capture-dialog .capture-header #capture-heading { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 42px; font-weight: 400; line-height: 1.08; letter-spacing: -.045em; }
+.capture-dialog .capture-header > div:last-child > button { min-width: 36px; min-height: 36px; border-radius: 50%; }
+.capture-paste-button { display: grid; place-items: center; color: var(--muted); cursor: pointer; }
+.capture-paste-button:hover { color: var(--ink); background: var(--canvas); }
+.capture-dialog .capture-type-row { flex-shrink: 0; gap: 10px; padding-bottom: 14px; margin-bottom: 0; }
+.capture-type-options { display: flex; align-items: center; gap: 5px; }
+.capture-type-options > button, .capture-type-options .capture-kind-picker > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 10px; border: 0; border-radius: 0; color: var(--muted); font-size: 12px; cursor: pointer; background: transparent; }
+.capture-type-options > button { box-shadow: inset 0 -2px transparent; transition: color 160ms ease, box-shadow 160ms ease; }
+.capture-type-options > button[aria-pressed="true"] { color: var(--ink); box-shadow: inset 0 -2px var(--ink); }
+.capture-type-options > button:hover, .capture-type-options .capture-kind-picker > summary:hover { color: var(--ink); }
+.capture-kind-menu { text-align: left; }
+.capture-type-options .capture-kind-menu { left: auto; right: 0; width: min(270px, calc(100vw - 64px)); }
+.capture-dialog .capture-content { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+.capture-dialog .capture-fields { padding-top: 16px; padding-right: 4px; width: 100%; }
+.capture-dialog .capture-note-title > summary { font-size: 17px; }
+.capture-dialog .capture-title-summary { display: flex; flex-direction: column; gap: 4px; font-size: 17px; font-weight: 500; color: var(--ink); }
+.capture-title-summary small { font-size: 10px; font-weight: 400; color: var(--muted); }
+.capture-dialog .capture-title-label, .capture-dialog .capture-note-title[open] .capture-title-summary { display: none; }
+.capture-dialog .capture-note-title[open] .capture-title-label { display: block; font-size: 10px; font-weight: 400; color: var(--muted); }
+.capture-dialog .capture-note-composer #capture-note-content { min-height: 260px; font-size: 16px; line-height: 1.9; }
+.capture-dialog .capture-note-composer #capture-title { font-size: 28px; letter-spacing: -.035em; }
+.capture-dialog .capture-note-composer { gap: 14px; padding-bottom: 4px; }
+.capture-dialog .capture-tags { border-top: 0; padding-top: 6px; }
+.capture-dialog .capture-footer { flex-shrink: 0; padding: 17px 0; border-top: 1px solid var(--line); }
+.capture-dialog .capture-footer kbd { border: 0; padding: 0; background: transparent; color: var(--muted); }
+.capture-dialog .capture-footer > div:last-child > button:last-child { min-height: 42px; border-radius: 22px; padding-inline: 20px; font-size: 12px; font-weight: 500; }
+.dark .capture-dialog .capture-footer > div:last-child > button:last-child:not(:disabled) { background: #eeeae3; border-color: #eeeae3; color: #292729; }
+.capture-dock { width: min(440px, calc(100vw - 86px)); border-radius: 30px 30px 16px 30px; }
+.floating-save { border-radius: 23px 19px 10px 23px; }
+.dock-format-label { flex-shrink: 0; font: 8px ui-monospace, monospace; letter-spacing: .09em; color: var(--muted); opacity: .8; }
 @media (max-width: 767px) {
   .mind-header-inner { gap: 10px; }
   .mind-search { min-width: 0; }
@@ -587,7 +625,20 @@ pre.memory-code { max-height: 260px; overflow: auto; margin: 8px -8px; border-ra
   .capture-detection-hint { display: none; }
   .capture-organization { gap: 5px; }
   .capture-note-composer > div:first-child > button { font-size: 10px; padding-inline: 8px; }
+  .capture-dialog { padding: 12px; }
+  .capture-dialog > .capture-screen { width: calc(100vw - 24px); height: min(680px, calc(100dvh - 32px)); padding: 0 22px; border-radius: 25px 25px 14px 25px; }
+  .capture-dialog .capture-header { padding: 20px 0 18px; flex-wrap: nowrap; }
+  .capture-dialog .capture-header #capture-heading { font-size: 32px; }
+  .capture-title-block { gap: 6px; }
+  .capture-dialog .capture-type-row { gap: 8px; }
+  .capture-type-options { flex-basis: 100%; gap: 4px; }
+  .capture-type-options > button, .capture-type-options .capture-kind-picker > summary { padding-inline: 6px; gap: 5px; font-size: 11px; }
+  .capture-dialog .capture-organization { margin-left: 0; width: 100%; justify-content: space-between; }
+  .capture-dialog .capture-footer { padding: 13px 0; }
+  .dock-format-label { display: none; }
 }
+@media (max-width: 360px) { .capture-type-options > button > svg { display: none; } }
+@media (max-width: 480px) { .capture-paste-button { display: none; } }
 @media (prefers-reduced-motion: reduce) { .account-spinner { animation: none; } }
 
 /* Original full-bleed artwork leaves quiet space for the welcome controls. */

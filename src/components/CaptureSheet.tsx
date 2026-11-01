@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useIsPresent } from 'framer-motion';
+import { useCardExpansion } from '../hooks/useCardExpansion';
 import { 
   X,
   Pin, 
@@ -93,6 +94,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   initialContent = '',
   initialTitle = '',
 }) => {
+  const present = useIsPresent();
   const [type, setType] = useState<ItemType>(initialType);
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -124,17 +126,19 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
   const [previewData, setPreviewData] = useState<LinkPreviewData | null>(null);
   const [duplicateItem, setDuplicateItem] = useState<SavedItem | null>(null);
-  const [clipboardSuggestion, setClipboardSuggestion] = useState<string | null>(null);
   const [autoDetectedBadge, setAutoDetectedBadge] = useState<string | null>(null);
   const fetchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewVersion = React.useRef(0);
   const captureDialogRef = React.useRef<HTMLDialogElement>(null);
+  const capturePanelRef = React.useRef<HTMLDivElement>(null);
+  useCardExpansion(capturePanelRef, 'capture', 'data-capture-source', true);
   const [formError, setFormError] = useState('');
 
   // Markdown write/render tab
   const [markdownTab, setMarkdownTab] = useState<'write' | 'render'>('write');
 
   useEffect(() => {
+    const dialog = captureDialogRef.current;
     if (isOpen) {
       if (captureDialogRef.current && !captureDialogRef.current.open) captureDialogRef.current.showModal();
       document.body.style.overflow = 'hidden';
@@ -157,27 +161,22 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       setAutoDetectedBadge(null);
       setMobileTab('editor');
       setMarkdownTab('write');
-      requestAnimationFrame(() => (document.getElementById('capture-url') || document.getElementById('capture-note-content') || document.getElementById('capture-title'))?.focus());
+      requestAnimationFrame(() => (document.getElementById('capture-url') || document.getElementById('capture-note-content') || document.getElementById('capture-title'))?.focus({ preventScroll: true }));
 
 
       if (initialContent) {
         handleContentChange(initialContent);
-      } else {
-        readClipboardSafely().then((res) => {
-          if (res.text && res.text.length > 3) {
-            setClipboardSuggestion(res.text);
-          }
-        });
       }
     } else {
       previewVersion.current += 1;
       document.body.style.overflow = '';
-      setClipboardSuggestion(null);
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
       fetchTimerRef.current = null;
     }
     return () => {
-      document.body.style.overflow = '';
+      // Strict Mode replays effects while this same native dialog is still mounted.
+      queueMicrotask(() => { if (dialog && !dialog.isConnected) dialog.close(); });
+      if (!document.querySelector('dialog[open]')) document.body.style.overflow = '';
       previewVersion.current += 1;
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
     };
@@ -185,6 +184,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!present) return;
       if (e.key === 'Escape' && isOpen) onClose();
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && isOpen) {
         e.preventDefault();
@@ -193,7 +193,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, content, title, secondaryNote, type, isPinned, selectedFolderId, previewData, checklistItems, tags]);
+  }, [isOpen, present, content, title, secondaryNote, type, isPinned, selectedFolderId, previewData, checklistItems, tags]);
 
   // Omni-Input Auto-Detection
   const handleContentChange = (val: string) => {
@@ -315,11 +315,17 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
     }
   };
 
-  const handleApplyClipboard = () => {
-    if (!clipboardSuggestion) return;
-    sound.pop();
-    handleContentChange(clipboardSuggestion);
-    setClipboardSuggestion(null);
+  const handleApplyClipboard = async () => {
+    const version = previewVersion.current;
+    const result = await readClipboardSafely();
+    if (version !== previewVersion.current) return;
+    if (result.text) {
+      sound.pop();
+      setFormError('');
+      handleContentChange(result.text);
+    } else {
+      setFormError('Clipboard is empty or unavailable. You can paste directly into the editor.');
+    }
   };
 
   // Tag management
@@ -435,6 +441,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   };
 
   const handleSubmit = (e?: React.FormEvent | KeyboardEvent) => {
+    if (!present) return;
     if (e) e.preventDefault();
     if (!content.trim() && !title.trim() && checklistItems.length === 0) return;
 
@@ -604,22 +611,26 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   const passwordStrength = useMemo(() => getPasswordStrength(content), [content]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.dialog
-          ref={captureDialogRef}
+        <dialog
+          ref={node => { captureDialogRef.current = node; if (node && !node.open) { node.showModal(); node.focus({ preventScroll: true }); } }}
           onCancel={event => { event.preventDefault(); onClose(); }}
           aria-labelledby="capture-heading"
-          initial={false}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.1 }}
+          className="memory-dialog capture-dialog"
+        >
+          <div className="capture-backdrop" onClick={onClose} />
+          <div
+          ref={capturePanelRef}
+          inert={!present}
+          style={{ transformOrigin: '0 0' }}
           className={`capture-screen ${type === 'link' || type === 'x_post' ? 'capture-link-screen' : ''}`}
         >
+          <div className="capture-editor">
           {/* Top Bar */}
           <div className={`capture-header px-6 py-4 border-b flex items-center justify-between gap-3 shrink-0 ${
             isDark ? 'border-white/[0.08] bg-[#101012]' : 'border-zinc-200/80 bg-zinc-50/50'
           }`}>
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="capture-title-block min-w-0">
+              <span className="capture-overline">Anything / Capture</span>
               <span id="capture-heading" className="font-bold text-base sm:text-lg tracking-tight text-zinc-950 dark:text-white">
                 Save something.
               </span>
@@ -628,6 +639,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <button type="button" className="capture-paste-button" onClick={handleApplyClipboard} aria-label="Paste from clipboard" title="Paste from clipboard"><Clipboard size={15} /></button>
               {type !== 'link' && type !== 'x_post' && <button
                 type="button"
                 onClick={() => setMobileTab(mobileTab === 'editor' ? 'preview' : 'editor')}
@@ -655,10 +667,16 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
           </div>
 
           <div className="capture-type-row">
+            <div className="capture-type-options" role="group" aria-label="Save type">
+              {typeOptions.filter(option => ['note', 'link', 'image', 'code'].includes(option.id)).map(option => (
+                <button key={option.id} type="button" aria-label={option.label} aria-pressed={type === option.id} onClick={() => { setType(option.id); setMobileTab('editor'); }}>
+                  {option.icon}<span>{option.label}</span>
+                </button>
+              ))}
             <details className="capture-kind-picker">
-              <summary>{typeOptions.find(option => option.id === type)?.icon}<span>{typeOptions.find(option => option.id === type)?.label}</span><ChevronDown size={12} /></summary>
+              <summary aria-label="More save types"><span>{['note', 'link', 'image', 'code'].includes(type) ? 'More' : typeOptions.find(option => option.id === type)?.label}</span><ChevronDown size={12} /></summary>
               <div className="capture-kind-menu" role="group" aria-label="Save type">
-                {typeOptions.map(option => (
+                {typeOptions.filter(option => !['note', 'link', 'image', 'code'].includes(option.id)).map(option => (
                   <button key={option.id} type="button" aria-label={option.label} aria-pressed={type === option.id} onClick={event => {
                     setType(option.id);
                     setMobileTab('editor');
@@ -667,7 +685,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                 ))}
               </div>
             </details>
-            <span className="capture-detection-hint">{autoDetectedBadge ? 'Ready to keep' : 'Choose a type, or just start writing'}</span>
+            </div>
             <div className="capture-organization">              {/* Folder Selector */}
               <FolderDropdown
                 folders={folders}
@@ -707,35 +725,6 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
               mobileTab === 'preview' && type !== 'link' && type !== 'x_post' ? 'hidden' : 'flex'
             }`}>
               <div className="space-y-3.5">
-                {/* Clipboard Notification Banner */}
-                {clipboardSuggestion && !content && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`capture-clipboard-suggestion px-3.5 py-2.5 rounded-2xl text-xs flex items-center justify-between gap-3 border ${
-                      isDark 
-                        ? 'bg-zinc-900/90 border-zinc-800 text-zinc-300' 
-                        : 'bg-zinc-50 border-zinc-200 text-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate min-w-0">
-                      <Clipboard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                      <span className="truncate text-xs">
-                        <span>From your clipboard</span><small>{clipboardSuggestion.slice(0, 60)}{clipboardSuggestion.length > 60 ? '…' : ''}</small>
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleApplyClipboard}
-                      className={`px-3 py-1 rounded-xl text-xs font-medium cursor-pointer transition-all shrink-0 ${
-                        isDark ? 'bg-white text-zinc-950 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black'
-                      }`}
-                    >
-                      Paste
-                    </button>
-                  </motion.div>
-                )}
-
                 {/* Duplicate Notice */}
                 {duplicateItem && (
                   <div className={`px-3.5 py-2 rounded-2xl text-xs flex items-center gap-2 border ${
@@ -1175,7 +1164,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                   <div className="capture-note-composer">
                     <div className="flex items-center justify-between">
                     {type === 'note' && <details className="capture-note-title" open={title ? true : undefined}>
-                      <summary>{title || 'Untitled memory'}<span>{title ? 'Edit title' : 'Add a title · optional'}</span></summary>
+                      <summary><span className="capture-title-summary">{title || 'Add a title'}<small>{title ? 'Edit title' : 'Optional'}</small></span><span className="capture-title-label">Title</span></summary>
                       <input id="capture-title" type="text" aria-label="Note title" value={title} onChange={event => setTitle(event.target.value)} placeholder="Give it a title" />
                     </details>}
                       <button
@@ -1256,7 +1245,6 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
                       </div>
                     ) : (
                       <textarea
-                        autoFocus
                         id="capture-note-content"
                         aria-label="Note content"
                         rows={5}
@@ -1618,8 +1606,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
               </button>
             </div>
           </div>
-        </motion.dialog>
-      )}
-    </AnimatePresence>
+          </div>
+          </div>
+        </dialog>
   );
 };

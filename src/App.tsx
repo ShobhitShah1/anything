@@ -659,11 +659,13 @@ export function App() {
 
       </main>
 
-      <FloatingCaptureBar hidden={isCaptureOpen || isDetailOpen || isWholeViewOpen || lightbox.isOpen} onOpenCapture={() => handleOpenCapture('note')} onQuickSave={handleQuickSave} onPasteLinks={handlePasteLinks} status={captureStatus} />
+      <FloatingCaptureBar hidden={isDetailOpen || isWholeViewOpen || lightbox.isOpen} onOpenCapture={() => handleOpenCapture('note')} onQuickSave={handleQuickSave} onPasteLinks={handlePasteLinks} status={captureStatus} />
       </div>
 
       {/* Direct capture screen */}
-      <CaptureSheet
+      <AnimatePresence>
+      {isCaptureOpen && <CaptureSheet
+        key="capture"
         isOpen={isCaptureOpen}
         onClose={() => {
           setIsCaptureOpen(false);
@@ -679,7 +681,8 @@ export function App() {
         initialFolderId={selectedFolderId || undefined}
         initialContent={captureInitialContent}
         initialTitle={captureInitialTitle}
-      />
+      />}
+      </AnimatePresence>
 
       {/* Card Detail Modal */}
       <AnimatePresence onExitComplete={() => { if (!isDetailOpen) setDetailItem(null); }}>

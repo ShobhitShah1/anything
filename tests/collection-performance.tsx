@@ -1,9 +1,10 @@
 import { createRoot } from 'react-dom/client';
-import { Profiler } from 'react';
+import { Profiler, StrictMode } from 'react';
 import { App } from '../src/App';
 import '../src/index.css';
 import '../src/design.css';
 import { runCollectionChecks, runReleaseChecks } from './collection.browser.mjs';
+import { runCaptureMorphChecks } from './capture.browser.mjs';
 
 const count = Math.min(10000, Number(new URLSearchParams(location.search).get('count')) || 3000);
 const existing = JSON.parse(localStorage.getItem('anything_items_v2') || '[]');
@@ -27,7 +28,7 @@ const items = Array.from({ length: count }, (_, index) => {
 localStorage.setItem('anything_items_v2', JSON.stringify(items));
 localStorage.setItem('anything_auto_clipboard', 'false');
 const renders: number[] = [];
-createRoot(document.getElementById('root')!).render(<Profiler id="collection" onRender={(_id, _phase, duration) => renders.push(duration)}><App /></Profiler>);
+createRoot(document.getElementById('root')!).render(<StrictMode><Profiler id="collection" onRender={(_id, _phase, duration) => renders.push(duration)}><App /></Profiler></StrictMode>);
 document.getElementById('run-checks')!.onclick = async () => {
   const results = document.getElementById('results')!;
   results.textContent = 'Checking…';
@@ -48,3 +49,10 @@ document.getElementById('release-checks')!.onclick = async () => {
 };
 requestAnimationFrame(() => { (document.getElementById('release-checks') as HTMLButtonElement).disabled = false; });
 document.getElementById('hide-checks')!.onclick = () => { document.querySelector('aside')!.hidden = true; };
+document.getElementById('capture-checks')!.onclick = async () => {
+  const results = document.getElementById('results')!;
+  results.textContent = 'Checking capture…';
+  try { results.textContent = JSON.stringify(await runCaptureMorphChecks(), null, 2); }
+  catch (error) { results.textContent = `FAIL: ${error}`; }
+};
+requestAnimationFrame(() => { (document.getElementById('capture-checks') as HTMLButtonElement).disabled = false; });

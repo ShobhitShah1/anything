@@ -162,7 +162,6 @@
 
 /* Capture uses the original editor layout as a direct page. */
 .collection-surface { min-height: 100dvh; display: flex; flex-direction: column; }
-.collection-surface.capture-active { display: none; }
 .capture-screen { position: relative; width: 100%; max-width: 900px; margin: 32px auto; padding: 0 24px; display: flex; flex-direction: column; color: #34332f; }
 .capture-screen .capture-header, .capture-screen .capture-types, .capture-screen .capture-footer { background: transparent; }
 .capture-content { align-items: flex-start; }
