@@ -40,7 +40,11 @@ export function App() {
 
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [autoClipboard, setAutoClipboard] = useState(() => {
-    try { return localStorage.getItem('anything_auto_clipboard') === 'true'; } catch { return false; }
+    try {
+      return localStorage.getItem('anything_auto_clipboard') === 'true';
+    } catch {
+      return false;
+    }
   });
   const [captureStatus, setCaptureStatus] = useState('');
   const lastClipboard = useRef('');
@@ -54,13 +58,12 @@ export function App() {
     return () => clearTimeout(timer);
   }, [captureStatus]);
 
-
   // Capture screen and item viewers
   const [isCaptureOpen, setIsCaptureOpen] = useState(false);
   const [captureInitialType, setCaptureInitialType] = useState<ItemType>('note');
   const [captureInitialContent, setCaptureInitialContent] = useState<string>('');
   const [captureInitialTitle, setCaptureInitialTitle] = useState<string>('');
-  
+
   // Card Detail Modal
   const [detailItem, setDetailItem] = useState<SavedItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -70,7 +73,12 @@ export function App() {
   const [isWholeViewOpen, setIsWholeViewOpen] = useState(false);
 
   // Lightbox
-  const [lightbox, setLightbox] = useState<{ isOpen: boolean; imageUrl: string | null; title: string | null; sourceId?: string }>({
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    imageUrl: string | null;
+    title: string | null;
+    sourceId?: string;
+  }>({
     isOpen: false,
     imageUrl: null,
     title: null,
@@ -86,7 +94,11 @@ export function App() {
   useLayoutEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
     document.documentElement.classList.toggle('light', !isDark);
-    try { localStorage.setItem('anything_theme', isDark ? 'dark' : 'light'); } catch { /* Theme still works without storage. */ }
+    try {
+      localStorage.setItem('anything_theme', isDark ? 'dark' : 'light');
+    } catch {
+      /* Theme still works without storage. */
+    }
   }, [isDark]);
 
   useEffect(() => {
@@ -99,7 +111,9 @@ export function App() {
       try {
         const next = JSON.parse(event.newValue);
         if (Array.isArray(next)) setItems(next);
-      } catch { /* Keep the current collection if another tab writes invalid data. */ }
+      } catch {
+        /* Keep the current collection if another tab writes invalid data. */
+      }
     };
     window.addEventListener('storage', receive);
     return () => window.removeEventListener('storage', receive);
@@ -125,7 +139,8 @@ export function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      const isInput =
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
       // Ctrl+K / ⌘K -> Open Capture
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -137,7 +152,7 @@ export function App() {
 
       // Esc -> Close any open modal or sheet
       if (e.key === 'Escape') {
-        if (lightbox.isOpen) setLightbox(previous => ({ ...previous, isOpen: false }));
+        if (lightbox.isOpen) setLightbox((previous) => ({ ...previous, isOpen: false }));
         else if (isWholeViewOpen) setIsWholeViewOpen(false);
         else if (isDetailOpen) setIsDetailOpen(false);
         else if (isCaptureOpen) setIsCaptureOpen(false);
@@ -158,7 +173,9 @@ export function App() {
         if (e.key === '/') {
           e.preventDefault();
           sound.click();
-          const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+          const searchInput = document.querySelector(
+            'input[placeholder*="Search"]',
+          ) as HTMLInputElement;
           if (searchInput) searchInput.focus();
           return;
         }
@@ -172,11 +189,7 @@ export function App() {
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
       const text = e.clipboardData?.getData('text');
@@ -191,15 +204,21 @@ export function App() {
     return () => window.removeEventListener('paste', handlePaste);
   }, []);
 
-  const handleTogglePin = useCallback((id: string) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, isPinned: !item.isPinned } : item))
-    );
-  }, [setItems]);
+  const handleTogglePin = useCallback(
+    (id: string) => {
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isPinned: !item.isPinned } : item)),
+      );
+    },
+    [setItems],
+  );
 
-  const handleDeleteItem = useCallback((id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  }, [setItems]);
+  const handleDeleteItem = useCallback(
+    (id: string) => {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    },
+    [setItems],
+  );
 
   const handleDeleteAll = () => {
     if (!saveItemsToStorage([])) {
@@ -218,79 +237,125 @@ export function App() {
     return true;
   };
 
-  const handleUpdateItem = useCallback((updated: SavedItem) => {
-    setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-    setDetailItem(current => current?.id === updated.id ? updated : current);
-    setWholeViewItem(current => current?.id === updated.id ? updated : current);
-  }, [setItems]);
+  const handleUpdateItem = useCallback(
+    (updated: SavedItem) => {
+      setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setDetailItem((current) => (current?.id === updated.id ? updated : current));
+      setWholeViewItem((current) => (current?.id === updated.id ? updated : current));
+    },
+    [setItems],
+  );
 
   const handleSaveNewItem = (newItem: SavedItem, enrichPreview = false) => {
     setItems((prev) => [newItem, ...prev]);
     const url = 'url' in newItem ? newItem.url : 'postUrl' in newItem ? newItem.postUrl : undefined;
     if (url && enrichPreview) {
-      void fetchLinkPreview(url).then(preview => {
-        if (preview.error) return;
-        setItems(previous => previous.map(item => item.id === newItem.id ? applyLinkPreview(item, preview) : item));
-      }).catch(() => { /* The item is saved even if metadata fails. */ });
+      void fetchLinkPreview(url)
+        .then((preview) => {
+          if (preview.error) return;
+          setItems((previous) =>
+            previous.map((item) =>
+              item.id === newItem.id ? applyLinkPreview(item, preview) : item,
+            ),
+          );
+        })
+        .catch(() => {
+          /* The item is saved even if metadata fails. */
+        });
     }
   };
 
-  const captureTexts = useCallback((texts: string[], linksOnly = false) => {
-    try {
-      const result = { items: [] as SavedItem[], duplicates: 0 };
-      for (const text of texts) {
-        const batch = createQuickCaptures(text, [...result.items, ...itemsRef.current], linksOnly, selectedFolderId || undefined);
-        result.items.push(...batch.items);
-        result.duplicates += batch.duplicates;
-      }
-      if (result.items.length) {
-        const next = [...result.items, ...itemsRef.current];
-        if (!saveItemsToStorage(next)) throw new Error('Browser storage is full. Export a backup and free some space before saving.');
-        setItems(next);
-        for (const item of result.items) {
-          const url = 'url' in item ? item.url : 'postUrl' in item ? item.postUrl : undefined;
-          if (url) previewQueue.current.push({ id: item.id, url });
+  const captureTexts = useCallback(
+    (texts: string[], linksOnly = false) => {
+      try {
+        const result = { items: [] as SavedItem[], duplicates: 0 };
+        for (const text of texts) {
+          const batch = createQuickCaptures(
+            text,
+            [...result.items, ...itemsRef.current],
+            linksOnly,
+            selectedFolderId || undefined,
+          );
+          result.items.push(...batch.items);
+          result.duplicates += batch.duplicates;
         }
-        const runWorker = async () => {
-          previewWorkers.current++;
-          try {
-            while (previewQueue.current.length) {
-              const entry = previewQueue.current.shift()!;
-              try {
-                const preview = await fetchLinkPreview(entry.url);
-                if (preview.error) continue;
-                const nextItems = itemsRef.current.map(item => item.id === entry.id ? applyLinkPreview(item, preview) : item);
-                setItems(nextItems);
-              } catch { /* The original capture is already saved. */ }
+        if (result.items.length) {
+          const next = [...result.items, ...itemsRef.current];
+          if (!saveItemsToStorage(next))
+            throw new Error(
+              'Browser storage is full. Export a backup and free some space before saving.',
+            );
+          setItems(next);
+          for (const item of result.items) {
+            const url = 'url' in item ? item.url : 'postUrl' in item ? item.postUrl : undefined;
+            if (url) previewQueue.current.push({ id: item.id, url });
+          }
+          const runWorker = async () => {
+            previewWorkers.current++;
+            try {
+              while (previewQueue.current.length) {
+                const entry = previewQueue.current.shift()!;
+                try {
+                  const preview = await fetchLinkPreview(entry.url);
+                  if (preview.error) continue;
+                  const nextItems = itemsRef.current.map((item) =>
+                    item.id === entry.id ? applyLinkPreview(item, preview) : item,
+                  );
+                  setItems(nextItems);
+                } catch {
+                  /* The original capture is already saved. */
+                }
+              }
+            } finally {
+              previewWorkers.current--;
             }
-          } finally { previewWorkers.current--; }
-        };
-        while (previewWorkers.current < 3 && previewQueue.current.length) void runWorker();
+          };
+          while (previewWorkers.current < 3 && previewQueue.current.length) void runWorker();
+        }
+        setCaptureStatus(
+          result.items.length
+            ? `Saved ${result.items.length}${result.duplicates ? ` · ${result.duplicates} already saved` : ''}`
+            : 'Already in your collection',
+        );
+        return true;
+      } catch (error) {
+        setCaptureStatus(error instanceof Error ? error.message : 'Could not save this capture.');
+        return false;
       }
-      setCaptureStatus(result.items.length ? `Saved ${result.items.length}${result.duplicates ? ` · ${result.duplicates} already saved` : ''}` : 'Already in your collection');
-      return true;
-    } catch (error) {
-      setCaptureStatus(error instanceof Error ? error.message : 'Could not save this capture.');
-      return false;
-    }
-  }, [selectedFolderId, setItems]);
+    },
+    [selectedFolderId, setItems],
+  );
 
-  const captureText = useCallback((text: string, linksOnly = false) => captureTexts([text], linksOnly), [captureTexts]);
+  const captureText = useCallback(
+    (text: string, linksOnly = false) => captureTexts([text], linksOnly),
+    [captureTexts],
+  );
 
   const handleQuickSave = (text: string) => {
     const saved = captureText(text, true);
-    if (saved) { setSelectedFilter('all'); setSearchQuery(''); }
+    if (saved) {
+      setSelectedFilter('all');
+      setSearchQuery('');
+    }
     return saved;
   };
 
   const handlePasteLinks = async () => {
     const result = await readClipboardSafely();
     if (result.status === 'ok' && result.text) handleQuickSave(result.text);
-    else setCaptureStatus(result.status === 'permission_denied' ? 'Clipboard access was blocked. Paste into the link field instead.' : 'Copy a link first, then try again.');
+    else
+      setCaptureStatus(
+        result.status === 'permission_denied'
+          ? 'Clipboard access was blocked. Paste into the link field instead.'
+          : 'Copy a link first, then try again.',
+      );
   };
 
   const handleToggleAutoClipboard = async () => {
-    if (autoClipboard) { setAutoClipboard(false); return; }
+    if (autoClipboard) {
+      setAutoClipboard(false);
+      return;
+    }
     const result = await readClipboardSafely();
     if (result.status === 'permission_denied' || result.status === 'unsupported') {
       setCaptureStatus('Allow clipboard access in your browser to enable auto-save.');
@@ -305,11 +370,24 @@ export function App() {
   };
 
   useEffect(() => {
-    try { localStorage.setItem('anything_auto_clipboard', String(autoClipboard)); } catch { /* Preference storage is optional. */ }
+    try {
+      localStorage.setItem('anything_auto_clipboard', String(autoClipboard));
+    } catch {
+      /* Preference storage is optional. */
+    }
     if (!autoClipboard) return;
     let active = true;
     const check = async () => {
-      if (clipboardBusy.current || document.visibilityState !== 'visible' || !document.hasFocus() || isCaptureOpen || isDetailOpen || isWholeViewOpen || lightbox.isOpen) return;
+      if (
+        clipboardBusy.current ||
+        document.visibilityState !== 'visible' ||
+        !document.hasFocus() ||
+        isCaptureOpen ||
+        isDetailOpen ||
+        isWholeViewOpen ||
+        lightbox.isOpen
+      )
+        return;
       clipboardBusy.current = true;
       try {
         const result = await readClipboardSafely();
@@ -321,20 +399,44 @@ export function App() {
           if (captureText(result.text)) lastClipboard.current = result.text;
           else setAutoClipboard(false);
         }
-      } finally { clipboardBusy.current = false; }
+      } finally {
+        clipboardBusy.current = false;
+      }
     };
     void check();
     const timer = window.setInterval(check, 1200);
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', check);
-    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', check);
+    };
   }, [autoClipboard, captureText, isCaptureOpen, isDetailOpen, isWholeViewOpen, lightbox.isOpen]);
 
   useEffect(() => {
     const receive = (event: MessageEvent) => {
-      if (event.source !== window || event.origin !== location.origin || event.data?.source !== 'anything-extension' || !Array.isArray(event.data.entries) || event.data.entries.length > 100) return;
-      const entries = event.data.entries.filter((entry: { id?: unknown; text?: unknown }) => typeof entry?.id === 'string' && entry.id.length <= 100 && typeof entry.text === 'string' && entry.text.trim() && entry.text.length <= 50_000);
-      const ids = entries.length && captureTexts(entries.map((entry: { text: string }) => entry.text)) ? entries.map((entry: { id: string }) => entry.id) : [];
+      if (
+        event.source !== window ||
+        event.origin !== location.origin ||
+        event.data?.source !== 'anything-extension' ||
+        !Array.isArray(event.data.entries) ||
+        event.data.entries.length > 100
+      )
+        return;
+      const entries = event.data.entries.filter(
+        (entry: { id?: unknown; text?: unknown }) =>
+          typeof entry?.id === 'string' &&
+          entry.id.length <= 100 &&
+          typeof entry.text === 'string' &&
+          entry.text.trim() &&
+          entry.text.length <= 50_000,
+      );
+      const ids =
+        entries.length && captureTexts(entries.map((entry: { text: string }) => entry.text))
+          ? entries.map((entry: { id: string }) => entry.id)
+          : [];
       window.postMessage({ source: 'anything-app', savedIds: ids }, location.origin);
     };
     window.addEventListener('message', receive);
@@ -373,7 +475,10 @@ export function App() {
 
   const closeDetail = useCallback(() => setIsDetailOpen(false), []);
   const closeWholeView = useCallback(() => setIsWholeViewOpen(false), []);
-  const closeLightbox = useCallback(() => setLightbox(previous => ({ ...previous, isOpen: false })), []);
+  const closeLightbox = useCallback(
+    () => setLightbox((previous) => ({ ...previous, isOpen: false })),
+    [],
+  );
 
   // Folder Operations
   const handleCreateFolder = (name: string): Folder => {
@@ -389,7 +494,7 @@ export function App() {
   const handleDeleteFolder = (folderId: string) => {
     setFolders((prev) => prev.filter((f) => f.id !== folderId));
     setItems((prev) =>
-      prev.map((item) => (item.folderId === folderId ? { ...item, folderId: undefined } : item))
+      prev.map((item) => (item.folderId === folderId ? { ...item, folderId: undefined } : item)),
     );
   };
 
@@ -423,7 +528,9 @@ export function App() {
   }, [items]);
 
   const itemCounts = useMemo(() => {
-    const scopedItems = items.filter(i => selectedFolderId === null || i.folderId === selectedFolderId);
+    const scopedItems = items.filter(
+      (i) => selectedFolderId === null || i.folderId === selectedFolderId,
+    );
     const counts: Record<string, number> = {
       all: scopedItems.length,
       pinned: scopedItems.filter((i) => i.isPinned).length,
@@ -482,12 +589,10 @@ export function App() {
       });
   }, [items, selectedFolderId, selectedFilter, selectedTag, searchQuery, sortOption]);
 
-  const isDefaultOverview = selectedFilter === 'all' && !searchQuery.trim() && !selectedTag && selectedFolderId === null;
+  const isDefaultOverview =
+    selectedFilter === 'all' && !searchQuery.trim() && !selectedTag && selectedFolderId === null;
   const pinnedItems = useMemo(() => filteredItems.filter((i) => i.isPinned), [filteredItems]);
-  const unpinnedItems = useMemo(
-    () => filteredItems.filter((i) => !i.isPinned),
-    [filteredItems]
-  );
+  const unpinnedItems = useMemo(() => filteredItems.filter((i) => !i.isPinned), [filteredItems]);
 
   const gridItems = useMemo(() => {
     if (selectedFilter === 'pinned') return pinnedItems;
@@ -499,133 +604,159 @@ export function App() {
 
   return (
     <div id="top" className="anything-app min-h-screen flex flex-col">
-      
-      <div inert={isCaptureOpen} aria-hidden={isCaptureOpen} className={`collection-surface ${isCaptureOpen ? "capture-active" : ""}`}>
-      {/* Top Header */}
-      <Header
-        account={account}
-        items={items}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onImportItems={handleImportItems}
-        onDeleteAll={handleDeleteAll}
-        isDark={isDark}
-        onReadClipboard={handleReadClipboard}
-        autoClipboard={autoClipboard}
-        onToggleAutoClipboard={handleToggleAutoClipboard}
-        onToggleTheme={() => setIsDark(previous => !previous)}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedFilter={selectedFilter}
-        onNavigate={(filter) => {
-          setSelectedFilter(filter);
-          setSelectedFolderId(null);
-          setSearchQuery('');
-          setSelectedTag(null);
-        }}
-      />
+      <div
+        inert={isCaptureOpen}
+        aria-hidden={isCaptureOpen}
+        className={`collection-surface ${isCaptureOpen ? 'capture-active' : ''}`}
+      >
+        {/* Top Header */}
+        <Header
+          account={account}
+          items={items}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onImportItems={handleImportItems}
+          onDeleteAll={handleDeleteAll}
+          isDark={isDark}
+          onReadClipboard={handleReadClipboard}
+          autoClipboard={autoClipboard}
+          onToggleAutoClipboard={handleToggleAutoClipboard}
+          onToggleTheme={() => setIsDark((previous) => !previous)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedFilter={selectedFilter}
+          onNavigate={(filter) => {
+            setSelectedFilter(filter);
+            setSelectedFolderId(null);
+            setSearchQuery('');
+            setSelectedTag(null);
+          }}
+        />
 
-      {/* Clipboard Toast Banner */}
-      <AnimatePresence>
-        {clipboardNotice && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full px-4"
-          >
-            <div className={`p-4 rounded-2xl border shadow-xl flex items-center justify-between gap-3 text-sm ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
-            }`}>
-              <div className="flex items-center gap-3 truncate min-w-0">
-                {clipboardNotice.isDuplicate ? (
-                  <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
-                ) : (
-                  <ClipboardCheck className="w-5 h-5 text-emerald-500 shrink-0" />
-                )}
-                <div className="truncate">
+        {/* Clipboard Toast Banner */}
+        <AnimatePresence>
+          {clipboardNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full px-4"
+            >
+              <div
+                className={`p-4 rounded-2xl border shadow-xl flex items-center justify-between gap-3 text-sm ${
+                  isDark
+                    ? 'bg-zinc-900 border-zinc-800 text-white'
+                    : 'bg-white border-zinc-200 text-zinc-900'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate min-w-0">
                   {clipboardNotice.isDuplicate ? (
-                    <span>Already saved: <strong>{clipboardNotice.duplicateTitle}</strong></span>
+                    <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
                   ) : (
-                    <span>Clipboard: <em>{clipboardNotice.text.slice(0, 36)}...</em></span>
+                    <ClipboardCheck className="w-5 h-5 text-emerald-500 shrink-0" />
                   )}
+                  <div className="truncate">
+                    {clipboardNotice.isDuplicate ? (
+                      <span>
+                        Already saved: <strong>{clipboardNotice.duplicateTitle}</strong>
+                      </span>
+                    ) : (
+                      <span>
+                        Clipboard: <em>{clipboardNotice.text.slice(0, 36)}...</em>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {!clipboardNotice.isDuplicate && (
+                    <button
+                      onClick={() => {
+                        setClipboardNotice(null);
+                        handleOpenCapture('link');
+                      }}
+                      className={`px-3 py-1.5 rounded-xl font-medium text-xs cursor-pointer transition-colors ${
+                        isDark
+                          ? 'bg-white text-zinc-950 hover:bg-zinc-200'
+                          : 'bg-zinc-900 text-white hover:bg-black'
+                      }`}
+                    >
+                      Save this
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setClipboardNotice(null)}
+                    className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {!clipboardNotice.isDuplicate && (
-                  <button
-                    onClick={() => {
-                      setClipboardNotice(null);
-                      handleOpenCapture('link');
-                    }}
-                    className={`px-3 py-1.5 rounded-xl font-medium text-xs cursor-pointer transition-colors ${
-                      isDark ? 'bg-white text-zinc-950 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black'
-                    }`}
-                  >
-                    Save this
-                  </button>
-                )}
-                <button
-                  onClick={() => setClipboardNotice(null)}
-                  className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Unified Monochrome Filter & Folder Toolbar */}
-      {items.length > 0 && <FilterBar
-        folders={folders}
-        selectedFolderId={selectedFolderId}
-        onSelectFolder={setSelectedFolderId}
-        onCreateFolder={handleCreateFolder}
-        totalCount={items.length}
-        selectedFilter={selectedFilter}
-        onFilterChange={setSelectedFilter}
-        itemCounts={itemCounts}
-        folderCounts={folderCounts}
-        sortOption={sortOption}
-        onSortChange={setSortOption}
-        isDark={isDark}
-      />}
-
-      {/* Main Content Area */}
-      <main className={`flex-1 w-full collection-main max-w-[1600px] mx-auto px-5 sm:px-9 pt-2 pb-10 ${items.length === 0 ? 'welcome-main' : ''}`}>
-        
-        {items.length === 0 ? (
-          <CreativeEmptyView
-            account={account}
+        {/* Unified Monochrome Filter & Folder Toolbar */}
+        {items.length > 0 && (
+          <FilterBar
+            folders={folders}
+            selectedFolderId={selectedFolderId}
+            onSelectFolder={setSelectedFolderId}
+            onCreateFolder={handleCreateFolder}
+            totalCount={items.length}
+            selectedFilter={selectedFilter}
+            onFilterChange={setSelectedFilter}
+            itemCounts={itemCounts}
+            folderCounts={folderCounts}
+            sortOption={sortOption}
+            onSortChange={setSortOption}
+            isDark={isDark}
           />
-        ) : (
-          <>
+        )}
+
+        {/* Main Content Area */}
+        <main
+          className={`flex-1 w-full collection-main max-w-[1600px] mx-auto px-5 sm:px-9 pt-2 pb-10 ${items.length === 0 ? 'welcome-main' : ''}`}
+        >
+          {items.length === 0 ? (
+            <CreativeEmptyView account={account} />
+          ) : (
+            <>
               {/* Masonry View */}
               {viewMode === 'masonry' && (
                 <>
-                    {gridItems.length === 0 ? (
-                      <div className="collection-no-results">
-                        <span className="empty-orbit" aria-hidden="true">✳</span>
-                        <h2>Nothing here. Yet.</h2>
-                        <p>Try a different thought, or give this space something to remember.</p>
-                        <button type="button" onClick={() => { setSearchQuery(''); setSelectedFilter('all'); setSelectedFolderId(null); setSelectedTag(null); }}>Show everything</button>
-                      </div>
-                    ) : (
-                      <MasonryGrid
-                        activeId={detailItem?.id ?? wholeViewItem?.id ?? lightbox.sourceId ?? null}
-                        items={gridItems}
-                        folders={folders}
-                        onTogglePin={handleTogglePin}
-                        onDelete={handleDeleteItem}
-                        onUpdateItem={handleUpdateItem}
-                        onOpenImage={handleOpenImage}
-                        onOpenDetail={handleOpenDetail}
-                        isDark={isDark}
-                      />
-                    )}
+                  {gridItems.length === 0 ? (
+                    <div className="collection-no-results">
+                      <span className="empty-orbit" aria-hidden="true">
+                        ✳
+                      </span>
+                      <h2>Nothing here. Yet.</h2>
+                      <p>Try a different thought, or give this space something to remember.</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedFilter('all');
+                          setSelectedFolderId(null);
+                          setSelectedTag(null);
+                        }}
+                      >
+                        Show everything
+                      </button>
+                    </div>
+                  ) : (
+                    <MasonryGrid
+                      activeId={detailItem?.id ?? wholeViewItem?.id ?? lightbox.sourceId ?? null}
+                      items={gridItems}
+                      folders={folders}
+                      onTogglePin={handleTogglePin}
+                      onDelete={handleDeleteItem}
+                      onUpdateItem={handleUpdateItem}
+                      onOpenImage={handleOpenImage}
+                      onOpenDetail={handleOpenDetail}
+                      isDark={isDark}
+                    />
+                  )}
                 </>
               )}
 
@@ -642,94 +773,118 @@ export function App() {
                 />
               )}
 
-            {/* Focus View */}
-            {viewMode === 'focus' && (
-              <FocusCanvasView
-                items={filteredItems}
-                onTogglePin={handleTogglePin}
-                onDelete={handleDeleteItem}
-                onUpdateItem={handleUpdateItem}
-                onOpenImage={handleOpenImage}
-                onOpenDetail={handleOpenDetail}
-                isDark={isDark}
-              />
-            )}
-          </>
-        )}
+              {/* Focus View */}
+              {viewMode === 'focus' && (
+                <FocusCanvasView
+                  items={filteredItems}
+                  onTogglePin={handleTogglePin}
+                  onDelete={handleDeleteItem}
+                  onUpdateItem={handleUpdateItem}
+                  onOpenImage={handleOpenImage}
+                  onOpenDetail={handleOpenDetail}
+                  isDark={isDark}
+                />
+              )}
+            </>
+          )}
+        </main>
 
-      </main>
-
-      <FloatingCaptureBar hidden={isDetailOpen || isWholeViewOpen || lightbox.isOpen} onOpenCapture={() => handleOpenCapture('note')} onQuickSave={handleQuickSave} onPasteLinks={handlePasteLinks} status={captureStatus} />
+        <FloatingCaptureBar
+          hidden={isDetailOpen || isWholeViewOpen || lightbox.isOpen}
+          onOpenCapture={() => handleOpenCapture('note')}
+          onQuickSave={handleQuickSave}
+          onPasteLinks={handlePasteLinks}
+          status={captureStatus}
+        />
       </div>
 
       {/* Direct capture screen */}
       <AnimatePresence>
-      {isCaptureOpen && <CaptureSheet
-        key="capture"
-        isOpen={isCaptureOpen}
-        onClose={() => {
-          setIsCaptureOpen(false);
-          setCaptureInitialContent('');
-          setCaptureInitialTitle('');
-        }}
-        onSave={handleSaveNewItem}
-        existingItems={items}
-        folders={folders}
-        onCreateFolder={handleCreateFolder}
-        isDark={isDark}
-        initialType={captureInitialType}
-        initialFolderId={selectedFolderId || undefined}
-        initialContent={captureInitialContent}
-        initialTitle={captureInitialTitle}
-      />}
+        {isCaptureOpen && (
+          <CaptureSheet
+            key="capture"
+            isOpen={isCaptureOpen}
+            onClose={() => {
+              setIsCaptureOpen(false);
+              setCaptureInitialContent('');
+              setCaptureInitialTitle('');
+            }}
+            onSave={handleSaveNewItem}
+            existingItems={items}
+            folders={folders}
+            onCreateFolder={handleCreateFolder}
+            isDark={isDark}
+            initialType={captureInitialType}
+            initialFolderId={selectedFolderId || undefined}
+            initialContent={captureInitialContent}
+            initialTitle={captureInitialTitle}
+          />
+        )}
       </AnimatePresence>
 
       {/* Card Detail Modal */}
-      <AnimatePresence onExitComplete={() => { if (!isDetailOpen) setDetailItem(null); }}>
-      {isDetailOpen && detailItem && <CardDetailModal
-        key={detailItem.id}
-        item={detailItem}
-        isOpen={isDetailOpen}
-        onClose={closeDetail}
-        onTogglePin={handleTogglePin}
-        onDelete={handleDeleteItem}
-        onUpdateItem={handleUpdateItem}
-        onOpenImage={handleOpenImage}
-        onOpenWholeView={handleOpenWholeView}
-        folders={folders}
-        onCreateFolder={handleCreateFolder}
-        isDark={isDark}
-      />}
+      <AnimatePresence
+        onExitComplete={() => {
+          if (!isDetailOpen) setDetailItem(null);
+        }}
+      >
+        {isDetailOpen && detailItem && (
+          <CardDetailModal
+            key={detailItem.id}
+            item={detailItem}
+            isOpen={isDetailOpen}
+            onClose={closeDetail}
+            onTogglePin={handleTogglePin}
+            onDelete={handleDeleteItem}
+            onUpdateItem={handleUpdateItem}
+            onOpenImage={handleOpenImage}
+            onOpenWholeView={handleOpenWholeView}
+            folders={folders}
+            onCreateFolder={handleCreateFolder}
+            isDark={isDark}
+          />
+        )}
       </AnimatePresence>
 
       {/* Whole View (Full Canvas / Page Reader & Editor for Skills & Markdown) */}
-      <AnimatePresence onExitComplete={() => { if (!isWholeViewOpen) setWholeViewItem(null); }}>
-      {isWholeViewOpen && wholeViewItem && <WholeViewModal
-        key={wholeViewItem.id}
-        item={wholeViewItem}
-        isOpen={isWholeViewOpen}
-        onClose={closeWholeView}
-        onTogglePin={handleTogglePin}
-        onDelete={handleDeleteItem}
-        onUpdateItem={handleUpdateItem}
-        folders={folders}
-        isDark={isDark}
-      />}
+      <AnimatePresence
+        onExitComplete={() => {
+          if (!isWholeViewOpen) setWholeViewItem(null);
+        }}
+      >
+        {isWholeViewOpen && wholeViewItem && (
+          <WholeViewModal
+            key={wholeViewItem.id}
+            item={wholeViewItem}
+            isOpen={isWholeViewOpen}
+            onClose={closeWholeView}
+            onTogglePin={handleTogglePin}
+            onDelete={handleDeleteItem}
+            onUpdateItem={handleUpdateItem}
+            folders={folders}
+            isDark={isDark}
+          />
+        )}
       </AnimatePresence>
 
       {/* Lightbox Modal */}
-      <AnimatePresence onExitComplete={() => { if (!lightbox.isOpen) setLightbox({ isOpen: false, imageUrl: null, title: null }); }}>
-      {lightbox.isOpen && <ImageViewerModal
-        key={lightbox.sourceId ?? lightbox.imageUrl}
-        sourceId={lightbox.sourceId}
-        isOpen={lightbox.isOpen}
-        imageUrl={lightbox.imageUrl}
-        title={lightbox.title}
-        onClose={closeLightbox}
-        isDark={isDark}
-      />}
+      <AnimatePresence
+        onExitComplete={() => {
+          if (!lightbox.isOpen) setLightbox({ isOpen: false, imageUrl: null, title: null });
+        }}
+      >
+        {lightbox.isOpen && (
+          <ImageViewerModal
+            key={lightbox.sourceId ?? lightbox.imageUrl}
+            sourceId={lightbox.sourceId}
+            isOpen={lightbox.isOpen}
+            imageUrl={lightbox.imageUrl}
+            title={lightbox.title}
+            onClose={closeLightbox}
+            isDark={isDark}
+          />
+        )}
       </AnimatePresence>
-
     </div>
   );
 }

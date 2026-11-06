@@ -9,29 +9,76 @@ async function worker(acknowledge = true) {
   const state = { appUrl: 'http://localhost:5173/', queue: [], copyEnabled: false };
   const deliveries = [];
   const injections = [];
-  const listen = name => ({ addListener: handler => { handlers[name] = handler; } });
+  const listen = (name) => ({
+    addListener: (handler) => {
+      handlers[name] = handler;
+    },
+  });
   const chrome = {
-    runtime: { id: 'test', getURL: path => `chrome-extension://test/${path}`, onInstalled: listen('install'), onStartup: listen('startup'), onMessage: listen('message') },
-    storage: { local: { get: async () => structuredClone(state), set: async values => Object.assign(state, structuredClone(values)) } },
+    runtime: {
+      id: 'test',
+      getURL: (path) => `chrome-extension://test/${path}`,
+      onInstalled: listen('install'),
+      onStartup: listen('startup'),
+      onMessage: listen('message'),
+    },
+    storage: {
+      local: {
+        get: async () => structuredClone(state),
+        set: async (values) => Object.assign(state, structuredClone(values)),
+      },
+    },
     action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
     permissions: { onRemoved: listen('permissions'), contains: async () => false },
-    contextMenus: { onClicked: listen('context'), removeAll: callback => callback(), create: () => {} },
-    scripting: { executeScript: async options => injections.push(options.target.tabId), getRegisteredContentScripts: async () => [] },
+    contextMenus: {
+      onClicked: listen('context'),
+      removeAll: (callback) => callback(),
+      create: () => {},
+    },
+    scripting: {
+      executeScript: async (options) => injections.push(options.target.tabId),
+      getRegisteredContentScripts: async () => [],
+    },
     tabs: {
-      query: async () => [{ id: 9, url: 'https://evil.example/' }, { id: 2, url: state.appUrl, status: 'complete' }],
+      query: async () => [
+        { id: 9, url: 'https://evil.example/' },
+        { id: 2, url: state.appUrl, status: 'complete' },
+      ],
       onUpdated: listen('tabs'),
-      sendMessage: async (tabId, message) => { deliveries.push({ tabId, message }); return { savedIds: acknowledge ? [...message.entries.map(entry => entry.id), 'not-in-batch'] : [] }; },
+      sendMessage: async (tabId, message) => {
+        deliveries.push({ tabId, message });
+        return {
+          savedIds: acknowledge
+            ? [...message.entries.map((entry) => entry.id), 'not-in-batch']
+            : [],
+        };
+      },
     },
   };
-  const source = (await readFile(new URL('./background.js', import.meta.url), 'utf8')).replace(/^import[^\n]+\n/, '');
-  runInNewContext(source, { chrome, DEFAULT_APP_URL, normalizeAppUrl, isAppPage, appendCapture, crypto, URL });
-  const send = (message, sender = { id: 'test', url: chrome.runtime.getURL('popup.html') }) => new Promise(resolve => handlers.message(message, sender, resolve));
+  const source = (await readFile(new URL('./background.js', import.meta.url), 'utf8')).replace(
+    /^import[^\n]+\n/,
+    '',
+  );
+  runInNewContext(source, {
+    chrome,
+    DEFAULT_APP_URL,
+    normalizeAppUrl,
+    isAppPage,
+    appendCapture,
+    crypto,
+    URL,
+  });
+  const send = (message, sender = { id: 'test', url: chrome.runtime.getURL('popup.html') }) =>
+    new Promise((resolve) => handlers.message(message, sender, resolve));
   return { state, deliveries, injections, send };
 }
 
 test('extension delivers only to the configured app and removes only acknowledged captures', async () => {
   const app = await worker();
-  assert.equal((await app.send({ type: 'anything:capture', text: 'https://example.com/' })).ok, true);
+  assert.equal(
+    (await app.send({ type: 'anything:capture', text: 'https://example.com/' })).ok,
+    true,
+  );
   await new Promise(setImmediate);
   assert.deepEqual(app.injections, [2]);
   assert.equal(app.deliveries[0].tabId, 2);
@@ -49,7 +96,15 @@ test('website copy capture is opt-in and copying from Anything never creates a c
   assert.equal((await app.send({ type: 'anything:copied', text: 'Hello' }, sender)).ok, false);
   assert.equal(app.state.queue.length, 0);
   app.state.copyEnabled = true;
-  assert.equal((await app.send({ type: 'anything:copied', text: 'Hello' }, { id: 'test', tab: { url: app.state.appUrl } })).ok, true);
+  assert.equal(
+    (
+      await app.send(
+        { type: 'anything:copied', text: 'Hello' },
+        { id: 'test', tab: { url: app.state.appUrl } },
+      )
+    ).ok,
+    true,
+  );
   assert.equal(app.deliveries.length, 0);
   assert.equal((await app.send({ type: 'anything:copied', text: 'Hello' }, sender)).ok, true);
   await new Promise(setImmediate);
@@ -62,10 +117,21 @@ test('copy listener ignores password fields and synthetic events', async () => {
   let password = true;
   const context = {
     window: { getSelection: () => ({ toString: () => 'selected text' }) },
-    document: { activeElement: { matches: () => password }, addEventListener: (_name, callback) => { copied = callback; } },
-    chrome: { storage: { local: { get: async () => ({ copyEnabled: true }) }, onChanged: { addListener() {} } }, runtime: { sendMessage: async message => sent.push(message) } },
+    document: {
+      activeElement: { matches: () => password },
+      addEventListener: (_name, callback) => {
+        copied = callback;
+      },
+    },
+    chrome: {
+      storage: {
+        local: { get: async () => ({ copyEnabled: true }) },
+        onChanged: { addListener() {} },
+      },
+      runtime: { sendMessage: async (message) => sent.push(message) },
+    },
     navigator: { clipboard: { readText: async () => 'Actual copied text' } },
-    setTimeout: callback => callback(),
+    setTimeout: (callback) => callback(),
   };
   runInNewContext(await readFile(new URL('./copy.js', import.meta.url), 'utf8'), context);
   await new Promise(setImmediate);

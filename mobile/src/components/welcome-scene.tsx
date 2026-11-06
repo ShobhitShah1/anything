@@ -78,8 +78,7 @@ export const WelcomeScene = memo(function WelcomeScene({
               },
             ]}
           >
-            A space for{' '}
-            <Text style={styles.headlineEmphasis}>everything.</Text>
+            A space for <Text style={styles.headlineEmphasis}>everything.</Text>
           </Text>
         </View>
 
@@ -99,10 +98,7 @@ export const WelcomeScene = memo(function WelcomeScene({
                 accessibilityRole="button"
                 accessibilityLabel="Start on this device"
                 onPress={onOpenCapture}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  { opacity: pressed ? 0.6 : 1 },
-                ]}
+                style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.6 : 1 }]}
               >
                 <Text
                   allowFontScaling={false}
@@ -116,18 +112,11 @@ export const WelcomeScene = memo(function WelcomeScene({
           ) : (
             <>
               {/* Signed-in user with empty collection */}
-              <Action
-                title="Save your first find"
-                icon={Plus}
-                onPress={onOpenCapture}
-              />
+              <Action title="Save your first find" icon={Plus} onPress={onOpenCapture} />
               <Pressable
                 accessibilityRole="button"
                 onPress={onOpenCapture}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  { opacity: pressed ? 0.65 : 1 },
-                ]}
+                style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.65 : 1 }]}
               >
                 <Text
                   allowFontScaling={false}

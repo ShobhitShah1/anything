@@ -1,6 +1,6 @@
 export const freeLimit = 3;
 export const paidLimit = 100;
-export const entitlementId = "anything_pro";
+export const entitlementId = 'anything_pro';
 
 export class AccessError extends Error {
   code: string;
@@ -21,34 +21,21 @@ export type Usage = {
 
 export function allowance(usage: Usage, paid: boolean, now: number) {
   const month = new Date(now).toISOString().slice(0, 7);
-  const used = paid
-    ? usage.month === month
-      ? usage.paidUsed || 0
-      : 0
-    : usage.freeUsed || 0;
+  const used = paid ? (usage.month === month ? usage.paidUsed || 0 : 0) : usage.freeUsed || 0;
   const limit = paid ? paidLimit : freeLimit;
   return { paid, used, limit, remaining: Math.max(0, limit - used), month };
 }
 
-export function reserve(
-  usage: Usage,
-  paid: boolean,
-  id: string,
-  now: number,
-): Usage {
+export function reserve(usage: Usage, paid: boolean, id: string, now: number): Usage {
   if (usage.pending && usage.pending.until > now)
-    throw new AccessError(
-      "busy",
-      "An AI response is already being created. Please wait.",
-      409,
-    );
+    throw new AccessError('busy', 'An AI response is already being created. Please wait.', 409);
   const access = allowance(usage, paid, now);
   if (!access.remaining)
     throw new AccessError(
-      paid ? "monthly_limit" : "subscription_required",
+      paid ? 'monthly_limit' : 'subscription_required',
       paid
-        ? "Your 100 monthly AI responses are used. More arrive next calendar month."
-        : "Your three free AI responses are used. Continue with Anything Pro.",
+        ? 'Your 100 monthly AI responses are used. More arrive next calendar month.'
+        : 'Your three free AI responses are used. Continue with Anything Pro.',
       402,
     );
   return { ...usage, pending: { id, until: now + 180_000 } };
@@ -74,12 +61,8 @@ export function finish(
   };
 }
 
-export function hasEntitlement(
-  subscriber: unknown,
-  now: number,
-  allowSandbox = false,
-) {
-  if (!subscriber || typeof subscriber !== "object") return false;
+export function hasEntitlement(subscriber: unknown, now: number, allowSandbox = false) {
+  if (!subscriber || typeof subscriber !== 'object') return false;
   const value = subscriber as {
     entitlements?: Record<
       string,
@@ -96,14 +79,13 @@ export function hasEntitlement(
   if (
     !allowSandbox &&
     (!entitlement.product_identifier ||
-      value.subscriptions?.[entitlement.product_identifier]?.is_sandbox !==
-        false)
+      value.subscriptions?.[entitlement.product_identifier]?.is_sandbox !== false)
   )
     return false;
   if (entitlement.expires_date === null) return true;
   const expiry = Math.max(
-    Date.parse(entitlement.expires_date || "") || 0,
-    Date.parse(entitlement.grace_period_expires_date || "") || 0,
+    Date.parse(entitlement.expires_date || '') || 0,
+    Date.parse(entitlement.grace_period_expires_date || '') || 0,
   );
   return expiry > now;
 }

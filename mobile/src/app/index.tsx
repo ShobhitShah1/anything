@@ -38,7 +38,6 @@ import {
   CheckSquare,
   Trash2,
   X,
-  ArrowUpRight,
   Undo2,
   ArrowDownUp,
   LayoutGrid,
@@ -52,7 +51,7 @@ import {
 } from 'lucide-react-native';
 import * as ClipboardAPI from 'expo-clipboard';
 import { useCollection } from '../state/collection';
-import { Action, CollectionSearch, GoogleMark, IconButton } from '../components/ui';
+import { Action, CollectionSearch, IconButton } from '../components/ui';
 import { FilterChips } from '../components/filter-chips';
 import { BrandMark } from '../components/brand-mark';
 import { PlusCard } from '../components/plus-card';
@@ -71,6 +70,7 @@ import { AiEditorLight } from '../components/ai-editor-light';
 import { MarkdownContent } from '../components/markdown-content';
 import { AiResponseStatus } from '../components/ai-response-status';
 import { WelcomeScene } from '../components/welcome-scene';
+import { CollectionAd } from '../components/collection-ad';
 import type { SavedItem } from '../shared/types';
 import { fonts, space, type } from '../theme';
 
@@ -78,17 +78,20 @@ export default function Home() {
   const state = useCollection();
   const { targetRef, topInset, onScroll, options: headerOptions } = useScrollHeader();
   const { colors, data } = state;
+
   const { folder } = useLocalSearchParams<{ folder?: string }>();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [layout, setLayout] = useState('grid');
   const [sort, setSort] = useState<'newest' | 'oldest' | 'title'>('newest');
   const [viewHeight, setViewHeight] = useState(0);
+
   const [quickText, setQuickText] = useState('');
   const quickRef = useRef<TextInputInstance>(null);
   const [captureOpen, setCaptureOpen] = useState(false);
   const ai = useQuickAi(captureOpen, quickText, setQuickText);
   const hasText = Boolean(quickText.trim());
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const rendered =
     captureOpen &&
@@ -97,6 +100,7 @@ export default function Home() {
     (!ai.enabled || ai.phase === 'streaming');
   const responseRef = useRef<ScrollViewInstance>(null);
   const followResponse = useRef(true);
+
   useEffect(() => {
     followResponse.current = true;
   }, [ai.generated?.id]);
@@ -105,10 +109,12 @@ export default function Home() {
     Keyboard.dismiss();
     setCaptureOpen(false);
   }, []);
+
   const [saving, setSaving] = useState(false);
   const aiWorking = ai.phase !== 'idle';
   const generationPhase = ai.phase === 'thinking' || ai.phase === 'streaming' ? ai.phase : 'idle';
   const generating = generationPhase !== 'idle';
+
   const [controlsHeight, setControlsHeight] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
   const [deleteIds, setDeleteIds] = useState<readonly string[] | null>(null);
@@ -124,6 +130,7 @@ export default function Home() {
   const toggleCard = useCallback((id: string) => {
     setSelectedIds((current) => (current === null ? current : toggleSelection(current, id)));
   }, []);
+
   useEffect(() => {
     if (!selecting || deleteIds) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -135,6 +142,7 @@ export default function Home() {
   const [context, setContext] = useState<CardAnchor | null>(null);
   const liftedId = useSharedValue<string | null>(null);
   const [contextReady, setContextReady] = useState(false);
+
   const showContext = useCallback((anchor: CardAnchor) => {
     setContextReady(false);
     setContext(anchor);
@@ -302,6 +310,17 @@ export default function Home() {
         ),
     [data.items, folder, filter, query, sort],
   );
+  const showCollectionAd =
+    state.user &&
+    state.adsEligible &&
+    !state.pro &&
+    !folder &&
+    !query &&
+    filter === 'all' &&
+    sort === 'newest' &&
+    !selectedIds &&
+    !captureOpen &&
+    items.length >= 8;
   const quickSave = async (draft?: string) => {
     if (saving) return;
     setSaving(true);
@@ -684,6 +703,7 @@ export default function Home() {
                 alignSelf: 'center',
               }}
               ListHeaderComponent={controls}
+              ListFooterComponent={showCollectionAd ? <CollectionAd colors={colors} /> : null}
               renderItem={({ item }) => (
                 <View style={{ alignItems: 'center' }}>
                   <SaveCard

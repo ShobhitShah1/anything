@@ -1,40 +1,41 @@
-import { test } from "node:test";
-import assert from "node:assert/strict";
-import worker from "./index.ts";
-import { firebase, encodeUsage, decodeUsage } from "./firebase.ts";
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import worker from './index.ts';
+import { firebase, encodeUsage, decodeUsage } from './firebase.ts';
 
 const pair = await crypto.subtle.generateKey(
   {
-    name: "RSASSA-PKCS1-v1_5",
+    name: 'RSASSA-PKCS1-v1_5',
     modulusLength: 2048,
     publicExponent: new Uint8Array([1, 0, 1]),
-    hash: "SHA-256",
+    hash: 'SHA-256',
   },
   true,
-  ["sign", "verify"],
+  ['sign', 'verify'],
 );
-const pem = `-----BEGIN PRIVATE KEY-----\n${Buffer.from(await crypto.subtle.exportKey("pkcs8", pair.privateKey)).toString("base64")}\n-----END PRIVATE KEY-----`;
+const pem = `-----BEGIN PRIVATE KEY-----\n${Buffer.from(await crypto.subtle.exportKey('pkcs8', pair.privateKey)).toString('base64')}\n-----END PRIVATE KEY-----`;
 const env = {
-  FIREBASE_PROJECT_ID: "test-project",
-  FIREBASE_API_KEY: "public-test",
+  FIREBASE_PROJECT_ID: 'test-project',
+  FIREBASE_API_KEY: 'public-test',
   FIREBASE_SERVICE_ACCOUNT: JSON.stringify({
-    project_id: "test-project",
-    client_email: "worker@test-project.iam.gserviceaccount.com",
+    project_id: 'test-project',
+    client_email: 'worker@test-project.iam.gserviceaccount.com',
     private_key: pem,
   }),
-  GROQ_API_KEYS: "gsk_test1234567890123",
-  REVENUECAT_SECRET_API_KEY: "test-secret",
+  GROQ_API_KEYS: 'gsk_test1234567890123',
+  REVENUECAT_SECRET_API_KEY: 'test-secret',
+  ADMIN_CONSOLE_ORIGINS: 'http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:5174',
 };
-const request = (action = "generate", token = "valid") =>
-  new Request("https://example.com/ai", {
-    method: "POST",
+const request = (action = 'generate', token = 'valid') =>
+  new Request('https://example.com/ai', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({
       action,
-      messages: [{ role: "user", content: "Write a note" }],
+      messages: [{ role: 'user', content: 'Write a note' }],
     }),
   });
 const event = (content, finish_reason = null) =>
@@ -49,51 +50,60 @@ function upstream(initial = {}) {
   let fail = false;
   const mock = async (input, options) => {
     const url = new URL(String(input));
-    if (url.hostname === "identitytoolkit.googleapis.com") {
+    if (url.hostname === 'identitytoolkit.googleapis.com') {
       const token = JSON.parse(options.body).idToken;
-      return token === "valid"
+      return ['valid', 'owner'].includes(token)
         ? Response.json({
             users: [
               {
-                localId: "uid",
-                providerUserInfo: [{ providerId: "google.com" }],
+                localId: token === 'owner' ? '28J4d7cdG9W7az1zZu6x4O5INbp1' : 'uid',
+                providerUserInfo: [{ providerId: 'google.com' }],
               },
             ],
           })
         : Response.json({ error: {} }, { status: 400 });
     }
-    if (url.hostname === "oauth2.googleapis.com")
-      return Response.json({ access_token: "server-token", expires_in: 3600 });
-    if (url.hostname === "api.revenuecat.com")
+    if (url.hostname === 'oauth2.googleapis.com')
+      return Response.json({ access_token: 'server-token', expires_in: 3600 });
+    if (url.hostname === 'api.revenuecat.com') {
+      if (url.pathname.endsWith('/target-user'))
+        return Response.json({
+          subscriber: {
+            entitlements: {
+              anything_pro: {
+                expires_date: '2030-01-01T00:00:00Z',
+                grace_period_expires_date: null,
+                product_identifier: 'pro_monthly',
+              },
+            },
+            subscriptions: { pro_monthly: { is_sandbox: false } },
+          },
+        });
       return Response.json({ subscriber: { entitlements: {} } });
-    if (url.hostname === "firestore.googleapis.com") {
-      if (options.method === "PATCH") {
+    }
+    if (url.hostname === 'firestore.googleapis.com') {
+      if (options.method === 'PATCH') {
         if (
           fields
-            ? url.searchParams.get("currentDocument.updateTime") !==
-              String(version)
-            : url.searchParams.get("currentDocument.exists") !== "false"
+            ? url.searchParams.get('currentDocument.updateTime') !== String(version)
+            : url.searchParams.get('currentDocument.exists') !== 'false'
         )
-          return Response.json(
-            { error: { status: "FAILED_PRECONDITION" } },
-            { status: 412 },
-          );
+          return Response.json({ error: { status: 'FAILED_PRECONDITION' } }, { status: 412 });
         fields = JSON.parse(options.body).fields;
         version++;
       }
       return fields
         ? Response.json({ fields, updateTime: String(version) })
-        : Response.json({ error: { status: "NOT_FOUND" } }, { status: 404 });
+        : Response.json({ error: { status: 'NOT_FOUND' } }, { status: 404 });
     }
-    if (url.hostname === "api.groq.com") {
+    if (url.hostname === 'api.groq.com') {
       calls++;
-      if (fail) return new Response("", { status: 500 });
-      return new Response(
-        event("A useful draft.") + event("", "stop") + "data: [DONE]\n\n",
-        { headers: { "Content-Type": "text/event-stream" } },
-      );
+      if (fail) return new Response('', { status: 500 });
+      return new Response(event('A useful draft.') + event('', 'stop') + 'data: [DONE]\n\n', {
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
     }
-    throw new Error("Unexpected endpoint");
+    throw new Error('Unexpected endpoint');
   };
   return {
     mock,
@@ -114,23 +124,98 @@ async function invoke(req) {
   return { response, text };
 }
 
-test("worker denies absent and invalid identity before generation", async (t) => {
-  const source = upstream();
-  t.mock.method(globalThis, "fetch", source.mock);
-  for (const token of ["", "forged"])
-    assert.equal(
-      (await invoke(request("generate", token))).response.status,
-      401,
-    );
-  assert.equal(source.calls(), 0);
-  assert.equal(
-    (await invoke(new Request("https://example.com/ai"))).response.status,
-    405,
+test('admin CORS preflight allows only configured console origins', async () => {
+  const allowed = await invoke(
+    new Request('https://example.com/ai', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://localhost:5173',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization,content-type',
+      },
+    }),
   );
+  assert.equal(allowed.response.status, 204);
+  assert.equal(
+    allowed.response.headers.get('Access-Control-Allow-Origin'),
+    'http://localhost:5173',
+  );
+
+  const screenshotOrigin = await invoke(
+    new Request('https://example.com/ai', {
+      method: 'OPTIONS',
+      headers: { Origin: 'http://127.0.0.1:5174' },
+    }),
+  );
+  assert.equal(screenshotOrigin.response.status, 204);
+  assert.equal(
+    screenshotOrigin.response.headers.get('Access-Control-Allow-Origin'),
+    'http://127.0.0.1:5174',
+  );
+  assert.equal(allowed.response.headers.get('Access-Control-Allow-Methods'), 'POST, OPTIONS');
+
+  const blocked = await invoke(
+    new Request('https://example.com/ai', {
+      method: 'OPTIONS',
+      headers: { Origin: 'https://unlisted.example' },
+    }),
+  );
+  assert.equal(blocked.response.status, 403);
 });
-test("three successful responses are enforced through Firestore, then a paywall response", async (t) => {
+
+test('admin status response includes CORS headers for an allowed console origin', async (t) => {
   const source = upstream();
-  t.mock.method(globalThis, "fetch", source.mock);
+  t.mock.method(globalThis, 'fetch', source.mock);
+  const result = await invoke(
+    new Request('https://example.com/ai', {
+      method: 'POST',
+      headers: {
+        Origin: 'http://127.0.0.1:5173',
+        Authorization: 'Bearer valid',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'status' }),
+    }),
+  );
+  assert.equal(result.response.status, 200);
+  assert.equal(result.response.headers.get('Access-Control-Allow-Origin'), 'http://127.0.0.1:5173');
+  assert.equal(JSON.parse(result.text).remaining, 3);
+});
+
+test('admin account status returns verified subscription expiry and remaining quota only to owner', async (t) => {
+  const source = upstream({ freeUsed: 2 });
+  t.mock.method(globalThis, 'fetch', source.mock);
+  const makeRequest = (token) =>
+    new Request('https://example.com/ai', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'admin_status', uid: 'target-user' }),
+    });
+
+  const denied = await invoke(makeRequest('valid'));
+  assert.equal(denied.response.status, 403);
+  assert.equal(JSON.parse(denied.text).error, 'admin_required');
+
+  const result = await invoke(makeRequest('owner'));
+  const value = JSON.parse(result.text);
+  assert.equal(result.response.status, 200);
+  assert.equal(value.paid, true);
+  assert.equal(value.remaining, 100);
+  assert.equal(value.subscription.expiresAt, '2030-01-01T00:00:00Z');
+  assert.equal(value.subscription.productIdentifier, 'pro_monthly');
+});
+
+test('worker denies absent and invalid identity before generation', async (t) => {
+  const source = upstream();
+  t.mock.method(globalThis, 'fetch', source.mock);
+  for (const token of ['', 'forged'])
+    assert.equal((await invoke(request('generate', token))).response.status, 401);
+  assert.equal(source.calls(), 0);
+  assert.equal((await invoke(new Request('https://example.com/ai'))).response.status, 405);
+});
+test('three successful responses are enforced through Firestore, then a paywall response', async (t) => {
+  const source = upstream();
+  t.mock.method(globalThis, 'fetch', source.mock);
   for (let i = 0; i < 3; i++) {
     const result = await invoke(request());
     assert.equal(result.response.status, 200);
@@ -141,49 +226,47 @@ test("three successful responses are enforced through Firestore, then a paywall 
   assert.equal(source.calls(), 3);
   const denied = await invoke(request());
   assert.equal(denied.response.status, 402);
-  assert.equal(JSON.parse(denied.text).error, "subscription_required");
+  assert.equal(JSON.parse(denied.text).error, 'subscription_required');
 });
-test("parallel requests cannot spend the final free response twice", async (t) => {
+test('parallel requests cannot spend the final free response twice', async (t) => {
   const source = upstream({ freeUsed: 2 });
-  t.mock.method(globalThis, "fetch", source.mock);
-  const responses = await Promise.all(
-    Array.from({ length: 4 }, () => invoke(request())),
-  );
+  t.mock.method(globalThis, 'fetch', source.mock);
+  const responses = await Promise.all(Array.from({ length: 4 }, () => invoke(request())));
   assert.equal(responses.filter((r) => r.response.status === 200).length, 1);
   assert.equal(source.usage().freeUsed, 3);
   assert.equal(source.calls(), 1);
 });
-test("failed upstream generation releases the reservation and preserves free allowance", async (t) => {
+test('failed upstream generation releases the reservation and preserves free allowance', async (t) => {
   const source = upstream();
   source.fail();
-  t.mock.method(globalThis, "fetch", source.mock);
+  t.mock.method(globalThis, 'fetch', source.mock);
   const result = await invoke(request());
   assert.match(result.text, /error/);
   assert.equal(source.usage().freeUsed, 0);
   assert.equal(source.usage().pending, null);
 });
-test("Firestore field mapping preserves quota and reservation data", () => {
+test('Firestore field mapping preserves quota and reservation data', () => {
   const value = {
     freeUsed: 3,
     paidUsed: 7,
-    month: "2026-10",
-    pending: { id: "request", until: 12345 },
+    month: '2026-10',
+    pending: { id: 'request', until: 12345 },
   };
   assert.deepEqual(decodeUsage(encodeUsage(value)), value);
 });
-test("Firestore writes retry a stale revision instead of overwriting another request", async () => {
+test('Firestore writes retry a stale revision instead of overwriting another request', async () => {
   let writes = 0;
   let reads = 0;
   const source = upstream();
   const mock = async (input, options) => {
-    if (String(input).includes("firestore.googleapis.com")) {
-      if (options.method === "PATCH" && ++writes === 1)
-        return Response.json({ error: { status: "ABORTED" } }, { status: 409 });
+    if (String(input).includes('firestore.googleapis.com')) {
+      if (options.method === 'PATCH' && ++writes === 1)
+        return Response.json({ error: { status: 'ABORTED' } }, { status: 409 });
       if (!options.method) reads++;
     }
     return source.mock(input, options);
   };
-  await firebase(env, mock).update("uid", (usage) => ({
+  await firebase(env, mock).update('uid', (usage) => ({
     ...usage,
     freeUsed: (usage.freeUsed || 0) + 1,
   }));
@@ -192,12 +275,12 @@ test("Firestore writes retry a stale revision instead of overwriting another req
   assert.equal(source.usage().freeUsed, 1);
 });
 
-test("new-account document creation uses a precondition and retries creation races", async () => {
+test('new-account document creation uses a precondition and retries creation races', async () => {
   const source = upstream(null);
   const client = firebase(env, source.mock);
   await Promise.all(
     [1, 2].map(() =>
-      client.update("uid", (usage) => ({
+      client.update('uid', (usage) => ({
         ...usage,
         freeUsed: (usage.freeUsed || 0) + 1,
       })),
@@ -205,43 +288,41 @@ test("new-account document creation uses a precondition and retries creation rac
   );
   assert.equal(source.usage().freeUsed, 2);
 });
-test("oversized requests stop before provider or quota writes", async (t) => {
+test('oversized requests stop before provider or quota writes', async (t) => {
   const source = upstream();
-  t.mock.method(globalThis, "fetch", source.mock);
+  t.mock.method(globalThis, 'fetch', source.mock);
   const response = await invoke(
-    new Request("https://example.com/ai", {
-      method: "POST",
+    new Request('https://example.com/ai', {
+      method: 'POST',
       headers: {
-        Authorization: "Bearer valid",
-        "Content-Type": "application/json",
+        Authorization: 'Bearer valid',
+        'Content-Type': 'application/json',
       },
-      body: "x".repeat(170001),
+      body: 'x'.repeat(170001),
     }),
   );
   assert.equal(response.response.status, 413);
   assert.equal(source.calls(), 0);
   assert.equal(source.usage().freeUsed, 0);
 });
-test("response text arrives progressively, and success is charged before the terminal event", async (t) => {
+test('response text arrives progressively, and success is charged before the terminal event', async (t) => {
   const source = upstream();
   const encoder = new TextEncoder();
   let complete;
   const body = new ReadableStream({
     start(controller) {
-      controller.enqueue(encoder.encode(event("First")));
+      controller.enqueue(encoder.encode(event('First')));
       complete = () => {
         controller.enqueue(
-          encoder.encode(
-            event(" second") + event("", "stop") + "data: [DONE]\n\n",
-          ),
+          encoder.encode(event(' second') + event('', 'stop') + 'data: [DONE]\n\n'),
         );
         controller.close();
       };
     },
   });
-  t.mock.method(globalThis, "fetch", async (url, init) =>
-    String(url).includes("api.groq.com")
-      ? new Response(body, { headers: { "Content-Type": "text/event-stream" } })
+  t.mock.method(globalThis, 'fetch', async (url, init) =>
+    String(url).includes('api.groq.com')
+      ? new Response(body, { headers: { 'Content-Type': 'text/event-stream' } })
       : source.mock(url, init),
   );
   const pending = [];
@@ -254,7 +335,7 @@ test("response text arrives progressively, and success is charged before the ter
   assert.equal(source.usage().freeUsed, 0);
   assert.ok(source.usage().pending);
   complete();
-  let rest = "";
+  let rest = '';
   while (true) {
     const next = await reader.read();
     if (next.done) break;
@@ -267,18 +348,24 @@ test("response text arrives progressively, and success is charged before the ter
   assert.equal(source.usage().pending, null);
 });
 
-
-test("a verified store subscription unlocks the paid quota and never spends free allowance", async (t) => {
+test('a verified store subscription unlocks the paid quota and never spends free allowance', async (t) => {
   const source = upstream({ freeUsed: 3 });
-  t.mock.method(globalThis, "fetch", async (input, options) => {
-    if (new URL(String(input)).hostname === "api.revenuecat.com")
-      return Response.json({ subscriber: {
-        entitlements: { anything_pro: { product_identifier: "pro_monthly", expires_date: new Date(Date.now() + 86400000).toISOString() } },
-        subscriptions: { pro_monthly: { is_sandbox: false } },
-      } });
+  t.mock.method(globalThis, 'fetch', async (input, options) => {
+    if (new URL(String(input)).hostname === 'api.revenuecat.com')
+      return Response.json({
+        subscriber: {
+          entitlements: {
+            anything_pro: {
+              product_identifier: 'pro_monthly',
+              expires_date: new Date(Date.now() + 86400000).toISOString(),
+            },
+          },
+          subscriptions: { pro_monthly: { is_sandbox: false } },
+        },
+      });
     return source.mock(input, options);
   });
-  const status = await invoke(request("status"));
+  const status = await invoke(request('status'));
   assert.equal(status.response.status, 200);
   assert.equal(JSON.parse(status.text).paid, true);
   assert.equal(JSON.parse(status.text).limit, 100);
@@ -288,15 +375,21 @@ test("a verified store subscription unlocks the paid quota and never spends free
   assert.equal(source.usage().freeUsed, 3);
 });
 
-test("sandbox subscriptions cannot grant production access, and billing outages do not spend quota", async (t) => {
+test('sandbox subscriptions cannot grant production access, and billing outages do not spend quota', async (t) => {
   const source = upstream({ freeUsed: 3 });
   let unavailable = false;
-  t.mock.method(globalThis, "fetch", async (input, options) => {
-    if (new URL(String(input)).hostname === "api.revenuecat.com")
-      return unavailable ? new Response("", { status: 503 }) : Response.json({ subscriber: {
-        entitlements: { anything_pro: { product_identifier: "test_pro", expires_date: null } },
-        subscriptions: { test_pro: { is_sandbox: true } },
-      } });
+  t.mock.method(globalThis, 'fetch', async (input, options) => {
+    if (new URL(String(input)).hostname === 'api.revenuecat.com')
+      return unavailable
+        ? new Response('', { status: 503 })
+        : Response.json({
+            subscriber: {
+              entitlements: {
+                anything_pro: { product_identifier: 'test_pro', expires_date: null },
+              },
+              subscriptions: { test_pro: { is_sandbox: true } },
+            },
+          });
     return source.mock(input, options);
   });
   const sandbox = await invoke(request());
@@ -305,29 +398,39 @@ test("sandbox subscriptions cannot grant production access, and billing outages 
   unavailable = true;
   const outage = await invoke(request());
   assert.equal(outage.response.status, 503);
-  assert.equal(JSON.parse(outage.text).error, "billing_unavailable");
+  assert.equal(JSON.parse(outage.text).error, 'billing_unavailable');
   assert.equal(source.usage().freeUsed, 3);
   assert.equal(source.calls(), 0);
 });
 
-
-test("expiry and renewal are rechecked on each request without trusting a stale app flag", async (t) => {
-  const source = upstream({ freeUsed: 3, paidUsed: 5, month: new Date().toISOString().slice(0, 7) });
+test('expiry and renewal are rechecked on each request without trusting a stale app flag', async (t) => {
+  const source = upstream({
+    freeUsed: 3,
+    paidUsed: 5,
+    month: new Date().toISOString().slice(0, 7),
+  });
   let active = true;
-  t.mock.method(globalThis, "fetch", async (input, options) => {
-    if (new URL(String(input)).hostname === "api.revenuecat.com")
-      return Response.json({ subscriber: {
-        entitlements: { anything_pro: { product_identifier: "monthly", expires_date: new Date(Date.now() + (active ? 86400000 : -86400000)).toISOString() } },
-        subscriptions: { monthly: { is_sandbox: false } },
-      } });
+  t.mock.method(globalThis, 'fetch', async (input, options) => {
+    if (new URL(String(input)).hostname === 'api.revenuecat.com')
+      return Response.json({
+        subscriber: {
+          entitlements: {
+            anything_pro: {
+              product_identifier: 'monthly',
+              expires_date: new Date(Date.now() + (active ? 86400000 : -86400000)).toISOString(),
+            },
+          },
+          subscriptions: { monthly: { is_sandbox: false } },
+        },
+      });
     return source.mock(input, options);
   });
-  assert.equal(JSON.parse((await invoke(request("status"))).text).paid, true);
+  assert.equal(JSON.parse((await invoke(request('status'))).text).paid, true);
   active = false;
-  assert.equal(JSON.parse((await invoke(request("status"))).text).paid, false);
+  assert.equal(JSON.parse((await invoke(request('status'))).text).paid, false);
   assert.equal((await invoke(request())).response.status, 402);
   active = true;
-  const renewed = JSON.parse((await invoke(request("status"))).text);
+  const renewed = JSON.parse((await invoke(request('status'))).text);
   assert.equal(renewed.paid, true);
   assert.equal(renewed.used, 5);
   assert.equal(source.calls(), 0);

@@ -8,6 +8,7 @@
     "FIREBASE_PROJECT_ID": "anything-66dbd",
     "FIREBASE_API_KEY": "AIzaSyC_Ukm6L5Jq7o_8wlZLRxLisKDr1QPvwKI",
     "ALLOW_SANDBOX_PURCHASES": "false",
+    "ADMIN_CONSOLE_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
   },
   "observability": { "enabled": false },
 }

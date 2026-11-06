@@ -24,7 +24,8 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
   isDark,
   className = '',
   emptyLabel = 'No Folder',
-  folderCounts, totalCount,
+  folderCounts,
+  totalCount,
 }) => {
   const menuId = useId();
   const reduceMotion = useReducedMotion();
@@ -55,7 +56,9 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    const first = dropdownRef.current?.querySelector<HTMLButtonElement>('[data-folder-menu] button');
+    const first = dropdownRef.current?.querySelector<HTMLButtonElement>(
+      '[data-folder-menu] button',
+    );
     first?.focus();
   }, [isOpen]);
 
@@ -71,22 +74,35 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef} onKeyDown={event => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        setIsOpen(false);
-        setIsCreating(false);
-        triggerRef.current?.focus();
-      }
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        if ((event.target as HTMLElement).tagName === 'INPUT') return;
-        event.preventDefault();
-        if (!isOpen) { setIsOpen(true); return; }
-        const buttons = Array.from(dropdownRef.current?.querySelectorAll<HTMLButtonElement>('[data-folder-menu] button:not(:disabled)') || []);
-        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-        buttons[(index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
-      }
-    }}>
+    <div
+      className={`relative ${className}`}
+      ref={dropdownRef}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          setIsOpen(false);
+          setIsCreating(false);
+          triggerRef.current?.focus();
+        }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          if ((event.target as HTMLElement).tagName === 'INPUT') return;
+          event.preventDefault();
+          if (!isOpen) {
+            setIsOpen(true);
+            return;
+          }
+          const buttons = Array.from(
+            dropdownRef.current?.querySelectorAll<HTMLButtonElement>(
+              '[data-folder-menu] button:not(:disabled)',
+            ) || [],
+          );
+          const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+          buttons[
+            (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length
+          ]?.focus();
+        }
+      }}
+    >
       {/* Trigger Button */}
       <button
         ref={triggerRef}
@@ -140,13 +156,20 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                 !selectedFolderId
-                  ? (isDark ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-950')
-                  : (isDark ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+                  ? isDark
+                    ? 'bg-zinc-800 text-white'
+                    : 'bg-zinc-100 text-zinc-950'
+                  : isDark
+                    ? 'hover:bg-zinc-800/60'
+                    : 'hover:bg-zinc-50'
               }`}
             >
               <div className="flex items-center gap-2">
                 <FolderIcon className="w-3.5 h-3.5 text-zinc-400" />
-                <span>{emptyLabel}</span>{totalCount !== undefined && <span className="text-zinc-500 tabular-nums">{totalCount}</span>}
+                <span>{emptyLabel}</span>
+                {totalCount !== undefined && (
+                  <span className="text-zinc-500 tabular-nums">{totalCount}</span>
+                )}
               </div>
               {!selectedFolderId && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />}
             </button>
@@ -168,15 +191,26 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                         isSelected
-                          ? (isDark ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-950')
-                          : (isDark ? 'hover:bg-zinc-800/60' : 'hover:bg-zinc-50')
+                          ? isDark
+                            ? 'bg-zinc-800 text-white'
+                            : 'bg-zinc-100 text-zinc-950'
+                          : isDark
+                            ? 'hover:bg-zinc-800/60'
+                            : 'hover:bg-zinc-50'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
                         <FolderIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                        <span className="truncate">{f.name}</span>{folderCounts && <span className="text-zinc-500 tabular-nums">{folderCounts[f.id] || 0}</span>}
+                        <span className="truncate">{f.name}</span>
+                        {folderCounts && (
+                          <span className="text-zinc-500 tabular-nums">
+                            {folderCounts[f.id] || 0}
+                          </span>
+                        )}
                       </div>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0" />}
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0" />
+                      )}
                     </button>
                   );
                 })}
@@ -205,7 +239,9 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
                       placeholder="Folder name..."
                       autoFocus
                       className={`w-full px-2.5 py-1.5 rounded-lg text-xs border focus:outline-none ${
-                        isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
+                        isDark
+                          ? 'bg-zinc-900 border-zinc-700 text-white'
+                          : 'bg-white border-zinc-300 text-zinc-900'
                       }`}
                     />
                     <div className="flex items-center justify-end gap-1">

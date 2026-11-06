@@ -20,7 +20,8 @@ const artwork =
     ? { uri: 'anything_launch_art' }
     : require('../../assets/splash-art.png');
 
-const isMockEnvironment = typeof (Image as unknown as { prefetch?: unknown })?.prefetch !== 'function';
+const isMockEnvironment =
+  typeof (Image as unknown as { prefetch?: unknown })?.prefetch !== 'function';
 
 export function LaunchScreen({ children }: { children: ReactNode }) {
   const { ready, error } = useCollection();
@@ -107,9 +108,7 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
   }, [showContent, contentLaidOut, introFinished, assetsReady, reduced, opacity]);
 
   const artworkStyle = useAnimatedStyle(() => ({
-    transform: reduced
-      ? []
-      : [{ scale: 0.98 + intro.get() * 0.02 }],
+    transform: reduced ? [] : [{ scale: 0.98 + intro.get() * 0.02 }],
   }));
   const coverStyle = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 

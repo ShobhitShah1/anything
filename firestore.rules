@@ -1,8 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isConsoleOwner() {
+      return request.auth != null
+        && request.auth.uid == '28J4d7cdG9W7az1zZu6x4O5INbp1'
+        && request.auth.token.admin == true;
+    }
+
     match /users/{uid}/collection/{record} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && (request.auth.uid == uid || isConsoleOwner());
       allow create, update: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['kind', 'id', 'deleted', 'data'])
         && request.resource.data.kind in ['item', 'folder']
@@ -15,6 +21,11 @@ service cloud.firestore {
             && request.resource.data.data.id == request.resource.data.id));
       // Deletions use tombstones so offline clients cannot bring old saves back.
       allow delete: if false;
+    }
+
+    // Collection-group reads need a recursive match; console owner remains read-only.
+    match /{path=**}/collection/{record} {
+      allow read: if isConsoleOwner();
     }
   }
 }

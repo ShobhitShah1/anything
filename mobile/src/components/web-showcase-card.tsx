@@ -31,28 +31,20 @@ export const WebShowcaseCard = memo(function WebShowcaseCard() {
       ]}
     >
       <View style={styles.header}>
-        <Text
-          allowFontScaling={false}
-          style={[styles.title, { color: colors.ink }]}
-        >
+        <Text allowFontScaling={false} style={[styles.title, { color: colors.ink }]}>
           Anything on the Web
         </Text>
         <View style={styles.action}>
-          <Text
-            allowFontScaling={false}
-            style={[styles.actionText, { color: colors.accent }]}
-          >
+          <Text allowFontScaling={false} style={[styles.actionText, { color: colors.accent }]}>
             Open
           </Text>
           <ArrowUpRight size={14} color={colors.accent} strokeWidth={1.8} />
         </View>
       </View>
 
-      <Text
-        allowFontScaling={false}
-        style={[styles.description, { color: colors.muted }]}
-      >
-        Access your collection from any computer. Your links, notes, and finds stay in sync across your phone and browser.
+      <Text allowFontScaling={false} style={[styles.description, { color: colors.muted }]}>
+        Access your collection from any computer. Your links, notes, and finds stay in sync across
+        your phone and browser.
       </Text>
 
       <Text

@@ -9,7 +9,11 @@ export const policyNames = {
   terms: 'Terms & Conditions',
   'delete-account': 'Account & Data Deletion',
 };
-const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+const escape = (value) =>
+  String(value ?? '').replace(
+    /[&<>"']/g,
+    (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char],
+  );
 
 export function renderLegalPage(config, key) {
   const page = config.pages[key];
@@ -18,27 +22,56 @@ export function renderLegalPage(config, key) {
   const ready = legalReady(config);
   const contact = safeEmail(config.operator.privacyEmail || config.operator.supportEmail);
   const date = new Date(`${config.legal.effectiveDate}T00:00:00Z`);
-  const updated = Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date) : '';
-  const pageLinks = Object.entries(policyNames).map(([id, label]) => `<a href="${id}.html"${id === key ? ' aria-current="page"' : ''}>${escape(label)}</a>`).join('');
-  const sections = page.sections.map((section, i) => {
-    const paragraphs = [...(section.paragraphs || []), ...(section.settings || []).map(setting => config.legal[setting]).filter(Boolean)];
-    const link = section.link && Object.keys(policyNames).some(id => `${id}.html` === section.link.href)
-      ? `<a class="policy-crosslink" href="${section.link.href}">${escape(section.link.label)} <span aria-hidden="true">↗</span></a>` : '';
-    return `<section class="legal-section" id="section-${i + 1}"><h2>${escape(section.title)}</h2>${paragraphs.map(text => `<p>${escape(text)}</p>`).join('')}${link}</section>`;
-  }).join('');
+  const updated = Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat('en', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(date)
+    : '';
+  const pageLinks = Object.entries(policyNames)
+    .map(
+      ([id, label]) =>
+        `<a href="${id}.html"${id === key ? ' aria-current="page"' : ''}>${escape(label)}</a>`,
+    )
+    .join('');
+  const sections = page.sections
+    .map((section, i) => {
+      const paragraphs = [
+        ...(section.paragraphs || []),
+        ...(section.settings || []).map((setting) => config.legal[setting]).filter(Boolean),
+      ];
+      const link =
+        section.link && Object.keys(policyNames).some((id) => `${id}.html` === section.link.href)
+          ? `<a class="policy-crosslink" href="${section.link.href}">${escape(section.link.label)} <span aria-hidden="true">↗</span></a>`
+          : '';
+      return `<section class="legal-section" id="section-${i + 1}"><h2>${escape(section.title)}</h2>${paragraphs.map((text) => `<p>${escape(text)}</p>`).join('')}${link}</section>`;
+    })
+    .join('');
   const operator = [
     `Operator: ${config.operator.legalName || 'Not yet supplied'}`,
     config.operator.country,
     config.operator.postalAddress,
-    Number.isInteger(config.legal.minimumAge) && config.legal.minimumAge > 0 ? `Minimum age: ${config.legal.minimumAge}; local consent requirements may also apply.` : '',
-    key === 'terms' && config.legal.disputeJurisdiction ? `Jurisdiction: ${config.legal.disputeJurisdiction}. Mandatory consumer rights continue to apply.` : '',
-  ].filter(Boolean).map(text => `<p>${escape(text)}</p>`).join('');
-  const email = contact ? `<a href="mailto:${escape(contact)}">${escape(contact)}</a>` : '<p>Privacy contact: not yet supplied.</p>';
-  const deletion = key === 'delete-account'
-    ? contact && config.legal.accountDeletionRequestsEnabled === true
-      ? `<p>Send your request from the email used for your Anything account. Your email app opens; nothing is submitted until you send it.</p><a href="mailto:${escape(contact)}?subject=${encodeURIComponent('Anything account and associated-data deletion request')}">Request account and data deletion ↗</a>`
-      : '<p>Account-deletion requests are not enabled yet. The operator must configure and test the request channel before this page can be used for a store release.</p>'
-    : '';
+    Number.isInteger(config.legal.minimumAge) && config.legal.minimumAge > 0
+      ? `Minimum age: ${config.legal.minimumAge}; local consent requirements may also apply.`
+      : '',
+    key === 'terms' && config.legal.disputeJurisdiction
+      ? `Jurisdiction: ${config.legal.disputeJurisdiction}. Mandatory consumer rights continue to apply.`
+      : '',
+  ]
+    .filter(Boolean)
+    .map((text) => `<p>${escape(text)}</p>`)
+    .join('');
+  const email = contact
+    ? `<a href="mailto:${escape(contact)}">${escape(contact)}</a>`
+    : '<p>Privacy contact: not yet supplied.</p>';
+  const deletion =
+    key === 'delete-account'
+      ? contact && config.legal.accountDeletionRequestsEnabled === true
+        ? `<p>Send your request from the email used for your Anything account. Your email app opens; nothing is submitted until you send it.</p><a href="mailto:${escape(contact)}?subject=${encodeURIComponent('Anything account and associated-data deletion request')}">Request account and data deletion ↗</a>`
+        : '<p>Account-deletion requests are not enabled yet. The operator must configure and test the request channel before this page can be used for a store release.</p>'
+      : '';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -77,7 +110,8 @@ export function renderLegalPage(config, key) {
 export async function renderLegalPages() {
   const root = resolve(import.meta.dirname, 'public');
   const config = JSON.parse(await readFile(resolve(root, 'site-config.json'), 'utf8'));
-  for (const key of Object.keys(policyNames)) await writeFile(resolve(root, `${key}.html`), renderLegalPage(config, key));
+  for (const key of Object.keys(policyNames))
+    await writeFile(resolve(root, `${key}.html`), renderLegalPage(config, key));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

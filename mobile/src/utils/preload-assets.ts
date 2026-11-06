@@ -6,12 +6,7 @@ export const WELCOME_SPACE_LIGHT = require('../../assets/welcome-space-light.png
 export const BRAND_MARK = require('../../assets/brand-mark.png');
 export const SPLASH_ART = require('../../assets/splash-art.png');
 
-export const CRITICAL_ASSETS = [
-  WELCOME_SPACE_DARK,
-  WELCOME_SPACE_LIGHT,
-  BRAND_MARK,
-  SPLASH_ART,
-];
+export const CRITICAL_ASSETS = [WELCOME_SPACE_DARK, WELCOME_SPACE_LIGHT, BRAND_MARK, SPLASH_ART];
 
 let preloaded = false;
 let preloadPromise: Promise<void> | null = null;
@@ -52,7 +47,10 @@ export function preloadCriticalAssets(): Promise<void> {
 
     // 2. React Native Image prefetch for disk/memory pipeline
     try {
-      if (typeof Image?.prefetch === 'function' && typeof Image?.resolveAssetSource === 'function') {
+      if (
+        typeof Image?.prefetch === 'function' &&
+        typeof Image?.resolveAssetSource === 'function'
+      ) {
         for (const asset of CRITICAL_ASSETS) {
           try {
             const resolved = Image.resolveAssetSource(asset);

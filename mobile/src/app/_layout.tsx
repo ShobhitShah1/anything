@@ -13,6 +13,7 @@ import { loadSubscription } from '../services/subscription';
 import { SignInSheet } from '../components/sign-in-sheet';
 import { billingClient } from '../services/billing';
 import { hasPro } from '../utils/billing-config';
+import { confirmedFreeAccount } from '../utils/ad-eligibility';
 
 function Routes() {
   const state = useCollection();
@@ -26,15 +27,19 @@ function Routes() {
     let disposed = false;
     let client: Awaited<ReturnType<typeof billingClient>> | undefined;
     const changed = (info: Parameters<typeof hasPro>[0]) => {
-      if (!disposed) setMembership({ uid, active: hasPro(info) });
+      if (!disposed) setMembership({ uid, active: hasPro(info), adsEligible: false });
     };
     void loadSubscription(uid).then(([usage, billing]) => {
-      if (!disposed)
+      if (!disposed && (usage.status === 'fulfilled' || billing.status === 'fulfilled'))
         setMembership({
           uid,
           active:
             (usage.status === 'fulfilled' && usage.value.paid) ||
             (billing.status === 'fulfilled' && billing.value.active),
+          adsEligible: confirmedFreeAccount(
+            usage.status === 'fulfilled' ? usage.value.paid : undefined,
+            billing.status === 'fulfilled' ? billing.value.active : undefined,
+          ),
         });
     });
     void billingClient()

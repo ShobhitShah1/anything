@@ -43,6 +43,14 @@ No webhook is required: the server verifies RevenueCat entitlement expiry and bi
 
 ## Deploy and connect
 
+### Admin account status API
+
+The console sends `POST /ai` with a Firebase ID token and `{ "action": "admin_status", "uid": "<account UID>" }`. The Worker accepts this read-only action only from owner UID `28J4d7cdG9W7az1zZu6x4O5INbp1`. It returns the current `anything_pro` entitlement state and expiry/grace dates from RevenueCat plus the account's AI allowance from `aiUsage`. Invalid UIDs return 400, other signed-in accounts return 403, invalid Firebase tokens return 401, and RevenueCat/Firestore outages return 503. It does not grant or revoke subscriptions or alter quota. Keep this action owner-only when changing the authorization contract.
+
+For the standalone admin console to check the signed-in operator's AI allowance from a browser, set `ADMIN_CONSOLE_ORIGINS` to the exact admin origin (comma-separated for multiple origins) and deploy the Worker. A GitHub Pages project URL such as `https://OWNER.github.io/REPOSITORY/` has the browser origin `https://OWNER.github.io` (no repository path). From `worker/`, deploy with `npm run deploy -- --var "ADMIN_CONSOLE_ORIGINS:https://OWNER.github.io"`, replacing `OWNER` with the GitHub username or organization. Keep the existing Firebase vars in `wrangler.jsonc`; Wrangler merges this override for the deployment. The local defaults include `http://localhost:5173` and `http://127.0.0.1:5173`. The Worker handles preflight requests and returns CORS headers only for listed origins; do not use `*`.
+
+Check the deployed CORS response with `curl.exe -i -X OPTIONS https://anything-ai.aivideomaker.workers.dev/ai -H "Origin: https://OWNER.github.io" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: authorization,content-type"`. Expect HTTP `204` and `Access-Control-Allow-Origin: https://OWNER.github.io`. If the origin is absent, deploy the updated Worker; updating the admin site's URL alone cannot change Worker CORS.
+
 ### If the app says AI is unavailable
 
 The mobile app needs `EXPO_PUBLIC_AI_URL=https://YOUR_WORKER.workers.dev/ai` in **mobile/.env**, even if you already added the Groq key in Cloudflare. `.env.example` is a template and is not loaded by Expo. Fully reload the development app after changing the value. For an installed preview/store build, set the same public URL in that profile's EAS environment and rebuild its JavaScript bundle through your normal release process. Never put provider secrets in `EXPO_PUBLIC_` variables.

@@ -147,6 +147,26 @@ Type checking gives Node a larger stack because the SDK’s combined native UI t
 
 ## Platform and privacy limits
 
+### AdMob and Expo Update setup
+
+AdMob is a single custom native ad at the end of the default collection, shown only for signed-in accounts that both the Worker and RevenueCat confirm are free and only after consent allows ad requests. Premium, filtered, searched, selected, and folder views do not show it. Development and preview builds use Google's test app/ad IDs. Expo Go cannot load this native module; install a new development or preview build to try it.
+
+Before enabling production ads:
+
+1. Create Android and iOS apps in AdMob, then create one native ad unit per platform.
+2. Add `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID`, `EXPO_PUBLIC_ADMOB_ANDROID_NATIVE_UNIT_ID`, and `EXPO_PUBLIC_ADMOB_IOS_NATIVE_UNIT_ID` to the EAS `production` environment. Production ads remain disabled unless all four are present.
+3. Configure the applicable privacy and consent messages in AdMob's Privacy & messaging, and declare that the Play app contains ads. Rebuild after changing native app IDs.
+
+`expo-updates` is installed, but this project is not linked to an Expo account yet. After signing in from this folder, let EAS configure the project URL, runtime version, project ID, and build channels:
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest init
+npx eas-cli@latest update:configure
+```
+
+Review the resulting app config and `eas.json` diff, then create a fresh preview/production build before publishing updates. OTA updates cannot add the native AdMob module to an already installed build.
+
 ### Quick Add AI and Anything Pro
 
 For the full store-to-backend setup, key locations, and sandbox-to-production flow, follow [PURCHASES.md](PURCHASES.md).

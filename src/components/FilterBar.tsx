@@ -28,7 +28,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onSelectFolder,
   onCreateFolder,
   totalCount,
-  folderCounts, sortOption, onSortChange,
+  folderCounts,
+  sortOption,
+  onSortChange,
   selectedFilter,
   onFilterChange,
   itemCounts,
@@ -51,7 +53,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   ];
 
   return (
-    <section aria-label="Collection controls" className="collection-controls collection-toolbar w-full max-w-[1600px] mx-auto px-5 sm:px-9">
+    <section
+      aria-label="Collection controls"
+      className="collection-controls collection-toolbar w-full max-w-[1600px] mx-auto px-5 sm:px-9"
+    >
       <div className="collection-folder relative z-20">
         <FolderDropdown
           folders={folders}
@@ -63,9 +68,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           folderCounts={folderCounts}
           totalCount={totalCount}
         />
-
       </div>
-      <div className="collection-types flex items-center gap-1 overflow-x-auto no-scrollbar" aria-label="Filter by type">
+      <div
+        className="collection-types flex items-center gap-1 overflow-x-auto no-scrollbar"
+        aria-label="Filter by type"
+      >
         {categories.map((cat) => {
           const count = itemCounts[cat.id] ?? 0;
           const isActive = selectedFilter === cat.id;
@@ -85,15 +92,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             >
               <span className="relative z-10 flex items-center gap-1.5">
                 <span>{cat.label}</span>
-                <span className="mind-filter-count tabular-nums">
-                  {count}
-                </span>
+                <span className="mind-filter-count tabular-nums">{count}</span>
               </span>
             </button>
           );
         })}
       </div>
-      <select aria-label="Sort saves" value={sortOption} onChange={event => onSortChange(event.target.value as SortOption)} className="collection-sort">
+      <select
+        aria-label="Sort saves"
+        value={sortOption}
+        onChange={(event) => onSortChange(event.target.value as SortOption)}
+        className="collection-sort"
+      >
         <option value="newest">Newest first</option>
         <option value="oldest">Oldest first</option>
         <option value="title">Title A-Z</option>

@@ -23,9 +23,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
   return (
     <div
-      className={`markdown-body ${
-        isDark ? 'text-zinc-200' : 'text-zinc-850'
-      } ${className}`}
+      className={`markdown-body ${isDark ? 'text-zinc-200' : 'text-zinc-850'} ${className}`}
       dangerouslySetInnerHTML={{ __html: htmlContent }}
     />
   );

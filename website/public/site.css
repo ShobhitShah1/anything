@@ -75,8 +75,8 @@ summary:focus-visible {
   width: 30px;
   height: 34px;
   background: currentColor;
-  mask: url("assets/mark.png?v=folded-a-1") center/contain no-repeat;
-  -webkit-mask: url("assets/mark.png?v=folded-a-1") center/contain no-repeat;
+  mask: url('assets/mark.png?v=folded-a-1') center/contain no-repeat;
+  -webkit-mask: url('assets/mark.png?v=folded-a-1') center/contain no-repeat;
 }
 .site-header nav {
   display: flex;
@@ -172,11 +172,11 @@ summary:focus-visible {
   display: none;
 }
 .legal-section summary:after {
-  content: "+";
+  content: '+';
   color: #91918a;
 }
 .legal-section[open] summary:after {
-  content: "−";
+  content: '−';
 }
 .legal-section p {
   font-size: 13px;

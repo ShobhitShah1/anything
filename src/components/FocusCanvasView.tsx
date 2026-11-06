@@ -29,13 +29,14 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('input, textarea, select, [contenteditable="true"]') || items.length === 0) return;
+      if (target.closest('input, textarea, select, [contenteditable="true"]') || items.length === 0)
+        return;
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setCurrentIndex(previous => (previous + 1) % items.length);
+        setCurrentIndex((previous) => (previous + 1) % items.length);
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setCurrentIndex(previous => (previous - 1 + items.length) % items.length);
+        setCurrentIndex((previous) => (previous - 1 + items.length) % items.length);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -79,7 +80,9 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
           <button
             onClick={handlePrev}
             className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white' : 'bg-white border-zinc-200 text-zinc-700 hover:text-black'
+              isDark
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
+                : 'bg-white border-zinc-200 text-zinc-700 hover:text-black'
             }`}
             title="Previous (←)"
           >
@@ -88,7 +91,9 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
           <button
             onClick={handleNext}
             className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white' : 'bg-white border-zinc-200 text-zinc-700 hover:text-black'
+              isDark
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
+                : 'bg-white border-zinc-200 text-zinc-700 hover:text-black'
             }`}
             title="Next (→)"
           >
@@ -99,21 +104,20 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
 
       {/* Focused memory */}
       <div className="w-full">
-            <CardItem
-              item={currentItem}
-              onTogglePin={onTogglePin}
-              onDelete={(id) => {
-                onDelete(id);
-                if (safeIndex >= items.length - 1) {
-                  setCurrentIndex(Math.max(0, items.length - 2));
-                }
-              }}
-              onUpdateItem={onUpdateItem}
-              onOpenImage={onOpenImage}
-              onOpenDetail={onOpenDetail}
-              isDark={isDark}
-            />
-
+        <CardItem
+          item={currentItem}
+          onTogglePin={onTogglePin}
+          onDelete={(id) => {
+            onDelete(id);
+            if (safeIndex >= items.length - 1) {
+              setCurrentIndex(Math.max(0, items.length - 2));
+            }
+          }}
+          onUpdateItem={onUpdateItem}
+          onOpenImage={onOpenImage}
+          onOpenDetail={onOpenDetail}
+          isDark={isDark}
+        />
       </div>
 
       {/* Mini indicator dots */}
@@ -129,8 +133,12 @@ export const FocusCanvasView: React.FC<FocusCanvasViewProps> = ({
             }}
             className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
               idx === safeIndex
-                ? (isDark ? 'w-6 bg-white' : 'w-6 bg-zinc-900')
-                : (isDark ? 'w-1.5 bg-zinc-800 hover:bg-zinc-600' : 'w-1.5 bg-zinc-200 hover:bg-zinc-400')
+                ? isDark
+                  ? 'w-6 bg-white'
+                  : 'w-6 bg-zinc-900'
+                : isDark
+                  ? 'w-1.5 bg-zinc-800 hover:bg-zinc-600'
+                  : 'w-1.5 bg-zinc-200 hover:bg-zinc-400'
             }`}
           />
         ))}

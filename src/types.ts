@@ -1,11 +1,11 @@
-export type ItemType = 
-  | 'x_post' 
-  | 'reddit_post' 
-  | 'instagram_post' 
-  | 'note' 
-  | 'secret' 
-  | 'image' 
-  | 'link' 
+export type ItemType =
+  | 'x_post'
+  | 'reddit_post'
+  | 'instagram_post'
+  | 'note'
+  | 'secret'
+  | 'image'
+  | 'link'
   | 'code'
   | 'markdown';
 
@@ -114,15 +114,15 @@ export interface CodeItem extends BaseItem {
   description?: string;
 }
 
-export type SavedItem = 
-  | XPostItem 
-  | RedditPostItem 
-  | InstagramPostItem 
-  | NoteItem 
+export type SavedItem =
+  | XPostItem
+  | RedditPostItem
+  | InstagramPostItem
+  | NoteItem
   | MarkdownItem
-  | SecretItem 
-  | ImageItem 
-  | LinkItem 
+  | SecretItem
+  | ImageItem
+  | LinkItem
   | CodeItem;
 
 export type ViewMode = 'masonry' | 'list' | 'focus';

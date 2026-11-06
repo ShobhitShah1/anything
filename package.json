@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "npm --prefix mobile exec -- prettier --write -- .",
+    "format:check": "npm --prefix mobile exec -- prettier --check -- .",
+    "format:website": "npm run format",
+    "format:admin": "npm --prefix mobile exec -- prettier --write -- admin-console",
+    "format:showcase": "npm --prefix mobile exec -- prettier --write -- mobile/src/components/web-showcase-card.tsx",
+    "format:check:shared": "npm run format:check",
+    "lint:shared": "npm --prefix mobile exec -- eslint --config mobile/eslint.config.cjs admin-console/src website/public/site.js website/public/shared.js website/pages.mjs website/check.mjs website/render-legal.mjs mobile/src/components/web-showcase-card.tsx --max-warnings 0"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.24",

@@ -12,9 +12,9 @@ self.addEventListener('activate', (event) => {
           if (key.startsWith('anything-image-cache-') && key !== CACHE_NAME) {
             return caches.delete(key);
           }
-        })
-      )
-    )
+        }),
+      ),
+    ),
   );
   self.clients.claim();
 });
@@ -45,7 +45,7 @@ self.addEventListener('fetch', (event) => {
         } catch {
           return cached || Response.error();
         }
-      })
+      }),
     );
   }
 });

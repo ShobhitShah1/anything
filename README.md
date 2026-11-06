@@ -89,6 +89,10 @@ Open the local address printed in your terminal.
 Built with React, TypeScript, Vite, Tailwind CSS, and Motion.
 See the [setup guide](docs/SETUP.md) for production builds, GitHub Pages, and preview checks.
 
+## Code formatting
+
+From the repository root, run `npm run format` to format supported source, config, and documentation files across the app, mobile app, website, admin console, extension, and Worker. Run `npm run format:check` to verify them without changing files. Generated builds, dependencies, credentials, and lockfiles are excluded.
+
 ## Save from your browser
 
 The **Save to Anything** extension adds right-click saving to Chrome and Edge. It connects to your existing Anything collection; no account is required.

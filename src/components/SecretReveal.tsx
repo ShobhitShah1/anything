@@ -87,7 +87,11 @@ export const SecretReveal: React.FC<SecretRevealProps> = ({ item }) => {
             }`}
             title="Copy to clipboard"
           >
-            {copied ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? (
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
           </button>
         </div>
       </div>

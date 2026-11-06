@@ -5,7 +5,13 @@ const LEGACY_STORAGE_KEY = 'anything_vault_items_v2';
 const FOLDERS_KEY = 'anything_folders_v1';
 
 export const DEFAULT_FOLDERS: Folder[] = [
-  { id: 'folder-skills', name: 'Skills & Prompts', icon: 'Sparkles', color: '#6366F1', createdAt: 1 },
+  {
+    id: 'folder-skills',
+    name: 'Skills & Prompts',
+    icon: 'Sparkles',
+    color: '#6366F1',
+    createdAt: 1,
+  },
   { id: 'folder-tech', name: 'Tech & Code', icon: 'Code', color: '#0EA5E9', createdAt: 2 },
   { id: 'folder-design', name: 'Design Inspo', icon: 'Palette', color: '#EC4899', createdAt: 3 },
   { id: 'folder-read', name: 'Read Later', icon: 'Bookmark', color: '#10B981', createdAt: 4 },
@@ -61,13 +67,13 @@ export function saveFolders(folders: Folder[]): void {
 
 export function exportItemsToJson(items: SavedItem[]) {
   const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-    JSON.stringify(items, null, 2)
+    JSON.stringify(items, null, 2),
   )}`;
   const downloadAnchor = document.createElement('a');
   downloadAnchor.setAttribute('href', jsonString);
   downloadAnchor.setAttribute(
     'download',
-    `anything-backup-${new Date().toISOString().slice(0, 10)}.json`
+    `anything-backup-${new Date().toISOString().slice(0, 10)}.json`,
   );
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();
@@ -88,8 +94,14 @@ export function parseSocialUrl(url: string): {
   const clean = url.trim();
 
   let host: string;
-  try { host = new URL(/^https?:\/\//i.test(clean) ? clean : `https://${clean}`).hostname.replace(/^www\./, ''); }
-  catch { return { detectedType: 'link', extractedInfo: { title: 'Link' } }; }
+  try {
+    host = new URL(/^https?:\/\//i.test(clean) ? clean : `https://${clean}`).hostname.replace(
+      /^www\./,
+      '',
+    );
+  } catch {
+    return { detectedType: 'link', extractedInfo: { title: 'Link' } };
+  }
 
   // X / Twitter
   if (['twitter.com', 'x.com', 'mobile.twitter.com'].includes(host)) {
@@ -97,7 +109,7 @@ export function parseSocialUrl(url: string): {
     const handle = match ? match[1] : 'user';
     return {
       detectedType: 'x_post',
-      extractedInfo: { handle, title: `@${handle}` }
+      extractedInfo: { handle, title: `@${handle}` },
     };
   }
 
@@ -107,7 +119,7 @@ export function parseSocialUrl(url: string): {
     const sub = subMatch ? `r/${subMatch[1]}` : 'r/reddit';
     return {
       detectedType: 'reddit_post',
-      extractedInfo: { subreddit: sub, title: sub }
+      extractedInfo: { subreddit: sub, title: sub },
     };
   }
 
@@ -117,7 +129,7 @@ export function parseSocialUrl(url: string): {
     const handle = instaMatch && instaMatch[1] ? instaMatch[1] : 'instagram';
     return {
       detectedType: 'instagram_post',
-      extractedInfo: { handle, title: `@${handle}` }
+      extractedInfo: { handle, title: `@${handle}` },
     };
   }
 
@@ -125,13 +137,13 @@ export function parseSocialUrl(url: string): {
   if (clean.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/i)) {
     return {
       detectedType: 'image',
-      extractedInfo: { title: 'Image' }
+      extractedInfo: { title: 'Image' },
     };
   }
 
   // Generic Link
   return {
     detectedType: 'link',
-    extractedInfo: { title: 'Link' }
+    extractedInfo: { title: 'Link' },
   };
 }

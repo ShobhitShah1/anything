@@ -21,7 +21,11 @@ export interface ClipboardReadResult {
 
 export async function readClipboardSafely(): Promise<ClipboardReadResult> {
   if (typeof navigator === 'undefined' || !navigator.clipboard) {
-    return { text: null, status: 'unsupported', error: 'Clipboard API not supported in this browser' };
+    return {
+      text: null,
+      status: 'unsupported',
+      error: 'Clipboard API not supported in this browser',
+    };
   }
 
   try {
@@ -54,7 +58,9 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
     return {
       type: 'x_post',
       title: social.extractedInfo?.title || '𝕏 Post',
-      subtitle: social.extractedInfo?.handle ? `Post by @${social.extractedInfo.handle}` : '𝕏 / Twitter post',
+      subtitle: social.extractedInfo?.handle
+        ? `Post by @${social.extractedInfo.handle}`
+        : '𝕏 / Twitter post',
       url: trimmed,
       content: trimmed,
     };
@@ -64,7 +70,9 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
     return {
       type: 'reddit_post',
       title: social.extractedInfo?.title || 'Reddit Post',
-      subtitle: social.extractedInfo?.subreddit ? `r/${social.extractedInfo.subreddit}` : 'Reddit thread',
+      subtitle: social.extractedInfo?.subreddit
+        ? `r/${social.extractedInfo.subreddit}`
+        : 'Reddit thread',
       url: trimmed,
       content: trimmed,
     };
@@ -81,13 +89,17 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
   }
 
   // Web URL check
-  const isUrl = trimmed.startsWith('http://') || trimmed.startsWith('https://') ||
+  const isUrl =
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
     /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(trimmed);
 
   if (isUrl && !trimmed.includes('\n')) {
     let domain = 'link';
     try {
-      domain = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`).hostname.replace('www.', '');
+      domain = new URL(
+        trimmed.startsWith('http') ? trimmed : `https://${trimmed}`,
+      ).hostname.replace('www.', '');
     } catch {
       domain = 'link';
     }
@@ -115,14 +127,24 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
   if (/^(sk-[a-zA-Z0-9]{16,}|ghp_[a-zA-Z0-9]{16,}|ey[a-zA-Z0-9_-]{20,})/.test(trimmed)) {
     return {
       type: 'secret',
-      title: trimmed.startsWith('sk-') ? 'OpenAI / Secret API Key' : trimmed.startsWith('ghp_') ? 'GitHub Access Token' : 'Auth Token',
+      title: trimmed.startsWith('sk-')
+        ? 'OpenAI / Secret API Key'
+        : trimmed.startsWith('ghp_')
+          ? 'GitHub Access Token'
+          : 'Auth Token',
       subtitle: 'Masked secret credential',
       content: trimmed,
     };
   }
 
   // Code snippet check
-  if (trimmed.includes('const ') || trimmed.includes('function ') || trimmed.includes('import ') || trimmed.includes('export ') || trimmed.includes('class ')) {
+  if (
+    trimmed.includes('const ') ||
+    trimmed.includes('function ') ||
+    trimmed.includes('import ') ||
+    trimmed.includes('export ') ||
+    trimmed.includes('class ')
+  ) {
     return {
       type: 'code',
       title: 'Code Snippet',
@@ -145,8 +167,11 @@ export function findDuplicateItem(queryUrlOrContent: string, items: SavedItem[])
   const clean = queryUrlOrContent.trim();
   if (!clean) return null;
   const canonicalUrl = (value: string) => {
-    try { return new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`).href; }
-    catch { return value; }
+    try {
+      return new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`).href;
+    } catch {
+      return value;
+    }
   };
 
   for (const item of items) {
@@ -156,10 +181,19 @@ export function findDuplicateItem(queryUrlOrContent: string, items: SavedItem[])
     if ('postUrl' in item && item.postUrl && canonicalUrl(item.postUrl) === canonicalUrl(clean)) {
       return item;
     }
-    if ('secretValue' in item && item.secretValue && item.secretValue.trim() === queryUrlOrContent.trim()) {
+    if (
+      'secretValue' in item &&
+      item.secretValue &&
+      item.secretValue.trim() === queryUrlOrContent.trim()
+    ) {
       return item;
     }
-    if ('imageUrl' in item && item.type === 'image' && canonicalUrl(item.imageUrl) === canonicalUrl(clean)) return item;
+    if (
+      'imageUrl' in item &&
+      item.type === 'image' &&
+      canonicalUrl(item.imageUrl) === canonicalUrl(clean)
+    )
+      return item;
     if ('code' in item && item.code.trim() === clean) return item;
     if ('content' in item && item.content && item.content.trim() === clean) {
       return item;

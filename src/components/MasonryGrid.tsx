@@ -17,26 +17,62 @@ interface MasonryGridProps {
 }
 
 export const MasonryGrid: React.FC<MasonryGridProps> = ({
-  items, folders, onTogglePin, onDelete, onUpdateItem, onOpenImage, onOpenDetail, activeId = null, isDark = true,
+  items,
+  folders,
+  onTogglePin,
+  onDelete,
+  onUpdateItem,
+  onOpenImage,
+  onOpenDetail,
+  activeId = null,
+  isDark = true,
 }) => {
   const reduceMotion = useReducedMotion();
-  const { ref, virtualizer, cardWidth, top, focusProps } = useCollectionVirtualizer(items, activeId, true);
-  const folderNames = useMemo(() => new Map(folders.map(folder => [folder.id, folder.name])), [folders]);
+  const { ref, virtualizer, cardWidth, top, focusProps } = useCollectionVirtualizer(
+    items,
+    activeId,
+    true,
+  );
+  const folderNames = useMemo(
+    () => new Map(folders.map((folder) => [folder.id, folder.name])),
+    [folders],
+  );
 
   return (
-    <div ref={ref} {...focusProps} className="relative w-full" style={{ height: virtualizer.getTotalSize(), overflowAnchor: 'none' }}>
-      {virtualizer.getVirtualItems().map(cell => {
+    <div
+      ref={ref}
+      {...focusProps}
+      className="relative w-full"
+      style={{ height: virtualizer.getTotalSize(), overflowAnchor: 'none' }}
+    >
+      {virtualizer.getVirtualItems().map((cell) => {
         const item = items[cell.index];
         return (
-          <motion.div key={item.id} ref={virtualizer.measureElement} data-index={cell.index} data-item-id={item.id}
+          <motion.div
+            key={item.id}
+            ref={virtualizer.measureElement}
+            data-index={cell.index}
+            data-item-id={item.id}
             layout={reduceMotion || virtualizer.isScrolling ? false : 'position'}
             layoutDependency={items}
             transition={{ layout: { duration: 0.26, ease: [0.23, 1, 0.32, 1] } }}
             className="absolute top-0 left-0"
-            style={{ width: cardWidth || '100%', top: cell.start - top, left: cell.lane * (cardWidth + 16) }}>
-            <CardItem item={item} folderName={folderNames.get(item.folderId ?? '')}
-              onTogglePin={onTogglePin} onDelete={onDelete} onUpdateItem={onUpdateItem}
-              onOpenImage={onOpenImage} onOpenDetail={onOpenDetail} isDark={isDark} />
+            style={{
+              width: cardWidth || '100%',
+              top: cell.start - top,
+              left: cell.lane * (cardWidth + 16),
+            }}
+          >
+            <CardItem
+              item={item}
+              folderName={folderNames.get(item.folderId ?? '')}
+              onTogglePin={onTogglePin}
+              onDelete={onDelete}
+              onUpdateItem={onUpdateItem}
+              onOpenImage={onOpenImage}
+              onOpenDetail={onOpenDetail}
+              isDark={isDark}
+            />
           </motion.div>
         );
       })}

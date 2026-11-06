@@ -43,7 +43,11 @@ function useCollectionState() {
   const [authReady, setAuthReady] = useState(!auth);
   const [busy, setBusy] = useState(false);
   const [signInPrompt, setSignInPrompt] = useState<'saves' | 'pro' | null>(null);
-  const [membership, setMembership] = useState<{ uid: string; active: boolean } | null>(null);
+  const [membership, setMembership] = useState<{
+    uid: string;
+    active: boolean;
+    adsEligible?: boolean;
+  } | null>(null);
   const [devProUid, setDevProUid] = useState<string | null>(null);
   const [status, setStatus] = useState('local');
   const [attempt, setAttempt] = useState(0);
@@ -111,6 +115,7 @@ function useCollectionState() {
             auth,
             (user) => {
               setUser(user);
+              setMembership(null);
               setDevProUid(null);
               if (user) setSignInPrompt(null);
               setAuthReady(true);
@@ -121,7 +126,7 @@ function useCollectionState() {
             },
           )
         : undefined,
-    [],
+    [setMembership],
   );
   useEffect(() => {
     if (!ready || !enabled) {
@@ -320,6 +325,7 @@ function useCollectionState() {
     setSignInPrompt,
     pro:
       !!uid && ((membership?.uid === uid && membership.active) || (__DEV__ && devProUid === uid)),
+    adsEligible: !!uid && membership?.uid === uid && membership.adsEligible === true,
     devPro: __DEV__ && !!uid && devProUid === uid,
     setDevPro: (value: boolean) => setDevProUid(__DEV__ && value && uid ? uid : null),
     setMembership,

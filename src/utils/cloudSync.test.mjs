@@ -3,9 +3,17 @@ import { test } from 'node:test';
 import { isCloudEntry, startCollectionSync } from './cloudSync.ts';
 import { readFirebaseConfig } from './firebaseConfig.ts';
 
-const note = (id, content = id) => ({ id, type: 'note', title: id, content, tags: [], isPinned: false, createdAt: 1 });
-const record = data => ({ kind: 'item', id: data.id, deleted: false, data });
-const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+const note = (id, content = id) => ({
+  id,
+  type: 'note',
+  title: id,
+  content,
+  tags: [],
+  isPinned: false,
+  createdAt: 1,
+});
+const record = (data) => ({ kind: 'item', id: data.id, deleted: false, data });
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 function harness(initial, pending = [], write = async () => {}, baseline) {
   let receive;
   let failed;
@@ -13,17 +21,50 @@ function harness(initial, pending = [], write = async () => {}, baseline) {
   const applied = [];
   const states = [];
   let journal = pending;
-  const sync = startCollectionSync({ initial, pending, baseline,
-    store: { watch: (next, fail) => { receive = next; failed = fail; return () => {}; }, write: async entries => { writes.push(entries); await write(entries); } },
-    apply: next => applied.push(next), persistPending: next => { journal = next; }, status: (state, error) => states.push({ state, error }),
+  const sync = startCollectionSync({
+    initial,
+    pending,
+    baseline,
+    store: {
+      watch: (next, fail) => {
+        receive = next;
+        failed = fail;
+        return () => {};
+      },
+      write: async (entries) => {
+        writes.push(entries);
+        await write(entries);
+      },
+    },
+    apply: (next) => applied.push(next),
+    persistPending: (next) => {
+      journal = next;
+    },
+    status: (state, error) => states.push({ state, error }),
   });
-  return { sync, writes, applied, states, receive: entries => receive(entries), fail: error => failed(error), journal: () => journal };
+  return {
+    sync,
+    writes,
+    applied,
+    states,
+    receive: (entries) => receive(entries),
+    fail: (error) => failed(error),
+    journal: () => journal,
+  };
 }
 
 test('Firebase remains optional until a complete web configuration is provided', () => {
   assert.equal(readFirebaseConfig({}), null);
   assert.equal(readFirebaseConfig({ VITE_FIREBASE_API_KEY: 'key' }), null);
-  assert.equal(readFirebaseConfig({ VITE_FIREBASE_API_KEY: 'key', VITE_FIREBASE_AUTH_DOMAIN: 'app.firebaseapp.com', VITE_FIREBASE_PROJECT_ID: 'project', VITE_FIREBASE_APP_ID: 'app' }).projectId, 'project');
+  assert.equal(
+    readFirebaseConfig({
+      VITE_FIREBASE_API_KEY: 'key',
+      VITE_FIREBASE_AUTH_DOMAIN: 'app.firebaseapp.com',
+      VITE_FIREBASE_PROJECT_ID: 'project',
+      VITE_FIREBASE_APP_ID: 'app',
+    }).projectId,
+    'project',
+  );
 });
 
 test('initial sync waits for remote data, merges local-only saves, and does not overwrite existing cloud records', async () => {
@@ -31,9 +72,15 @@ test('initial sync waits for remote data, merges local-only saves, and does not 
   assert.equal(h.writes.length, 0);
   h.receive([record(note('remote')), record(note('both', 'cloud'))]);
   await tick();
-  assert.deepEqual(h.applied.at(-1).items.map(item => item.id), ['remote', 'both', 'local']);
-  assert.equal(h.applied.at(-1).items.find(item => item.id === 'both').content, 'cloud');
-  assert.deepEqual(h.writes.flat().map(entry => entry.id), ['local']);
+  assert.deepEqual(
+    h.applied.at(-1).items.map((item) => item.id),
+    ['remote', 'both', 'local'],
+  );
+  assert.equal(h.applied.at(-1).items.find((item) => item.id === 'both').content, 'cloud');
+  assert.deepEqual(
+    h.writes.flat().map((entry) => entry.id),
+    ['local'],
+  );
   assert.deepEqual(h.journal(), []);
   h.sync.stop();
 });
@@ -50,11 +97,14 @@ test('deletions persist as tombstones and remote deletion wins over a stale loca
   await tick();
   assert.deepEqual(other.applied.at(-1).items, []);
   assert.equal(other.writes.length, 0);
-  h.sync.stop(); other.sync.stop();
+  h.sync.stop();
+  other.sync.stop();
 });
 
 test('failed writes keep pending edits across refresh and retry without losing local text', async () => {
-  const h = harness({ items: [], folders: [] }, [], async () => { throw new Error('offline'); });
+  const h = harness({ items: [], folders: [] }, [], async () => {
+    throw new Error('offline');
+  });
   h.receive([]);
   h.sync.update({ items: [note('draft', 'keep me')], folders: [] });
   await tick();
@@ -65,13 +115,21 @@ test('failed writes keep pending edits across refresh and retry without losing l
   await tick();
   assert.equal(restored.applied.at(-1).items[0].content, 'keep me');
   assert.deepEqual(restored.journal(), []);
-  h.sync.stop(); restored.sync.stop();
+  h.sync.stop();
+  restored.sync.stop();
 });
 
 test('an edit made while a write is pending is sent after it, rather than acknowledged with the older write', async () => {
   let finish;
   let first = true;
-  const h = harness({ items: [note('one')], folders: [] }, [], async () => { if (first) { first = false; await new Promise(resolve => { finish = resolve; }); } });
+  const h = harness({ items: [note('one')], folders: [] }, [], async () => {
+    if (first) {
+      first = false;
+      await new Promise((resolve) => {
+        finish = resolve;
+      });
+    }
+  });
   h.receive([record(note('one'))]);
   h.sync.update({ items: [note('one', 'first')], folders: [] });
   h.sync.update({ items: [note('one', 'latest')], folders: [] });
@@ -79,7 +137,10 @@ test('an edit made while a write is pending is sent after it, rather than acknow
   assert.equal(h.journal()[0].data.content, 'latest');
   finish();
   await tick();
-  assert.deepEqual(h.writes.map(entries => entries[0].data.content), ['first', 'latest']);
+  assert.deepEqual(
+    h.writes.map((entries) => entries[0].data.content),
+    ['first', 'latest'],
+  );
   assert.deepEqual(h.journal(), []);
   h.sync.stop();
 });
@@ -95,14 +156,26 @@ test('folders sync and empty folder collections stay empty; malformed remote dat
   assert.equal(h.applied.length, count);
   assert.equal(isCloudEntry(record({ ...note('bad'), content: undefined })), false);
   assert.equal(isCloudEntry({ ...record(note('bad')), id: 'different-id' }), false);
-  assert.equal(isCloudEntry(record({ ...note('bad'), type: 'link', url: 'javascript:alert(1)', domain: 'bad' })), false);
+  assert.equal(
+    isCloudEntry(
+      record({ ...note('bad'), type: 'link', url: 'javascript:alert(1)', domain: 'bad' }),
+    ),
+    false,
+  );
   assert.equal(isCloudEntry(record({ ...note('bad'), createdAt: 1e30 })), false);
   h.sync.stop();
 });
 
 test('stopping sync prevents late remote callbacks and keeps an unacknowledged write for the next session', async () => {
   let finish;
-  const h = harness({ items: [], folders: [] }, [], () => new Promise(resolve => { finish = resolve; }));
+  const h = harness(
+    { items: [], folders: [] },
+    [],
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
   h.receive([]);
   h.sync.update({ items: [note('pending')], folders: [] });
   h.sync.stop();
@@ -118,12 +191,15 @@ test('local edits and deletions made while sync was paused survive reconnecting 
   const h = harness({ items: [note('edit', 'after')], folders: [] }, [], async () => {}, baseline);
   h.receive(baseline.items.map(record));
   await tick();
-  assert.deepEqual(h.applied.at(-1).items.map(item => [item.id, item.content]), [['edit', 'after']]);
-  assert.equal(h.writes.flat().find(entry => entry.id === 'delete').deleted, true);
+  assert.deepEqual(
+    h.applied.at(-1).items.map((item) => [item.id, item.content]),
+    [['edit', 'after']],
+  );
+  assert.equal(h.writes.flat().find((entry) => entry.id === 'delete').deleted, true);
   h.sync.stop();
 });
 
-test('a database that never responds leaves connecting after 15 seconds and can recover when it responds', t => {
+test('a database that never responds leaves connecting after 15 seconds and can recover when it responds', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const h = harness({ items: [note('safe')], folders: [] });
   t.mock.timers.tick(15_000);
@@ -136,7 +212,7 @@ test('a database that never responds leaves connecting after 15 seconds and can 
   h.sync.stop();
 });
 
-test('stopping a connection cancels its timeout without reporting an error in another account', t => {
+test('stopping a connection cancels its timeout without reporting an error in another account', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const h = harness({ items: [], folders: [] });
   h.sync.stop();

@@ -7,7 +7,8 @@ export const CURATED_STARTER_ITEMS: SavedItem[] = [
     title: 'Say hello to Shobhit',
     url: 'https://x.com/Shobhit940',
     domain: 'x.com',
-    description: 'The person behind Anything. Share a thought, an idea, or something you’d love to see next.',
+    description:
+      'The person behind Anything. Share a thought, an idea, or something you’d love to see next.',
     isPinned: true,
     tags: ['anything'],
     createdAt: Date.now() - 1000 * 60 * 60 * 3,
@@ -18,8 +19,10 @@ export const CURATED_STARTER_ITEMS: SavedItem[] = [
     title: 'With Animation — Interactive Micro-Interactions',
     url: 'https://www.withanimation.app/',
     domain: 'withanimation.app',
-    description: 'Browse fluid SwiftUI and web animations, tweak spring constants in the live editor, and export seamless interactions.',
-    previewImage: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80',
+    description:
+      'Browse fluid SwiftUI and web animations, tweak spring constants in the live editor, and export seamless interactions.',
+    previewImage:
+      'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80',
     favicon: 'https://www.google.com/s2/favicons?domain=withanimation.app&sz=64',
     isPinned: false,
     tags: ['animation', 'dev', 'inspiration'],
@@ -31,7 +34,11 @@ export const CURATED_STARTER_ITEMS: SavedItem[] = [
     title: 'Aesthetic Interface Principles',
     content: 'Refined guidelines for crafting calm, minimal software interfaces.',
     checklist: [
-      { id: 'c-1', text: 'Use 1px hairline borders instead of heavy drop shadows', completed: true },
+      {
+        id: 'c-1',
+        text: 'Use 1px hairline borders instead of heavy drop shadows',
+        completed: true,
+      },
       { id: 'c-2', text: 'Preserve user focus with keyboard shortcuts (⌘K)', completed: true },
       { id: 'c-3', text: 'Apply fluid deceleration curves ([0.16, 1, 0.3, 1])', completed: false },
       { id: 'c-4', text: 'Zero unearned emojis — let typography lead', completed: true },
