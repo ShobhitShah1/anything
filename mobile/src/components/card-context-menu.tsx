@@ -27,6 +27,7 @@ import {
   Check,
   CheckSquare,
   Copy,
+  Download,
   Folder,
   Pencil,
   Pin,
@@ -39,7 +40,8 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedItem } from '../shared/types';
 import { useCollection } from '../state/collection';
-import { itemText, itemUrl } from '../utils/item';
+import { itemImage, itemText, itemUrl } from '../utils/item';
+import { downloadImage } from '../utils/download-image';
 import { contextMenuPhase } from '../utils/context-menu-state';
 import { contextGeometry } from '../utils/context-geometry';
 import { SaveCard, type CardAnchor } from './save-card';
@@ -151,9 +153,10 @@ export function CardContextMenu({
     );
   };
   const url = itemUrl(item);
+  const image = itemImage(item);
   const copy = item.type === 'secret' ? '' : url || itemText(item);
   const editable = ['note', 'image', 'markdown', 'code', 'secret', 'link'].includes(item.type);
-  const actionCount = 4 + Number(!!onSelect) + Number(!!copy) + Number(editable);
+  const actionCount = 4 + Number(!!onSelect) + Number(!!copy) + Number(editable) + Number(!!image);
   const target = contextGeometry(
     anchor.rect,
     width,
@@ -414,6 +417,18 @@ export function CardContextMenu({
                         }
                       />
                     )}
+                    {!!image && (
+                      <MenuRow
+                        label="Download image"
+                        icon={Download}
+                        disabled={disabled}
+                        onPress={() =>
+                          close(async () => {
+                            if (await downloadImage(image)) setNotice('Image saved to folder');
+                          })
+                        }
+                      />
+                    )}
                     {editable && (
                       <MenuRow
                         label="Edit find"
@@ -437,7 +452,7 @@ export function CardContextMenu({
                   </>
                 </ScrollView>
                 <ScrollView
-                  style={{ width: target.menuWidth, height: target.menuHeight - 44 }}
+                  style={{ width: target.menuWidth, height: contentHeight, flexShrink: 0 }}
                   keyboardShouldPersistTaps="handled"
                   bounces={false}
                   showsVerticalScrollIndicator={false}

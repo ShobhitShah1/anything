@@ -103,7 +103,8 @@ function menu(reduced = false) {
         return { useSafeAreaInsets: () => ({ top: 24, bottom: 34 }) };
       if (name === '../state/collection')
         return { useCollection: () => ({ colors: {}, data: { folders: [] } }) };
-      if (name === '../utils/item') return { itemUrl: () => '', itemText: () => 'note' };
+      if (name === '../utils/item')
+        return { itemUrl: () => '', itemText: () => 'note', itemImage: () => undefined };
       if (name === '../utils/context-geometry') return { contextGeometry };
       if (name === '../theme') return { radius: {}, type: {} };
       return {};
@@ -207,6 +208,9 @@ test('folder pages slide forward and back, resize to content, and leave the prev
     actions.row('Move to folder').props.onPress();
     const folders = render();
     assert.equal(folders.viewport.height, 147);
+    const folderScroll = folders.nodes.filter((node) => node.type === 'ScrollView')[1];
+    assert.equal(folderScroll.props.style.height, folders.viewport.height);
+    assert.equal(folderScroll.props.style.flexShrink, 0);
     assert.equal(
       folders.styles.find(
         (style) => style.transform?.length === 1 && style.transform[0].translateX !== undefined,
@@ -225,4 +229,18 @@ test('folder pages slide forward and back, resize to content, and leave the prev
     assert.deepEqual(back.preview, actions.preview);
     assert.ok(back.viewport.height > folders.viewport.height);
   }
+});
+
+test('long folder lists scroll inside the visible viewport without losing bottom rows', () => {
+  const render = menu();
+  const actions = render();
+  actions.nodes
+    .filter((node) => node.type === 'ScrollView')[1]
+    .props.onContentSizeChange(320, 1800);
+  actions.row('Move to folder').props.onPress();
+  const folders = render();
+  const scroll = folders.nodes.filter((node) => node.type === 'ScrollView')[1];
+  assert.ok(folders.viewport.height < 1800);
+  assert.equal(scroll.props.style.height, folders.viewport.height);
+  assert.equal(scroll.props.pointerEvents, 'auto');
 });

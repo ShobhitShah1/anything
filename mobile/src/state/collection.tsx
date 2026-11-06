@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { AppState, useColorScheme } from 'react-native';
+import { AppState, Platform, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import * as Clipboard from 'expo-clipboard';
@@ -252,14 +252,20 @@ function useCollectionState() {
   useEffect(() => {
     if (!ready || !data.autoClipboard) return;
     let checking = false;
+    let disposed = false;
     const check = async () => {
-      if (AppState.currentState !== 'active' || checking) return;
+      if (disposed || AppState.currentState !== 'active' || checking) return;
       checking = true;
       try {
         const text = (await Clipboard.getStringAsync()).trim();
-        if (text && text !== lastClipboard.current) {
-          lastClipboard.current = text;
+        if (
+          !disposed &&
+          AppState.currentState === 'active' &&
+          text &&
+          text !== lastClipboard.current
+        ) {
           await capture(text, false, undefined, true);
+          lastClipboard.current = text;
         }
       } catch {
         // Automatic clipboard checks stay quiet; persistence errors are reported by commit.
@@ -270,10 +276,18 @@ function useCollectionState() {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') void check();
     });
+    // Android can become active before its window regains clipboard access.
+    const focusSubscription =
+      Platform.OS === 'android'
+        ? AppState.addEventListener('focus', () => void check())
+        : undefined;
+    void check();
     const timer = setInterval(() => void check(), 4000);
     return () => {
+      disposed = true;
       clearInterval(timer);
       subscription.remove();
+      focusSubscription?.remove();
     };
   }, [ready, data.autoClipboard, capture]);
   useEffect(() => {

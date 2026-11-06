@@ -13,6 +13,7 @@ import {
   Check,
   Circle,
   Copy,
+  Download,
   Edit3,
   ExternalLink,
   Eye,
@@ -26,6 +27,7 @@ import { Action, IconButton } from '../../components/ui';
 import { itemImage, itemText, itemUrl, typeLabel } from '../../utils/item';
 import { getItemTitle } from '../../shared/utils/itemTitle';
 import { openLink } from '../../utils/open-link';
+import { downloadImage } from '../../utils/download-image';
 import { fonts, radius, space, type } from '../../theme';
 
 export default function ItemDetail() {
@@ -40,6 +42,7 @@ export default function ItemDetail() {
     options: headerOptions,
   } = useScrollHeader(item ? typeLabel(item) : 'Your find');
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [revealedId, setRevealedId] = useState<string>();
   const revealed = revealedId === id;
   const insets = useSafeAreaInsets();
@@ -78,11 +81,6 @@ export default function ItemDetail() {
           title: typeLabel(item),
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <IconButton
-                label="Edit find"
-                icon={Edit3}
-                onPress={() => router.push({ pathname: '/capture', params: { id } })}
-              />
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Delete find"
@@ -326,6 +324,22 @@ export default function ItemDetail() {
         }}
       >
         <IconButton label="Copy" icon={Copy} onPress={() => void copy()} />
+        {!!image && (
+          <IconButton
+            label="Download image"
+            icon={Download}
+            disabled={downloading}
+            onPress={() => {
+              setDownloading(true);
+              void downloadImage(image)
+                .then((saved) => {
+                  if (saved) state.setNotice('Image saved to folder');
+                })
+                .catch((error) => state.setError(error.message))
+                .finally(() => setDownloading(false));
+            }}
+          />
+        )}
         <IconButton
           label="Share"
           icon={Share2}
