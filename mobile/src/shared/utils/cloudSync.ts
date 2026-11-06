@@ -179,7 +179,7 @@ export function startCollectionSync(options: {
       options.status(
         'error',
         new Error(
-          'Could not reach your cloud collection. Check that Cloud Firestore has a (default) database and the private access rules are published. Also check your connection, then retry. Local saves are safe.',
+          'Cloud sync is taking longer than expected. Check your connection, Firestore database and private rules, then retry. Local saves are safe.',
         ),
       );
   }, 15_000);

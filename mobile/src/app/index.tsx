@@ -70,6 +70,7 @@ import { QuickCaptureToolbar } from '../components/quick-capture-toolbar';
 import { AiEditorLight } from '../components/ai-editor-light';
 import { MarkdownContent } from '../components/markdown-content';
 import { AiResponseStatus } from '../components/ai-response-status';
+import { WelcomeScene } from '../components/welcome-scene';
 import type { SavedItem } from '../shared/types';
 import { fonts, space, type } from '../theme';
 
@@ -467,6 +468,14 @@ export default function Home() {
       ...headerOptions,
       title: 'anything.',
       headerTitle: () => null,
+      headerBackground:
+        !data.items.length && !captureOpen ? () => null : headerOptions.headerBackground,
+      headerStyle: {
+        backgroundColor:
+          !data.items.length && !captureOpen
+            ? 'transparent'
+            : (headerOptions.headerStyle?.backgroundColor ?? colors.canvas),
+      },
       headerLeft: () => (
         <View style={{ height: 44, justifyContent: 'center', minWidth: 160 }}>
           {/* Home Brandmark Title */}
@@ -619,7 +628,9 @@ export default function Home() {
     [
       headerOptions,
       captureOpen,
+      colors.canvas,
       colors.ink,
+      data.items.length,
       homeHeaderStyle,
       captureHeaderStyle,
       dismissCapture,
@@ -782,83 +793,18 @@ export default function Home() {
           </View>
         </CollectionMotion>
       ) : (
-        <ScrollView
+        <View
+          style={{ flex: 1 }}
           accessibilityElementsHidden={captureOpen}
           importantForAccessibility={captureOpen ? 'no-hide-descendants' : 'auto'}
-          contentInsetAdjustmentBehavior="never"
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingTop: topInset,
-            paddingBottom: captureInset,
-          }}
-          showsVerticalScrollIndicator={false}
         >
-          <View
-            style={{
-              flex: 1,
-              minHeight: Math.max(500, height - topInset - captureInset),
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingHorizontal: space.xl,
-              paddingVertical: 28,
-            }}
-          >
-            <BrandMark size={156} animate />
-            <Text
-              allowFontScaling={false}
-              style={{
-                ...type.hero,
-                color: colors.ink,
-                textAlign: 'center',
-                fontSize: width < 380 ? 38 : 44,
-                lineHeight: width < 380 ? 44 : 50,
-                letterSpacing: -1.8,
-                marginTop: 24,
-                marginBottom: 16,
-              }}
-            >
-              {'Keep what\nmoves you.'}
-            </Text>
-            <Text
-              allowFontScaling={false}
-              style={{ fontSize: 15, lineHeight: 24, color: colors.muted, textAlign: 'center' }}
-            >
-              {'A link. An idea. A little inspiration.\nSave it here. Come back anytime.'}
-            </Text>
-            <View style={{ width: '100%', maxWidth: 360, gap: 12, marginTop: 32 }}>
-              <Action
-                title={
-                  state.user
-                    ? 'Save your first find'
-                    : state.busy
-                      ? 'Connecting…'
-                      : 'Continue with Google'
-                }
-                leading={!state.user ? <GoogleMark /> : undefined}
-                disabled={state.busy}
-                onPress={() => (state.user ? openCapture() : void state.signIn())}
-              />
-              <Pressable
-                accessibilityRole="button"
-                onPress={openCapture}
-                style={{
-                  minHeight: 48,
-                  flexDirection: 'row',
-                  gap: 8,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
-                  {state.user ? 'Or paste a link below' : 'Start on this device'}
-                </Text>
-                {!state.user && <ArrowUpRight size={14} color={colors.muted} />}
-              </Pressable>
-            </View>
-          </View>
-        </ScrollView>
+          <WelcomeScene
+            onOpenCapture={openCapture}
+            topInset={topInset}
+            captureInset={captureInset}
+            onScroll={handleScroll}
+          />
+        </View>
       )}
       {!selecting && (
         <Animated.View
@@ -942,7 +888,7 @@ export default function Home() {
                   flex: 1,
                   minWidth: 0,
                   paddingHorizontal: captureOpen ? 20 : 0,
-                  paddingTop: captureOpen ? 20 : 0,
+                  paddingTop: captureOpen ? 16 : 0,
                   paddingBottom: captureOpen ? 16 : 0,
                   fontSize: 17,
                   lineHeight: 26,

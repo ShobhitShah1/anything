@@ -104,6 +104,11 @@ function startup(reduced = false, native = false) {
       if (name === 'react-native-worklets') return { scheduleOnRN: (fn, ...args) => fn(...args) };
       if (name.endsWith('icon-ios-dark.png')) return 2;
       if (name === '../state/collection') return { useCollection: () => collection };
+      if (name === '../utils/preload-assets')
+        return {
+          CRITICAL_ASSETS: [],
+          preloadCriticalAssets: () => Promise.resolve(),
+        };
       if (name.endsWith('splash-art.png')) return 1;
       throw new Error(name);
     },

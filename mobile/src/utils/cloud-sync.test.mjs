@@ -254,7 +254,7 @@ test('a database that never responds leaves connecting after 15 seconds and can 
   const h = harness({ items: [note('safe')], folders: [] });
   t.mock.timers.tick(15_000);
   assert.equal(h.states.at(-1).state, 'error');
-  assert.match(h.states.at(-1).error.message, /Cloud Firestore/);
+  assert.match(h.states.at(-1).error.message, /taking longer than expected/);
   assert.equal(h.writes.length, 0);
   assert.equal(h.applied.length, 0);
   h.receive([record(note('safe'))]);

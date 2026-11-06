@@ -16,6 +16,7 @@ import { DeleteSheet } from '../components/delete-sheet';
 import { Action, Section, NativeGroup, SettingRow, GoogleMark } from '../components/ui';
 import { BrandMark } from '../components/brand-mark';
 import { PlusCard } from '../components/plus-card';
+import { WebShowcaseCard } from '../components/web-showcase-card';
 import { radius, space, type } from '../theme';
 import { Crown, LogOut, Trash2 } from 'lucide-react-native';
 
@@ -300,15 +301,8 @@ export default function Settings() {
             </SettingRow>
           </NativeGroup>
         </Section>
-        <View style={{ gap: 16, paddingHorizontal: 6 }}>
-          <Text
-            allowFontScaling={false}
-            style={{ color: colors.muted, fontSize: 12, lineHeight: 20 }}
-          >
-            Your device always keeps a local copy. Cloud sync is optional and includes saved
-            secrets; masking is not encryption. Large images stay local. Export a backup before
-            uninstalling.
-          </Text>
+        <WebShowcaseCard />
+        <View style={{ paddingHorizontal: 6, paddingTop: 4 }}>
           <Pressable
             accessibilityRole="button"
             onPress={() => setDeleting(true)}
