@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'admin-console/**'
+      - 'apps/admin-console/**'
       - '.github/workflows/admin-console-pages.yml'
   workflow_dispatch:
 
@@ -26,9 +26,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: admin-console/package-lock.json
-      - run: npm ci --prefix admin-console
-      - run: npm run build --prefix admin-console
+          cache-dependency-path: apps/admin-console/package-lock.json
+      - run: npm ci --prefix apps/admin-console
+      - run: npm run build --prefix apps/admin-console
         env:
           VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
@@ -37,7 +37,7 @@ jobs:
           VITE_CLOUDFLARE_WORKER_URL: ${{ vars.VITE_CLOUDFLARE_WORKER_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: admin-console/dist
+          path: apps/admin-console/dist
 
   deploy:
     environment:

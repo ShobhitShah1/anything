@@ -31,6 +31,7 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
 
       - name: Check Pages configuration
         id: pages
@@ -46,13 +47,13 @@ jobs:
           exit 1
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefix apps/web
 
       - name: Check capture, previews, and sync
-        run: node --test src/utils/*.test.mjs public/sw.test.mjs extension/*.test.mjs
+        run: node --test apps/web/src/utils/*.test.mjs apps/web/public/sw.test.mjs apps/extension/*.test.mjs
 
       - name: Check product website and release configuration
-        run: node website/check.mjs
+        run: node apps/showcase/check.mjs
 
       - name: Build production bundle
         env:
@@ -64,15 +65,15 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
         run: |
           node --input-type=module <<'NODE'
-          import { readFirebaseConfig } from './src/utils/firebaseConfig.ts';
+          import { readFirebaseConfig } from './apps/web/src/utils/firebaseConfig.ts';
           if (!readFirebaseConfig(process.env)) {
             throw new Error('Missing Firebase web configuration. Set VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID and VITE_FIREBASE_APP_ID in Settings > Secrets and variables > Actions > Variables, then redeploy.');
           }
           NODE
-          npm run build
+          npm run build --prefix apps/web
 
       - name: Include product website and policies
-        run: node website/pages.mjs
+        run: node apps/showcase/pages.mjs
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

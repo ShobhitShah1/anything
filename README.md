@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/anything-icon.png" alt="Anything folded a logo" width="72" height="72" />
+  <img src="apps/web/public/anything-icon.png" alt="Anything folded a logo" width="72" height="72" />
 </p>
 
 <h1 align="center">Anything.</h1>
@@ -23,9 +23,9 @@
 
 - **Promotional website:** [shobhitshah1.github.io/anything/about/](https://shobhitshah1.github.io/anything/about/) ? the app introduction, web preview, mobile gallery, and policy links.
 - **Web app:** [shobhitshah1.github.io/anything/](https://shobhitshah1.github.io/anything/) ? open your collection and sign in.
-- **Local promotional preview:** [127.0.0.1:5501/website/public/index.html](http://127.0.0.1:5501/website/public/index.html) when Live Server is running on port 5501. This address works only on your computer.
+- **Local promotional preview:** [127.0.0.1:5501/apps/showcase/public/index.html](http://127.0.0.1:5501/apps/showcase/public/index.html) when Live Server is running on port 5501. This address works only on your computer.
 
-The public hostname is `shobhitshah1.github.io`; `/anything/about/` is the promotional site's path. Edit its files in [`website/public/`](website/public/) and its links/support details in [`site-config.json`](website/public/site-config.json). See the [website guide](website/README.md) for the standalone preview command. Push to `main` to deploy both sites through [GitHub Actions](https://github.com/ShobhitShah1/anything/actions/workflows/deploy.yml).
+The public hostname is `shobhitshah1.github.io`; `/anything/about/` is the promotional site's path. Edit its files in [`apps/showcase/public/`](apps/showcase/public/) and its links/support details in [`site-config.json`](apps/showcase/public/site-config.json). See the [website guide](apps/showcase/README.md) for the standalone preview command. Push to `main` to deploy both sites through [GitHub Actions](https://github.com/ShobhitShah1/anything/actions/workflows/deploy.yml).
 
 ## Less scattered. More saved.
 
@@ -45,25 +45,25 @@ Start without an account, or continue with Google and choose whether to sync you
 
 **On the web.**
 
-![Anything web collection with the folded a logo and sample notes, a checklist, an image and a reading guide](website/public/assets/web-collection-1d403b273595.png)
+![Anything web collection with the folded a logo and sample notes, a checklist, an image and a reading guide](apps/showcase/public/assets/web-collection-1d403b273595.png)
 
 **On mobile.**
 
 <p align="center">
-  <img src="website/public/assets/mobile-home.png" alt="Anything Android collection with search, filters and quick capture" width="280" />
+  <img src="apps/showcase/public/assets/mobile-home.png" alt="Anything Android collection with search, filters and quick capture" width="280" />
   &nbsp;
-  <img src="website/public/assets/mobile-folders.png" alt="Anything Android folders showing Inspiration, Everyday, Reading and Build ideas" width="280" />
+  <img src="apps/showcase/public/assets/mobile-folders.png" alt="Anything Android folders showing Inspiration, Everyday, Reading and Build ideas" width="280" />
 </p>
 
 <sub>Unaltered captures of the running web and Android apps using fictional sample content. No personal account or private saves are shown.</sub>
 
 ## Mobile and the showcase
 
-The Android app lives in [`mobile/`](mobile/README.md). See its setup guide for development builds and [purchase setup](mobile/PURCHASES.md) before configuring subscriptions. A public store download is not linked until the release is available.
+The Android app lives in [`apps/mobile/`](apps/mobile/README.md). See its setup guide for development builds and [purchase setup](apps/mobile/PURCHASES.md) before configuring subscriptions. A public store download is not linked until the release is available.
 
-The [product website](https://shobhitshah1.github.io/anything/about/) introduces mobile and web together. Its [source and editing guide](website/README.md) cover the static pages, product images and the single [configuration file](website/public/site-config.json) for support details, store links and policy text. Privacy, permissions, terms and data-deletion pages remain explicitly marked as drafts until the operator completes the release details.
+The [product website](https://shobhitshah1.github.io/anything/about/) introduces mobile and web together. Its [source and editing guide](apps/showcase/README.md) cover the static pages, product images and the single [configuration file](apps/showcase/public/site-config.json) for support details, store links and policy text. Privacy, permissions, terms and data-deletion pages remain explicitly marked as drafts until the operator completes the release details.
 
-Project folders: `src/` and `public/` contain the collection web app, `mobile/` contains Android/iOS app code, and `website/public/` contains the product website. Push changes to `main` to publish through the existing GitHub Pages workflow. The local `store-listing/` screenshot studio is ignored and is not deployed.
+Project folders: `apps/web/`, `apps/mobile/`, `apps/admin-console/`, `apps/showcase/`, `apps/worker/`, and `apps/extension/` contain independent products. Firebase rules and deploy configuration live in `infra/firebase/`; shared docs and repository scripts stay at the root. Push changes to `main` to publish through the existing GitHub Actions workflows. The local `store-listing/` screenshot studio is ignored and is not deployed.
 
 ## A few keys worth knowing
 
@@ -80,7 +80,7 @@ You'll need **Node.js 24+**.
 ```bash
 git clone https://github.com/ShobhitShah1/anything.git
 cd anything
-npm ci
+npm ci --prefix apps/web
 npm run dev
 ```
 
@@ -100,7 +100,7 @@ The **Save to Anything** extension adds right-click saving to Chrome and Edge. I
 ### Install and connect
 
 1. In Anything, open **Settings → Capture → Browser extension → Download browser extension**.
-2. Extract the ZIP into a folder you can keep. If you cloned this repository, you can use the `extension/` folder directly.
+2. Extract the ZIP into a folder you can keep. If you cloned this repository, you can use the `apps/extension/` folder directly.
 3. Open `chrome://extensions` in Chrome or `edge://extensions` in Edge. Enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
 4. Open **Save to Anything** from your browser’s Extensions menu. You can pin it to the toolbar for easy access.
 5. Set **Your Anything address** to the full address of your collection, including its path. For example, `http://localhost:5173/` for local development, or `https://your-name.github.io/anything/` for a deployed copy. Anything’s extension setup panel shows your current address.

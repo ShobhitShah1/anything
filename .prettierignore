@@ -3,6 +3,8 @@
 **/dist-ios/
 **/web-build/
 **/.expo/
+**/.argent/
+**/.claude/
 **/.yarn/
 **/.tools/
 **/artifacts/
@@ -20,9 +22,9 @@
 **/AGENTS.md
 **/android/
 **/ios/
-mobile/assets/
-mobile/modules/anything-launch/android/build/
-website/public/privacy.html
-website/public/terms.html
-website/public/permissions.html
-website/public/delete-account.html
+apps/mobile/assets/
+apps/mobile/modules/anything-launch/android/build/
+apps/showcase/public/privacy.html
+apps/showcase/public/terms.html
+apps/showcase/public/permissions.html
+apps/showcase/public/delete-account.html

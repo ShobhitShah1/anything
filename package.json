@@ -1,46 +1,17 @@
 {
-  "name": "anything",
+  "name": "anything-monorepo",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview",
-    "format": "npm --prefix mobile exec -- prettier --write -- .",
-    "format:check": "npm --prefix mobile exec -- prettier --check -- .",
-    "format:website": "npm run format",
-    "format:admin": "npm --prefix mobile exec -- prettier --write -- admin-console",
-    "format:showcase": "npm --prefix mobile exec -- prettier --write -- mobile/src/components/web-showcase-card.tsx",
+    "dev": "npm run dev --prefix apps/web",
+    "build": "npm run build --prefix apps/web",
+    "lint": "npm run lint --prefix apps/web",
+    "preview": "npm run preview --prefix apps/web",
+    "format": "npm --prefix apps/mobile exec -- prettier --write -- .",
+    "format:check": "npm --prefix apps/mobile exec -- prettier --check -- .",
+    "format:admin": "npm --prefix apps/mobile exec -- prettier --write -- apps/admin-console",
+    "format:showcase": "npm --prefix apps/mobile exec -- prettier --write -- apps/showcase",
     "format:check:shared": "npm run format:check",
-    "lint:shared": "npm --prefix mobile exec -- eslint --config mobile/eslint.config.cjs admin-console/src website/public/site.js website/public/shared.js website/pages.mjs website/check.mjs website/render-legal.mjs mobile/src/components/web-showcase-card.tsx --max-warnings 0"
-  },
-  "dependencies": {
-    "@tanstack/react-virtual": "^3.14.24",
-    "canvas-confetti": "^1.9.4",
-    "clsx": "^2.1.1",
-    "firebase": "^13.1.0",
-    "framer-motion": "^14.3.0",
-    "lucide-react": "^1.59.0",
-    "marked": "^18.1.1",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "tailwind-merge": "^3.7.0"
-  },
-  "overrides": {
-    "@grpc/grpc-js": "^1.14.6"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/canvas-confetti": "^1.9.0",
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
-    "oxlint": "^1.81.0",
-    "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "lint:shared": "npm --prefix apps/mobile exec -- eslint --config apps/mobile/eslint.config.cjs apps/admin-console/src apps/showcase/public/site.js apps/showcase/public/shared.js apps/showcase/pages.mjs apps/showcase/check.mjs apps/showcase/render-legal.mjs apps/mobile/src/components/web-showcase-card.tsx --max-warnings 0"
   }
 }

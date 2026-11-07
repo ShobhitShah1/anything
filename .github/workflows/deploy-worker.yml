@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'worker/**'
+      - 'apps/worker/**'
       - '.github/workflows/deploy-worker.yml'
   workflow_dispatch:
 
@@ -33,13 +33,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: worker/package-lock.json
+          cache-dependency-path: apps/worker/package-lock.json
       - run: npm ci
-        working-directory: worker
+        working-directory: apps/worker
       - run: npm run typecheck
-        working-directory: worker
+        working-directory: apps/worker
       - run: npm test
-        working-directory: worker
+        working-directory: apps/worker
       - name: Deploy Worker with the admin site's exact origin
         run: npm run deploy -- --var "ADMIN_CONSOLE_ORIGINS:${ADMIN_CONSOLE_ORIGIN}"
-        working-directory: worker
+        working-directory: apps/worker

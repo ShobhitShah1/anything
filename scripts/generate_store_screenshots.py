@@ -228,7 +228,7 @@ def build_slide_1():
     draw = ImageDraw.Draw(canvas)
     
     # App Icon with rounded corners and glowing rim
-    icon_raw = Image.open("mobile/assets/icon-ios-dark.png").convert("RGBA")
+    icon_raw = Image.open("apps/mobile/assets/icon-ios-dark.png").convert("RGBA")
     icon_size = 210
     icon_resized = icon_raw.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
     

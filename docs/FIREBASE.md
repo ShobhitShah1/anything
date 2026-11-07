@@ -5,7 +5,7 @@ Anything works without Firebase. With a project configured, users can sign in us
 ## Connect your project
 
 1. Create a Firebase project and register a **Web app** in **Project settings → Your apps**.
-2. Copy `.env.example` to `.env.local` and fill in the values from your web app’s Firebase configuration:
+2. Copy `apps/web/.env.example` to `.env.local` and fill in the values from your web app’s Firebase configuration:
 
    ```dotenv
    VITE_FIREBASE_API_KEY=your-api-key
@@ -23,10 +23,10 @@ Anything works without Firebase. With a project configured, users can sign in us
 
    ```bash
    firebase login
-   firebase deploy --only firestore --project YOUR_PROJECT_ID
+   firebase deploy --config infra/firebase/firebase.json --only firestore --project YOUR_PROJECT_ID
    ```
 
-   `firebase.json` points to `firestore.rules` and `firestore.indexes.json`. The rules allow each signed-in user to access only `users/{their uid}/collection/*`. All other paths are denied. The index exemption keeps saved content out of unnecessary indexes. Do not use public/test-mode rules.
+   `infra/firebase/firebase.json` points to `infra/firebase/firestore.rules` and `infra/firebase/firestore.indexes.json`. The rules allow each signed-in user to access only `users/{their uid}/collection/*`. All other paths are denied. The index exemption keeps saved content out of unnecessary indexes. Do not use public/test-mode rules.
 
 7. Restart `npm run dev`. For production, supply the same `VITE_FIREBASE_*` values in the build environment and rebuild. The GitHub Pages workflow reads them from repository **Settings → Secrets and variables → Actions → Variables** using the names above. The Pages workflow stops if required values are missing, so it cannot silently publish a build with sign-in disabled. Local development can still run without Firebase. Vite embeds the web configuration at build time. These are Firebase web app values; a service-account key is not needed.
 
@@ -54,7 +54,7 @@ Saved secret fields are included only when the user enables collection sync. The
 
 ## Verify after setup
 
-If the profile stays on **Connecting**, Google Authentication may be configured while Firestore is not. In the same Firebase project, open **Build → Firestore Database**, create a **Standard edition `(default)`** database, then publish the contents of `firestore.rules` in the database’s **Rules** tab (or use the deployment command above). A custom database ID is not used by this app. Confirm your `VITE_FIREBASE_PROJECT_ID` matches this project. If the database and rules are already ready, check browser network blocking or connectivity. The app now reports an initial connection timeout after 15 seconds and offers **Retry sync**; local saves remain available.
+If the profile stays on **Connecting**, Google Authentication may be configured while Firestore is not. In the same Firebase project, open **Build → Firestore Database**, create a **Standard edition `(default)`** database, then publish the contents of `infra/firebase/firestore.rules` in the database’s **Rules** tab (or use the deployment command above). A custom database ID is not used by this app. Confirm your `VITE_FIREBASE_PROJECT_ID` matches this project. If the database and rules are already ready, check browser network blocking or connectivity. The app now reports an initial connection timeout after 15 seconds and offers **Retry sync**; local saves remain available.
 
 1. Sign in with Google and confirm the profile details. Leave sync off first; saving should stay local.
 2. Enable sync and confirm the collection appears under your own UID in Firestore.

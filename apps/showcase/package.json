@@ -1,0 +1,13 @@
+{
+  "name": "anything-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs",
+    "preview": "node preview.mjs",
+    "render:legal": "node render-legal.mjs",
+    "format": "npm --prefix ../.. run format",
+    "format:check": "npm --prefix ../.. run format:check",
+    "lint": "npm --prefix ../.. run lint:shared"
+  }
+}
