@@ -24,6 +24,7 @@ function cachePreview(data: LinkPreviewData, ttl = CACHE_TTL) {
   previewCache.delete(data.url);
   previewCache.set(data.url, { data, expires: Date.now() + ttl });
   if (previewCache.size > 100) previewCache.delete(previewCache.keys().next().value!);
+
   return data;
 }
 
@@ -31,6 +32,7 @@ function safeWebUrl(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   try {
     const parsed = new URL(value);
+
     return ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password
       ? parsed.href
       : undefined;
@@ -42,22 +44,29 @@ function safeWebUrl(value: unknown): string | undefined {
 // Ensure URL has http/https protocol
 export function normalizeUrl(rawUrl: string): string {
   let url = rawUrl.trim();
+
   if (/^[a-z][a-z\d+.-]*:/i.test(url) && !/^https?:\/\//i.test(url))
     throw new Error('Use an http or https URL.');
   if (!/^https?:\/\//i.test(url)) {
     url = `https://${url}`;
   }
+
   const parsed = new URL(url);
+
   if (parsed.username || parsed.password)
     throw new Error('Use a URL without embedded credentials.');
+
   return parsed.href;
 }
 
 export function isDirectImageUrl(urlStr: string): boolean {
   try {
     const parsed = new URL(urlStr);
+
     if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+
     const pathname = parsed.pathname.toLowerCase();
+
     return (
       /\.(jpeg|jpg|gif|png|webp|svg|avif|bmp)($|\?)/i.test(pathname) ||
       parsed.hostname === 'images.unsplash.com' ||
@@ -72,11 +81,11 @@ export function isDirectImageUrl(urlStr: string): boolean {
 export function getImmediateLinkPreview(rawUrl: string): LinkPreviewData {
   const url = normalizeUrl(rawUrl);
   const cached = previewCache.get(url);
+
   if (cached && cached.expires > Date.now()) return cached.data;
 
   const parsed = new URL(url);
   const domain = parsed.hostname.replace(/^www\./, '');
-
   const fallbackFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 
   // 1. Direct Image URL (Unsplash, imgur, png, jpg, etc.)
@@ -89,6 +98,7 @@ export function getImmediateLinkPreview(rawUrl: string): LinkPreviewData {
       url,
       favicon: fallbackFavicon,
     };
+
     return directPreview;
   }
 
@@ -98,6 +108,7 @@ export function getImmediateLinkPreview(rawUrl: string): LinkPreviewData {
       ? parsed.pathname.slice(1).split('/')[0]
       : parsed.searchParams.get('v') ||
         parsed.pathname.match(/^\/(?:embed|v|shorts)\/([\w-]+)/)?.[1];
+
   if (
     ['youtube.com', 'm.youtube.com', 'youtu.be'].includes(domain) &&
     videoId &&
@@ -111,11 +122,13 @@ export function getImmediateLinkPreview(rawUrl: string): LinkPreviewData {
       url,
       favicon: 'https://www.youtube.com/s/desktop/f8c2b740/img/favicon_144x144.png',
     };
+
     return ytPreview;
   }
 
   // 3. GitHub Repository
   const ghMatch = url.match(/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+)/);
+
   if (
     domain === 'github.com' &&
     ghMatch &&
@@ -134,6 +147,7 @@ export function getImmediateLinkPreview(rawUrl: string): LinkPreviewData {
       url,
       favicon: 'https://github.githubassets.com/favicons/favicon.svg',
     };
+
     return ghPreview;
   }
 
@@ -151,6 +165,7 @@ export function getImmediateLinkPreview(rawUrl: string): LinkPreviewData {
       url,
       favicon: 'https://abs.twimg.com/favicons/twitter.3.ico',
     };
+
     return preview;
   }
 
@@ -161,6 +176,7 @@ const PREVIEW_DEADLINE = 5000;
 
 async function fetchJson(url: string, signal: AbortSignal) {
   const response = await fetch(url, { signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+
   if (!response.ok)
     throw new Error(
       response.status === 429
@@ -169,6 +185,7 @@ async function fetchJson(url: string, signal: AbortSignal) {
           ? 'This URL is unavailable or was removed.'
           : 'This page could not be previewed.',
     );
+
   return response.json();
 }
 
@@ -186,8 +203,11 @@ async function fetchMetadata(
     force: String(forceFresh),
   });
   const json = await fetchJson(`https://api.microlink.io?${params}`, signal);
+
   if (json.status !== 'success' || !json.data) throw new Error('This page could not be previewed.');
+
   const data = json.data;
+
   return {
     ...fallback,
     title: typeof data.title === 'string' && data.title.trim() ? data.title : fallback.title,
@@ -204,11 +224,15 @@ async function fetchMetadata(
 
 async function fetchXPreview(url: string, fallback: LinkPreviewData, signal: AbortSignal) {
   const id = new URL(url).pathname.match(/^\/(?:[^/]+\/status|i\/web\/status)\/(\d+)/)?.[1];
+
   if (!id) throw new Error('Paste an X post URL containing /status/ and the post ID.');
+
   const json = await fetchJson(`https://api.fxtwitter.com/status/${id}`, signal);
   const tweet = json.tweet;
+
   if (json.code !== 200 || !tweet || typeof tweet.text !== 'string')
     throw new Error('This X post is unavailable, private, or deleted.');
+
   return {
     ...fallback,
     title: typeof tweet.author?.name === 'string' ? tweet.author.name : fallback.title,
@@ -232,7 +256,9 @@ async function fetchXPreview(url: string, fallback: LinkPreviewData, signal: Abo
 
 async function fetchVideoPreview(url: string, fallback: LinkPreviewData, signal: AbortSignal) {
   const data = await fetchJson(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, signal);
+
   if (data.error || typeof data.title !== 'string') throw new Error('Video metadata unavailable.');
+
   return {
     ...fallback,
     title: data.title,
@@ -244,18 +270,25 @@ async function fetchVideoPreview(url: string, fallback: LinkPreviewData, signal:
 export function fetchLinkPreview(rawUrl: string, forceFresh = false): Promise<LinkPreviewData> {
   const url = normalizeUrl(rawUrl);
   const cached = previewCache.get(url);
+
   if (!forceFresh && cached && cached.expires > Date.now()) return Promise.resolve(cached.data);
+
   const pending = pendingPreviews.get(url);
+
   if (pending) return pending;
   if (forceFresh) previewCache.delete(url);
+
   const fallback = getImmediateLinkPreview(url);
+
   if (isDirectImageUrl(url)) return Promise.resolve(cachePreview(fallback));
 
   const request = (async () => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PREVIEW_DEADLINE);
+
     try {
       let data: LinkPreviewData;
+
       if (['x.com', 'twitter.com', 'mobile.twitter.com'].includes(fallback.domain)) {
         data = await fetchXPreview(url, fallback, controller.signal);
       } else if (
@@ -265,7 +298,9 @@ export function fetchLinkPreview(rawUrl: string, forceFresh = false): Promise<Li
       } else {
         data = await fetchMetadata(url, fallback, controller.signal, forceFresh);
       }
+
       const { error: _oldError, ...clean } = data;
+
       return cachePreview(clean);
     } catch (error) {
       const errors = error instanceof AggregateError ? error.errors : [error];
@@ -275,13 +310,16 @@ export function fetchLinkPreview(rawUrl: string, forceFresh = false): Promise<Li
             ?.message ||
           errors.find((problem) => problem instanceof Error)?.message ||
           'Preview unavailable. You can still save this link.';
+
       return cachePreview({ ...fallback, error: message }, 15_000);
     } finally {
       clearTimeout(timeout);
       controller.abort();
     }
   })().finally(() => pendingPreviews.delete(url));
+
   pendingPreviews.set(url, request);
+
   return request;
 }
 
@@ -333,5 +371,6 @@ export function applyLinkPreview(item: SavedItem, preview: LinkPreviewData): Sav
       caption: item.caption || preview.description || '',
       imageUrl: preview.imageUrl || item.imageUrl,
     };
+
   return item;
 }

@@ -17,12 +17,15 @@ export function MembershipBackdrop({ compact = false }: { compact?: boolean }) {
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (value) =>
       setForeground(value === 'active'),
     );
+
     return () => subscription.remove();
   }, []);
+
   return (
     <View
       pointerEvents="none"

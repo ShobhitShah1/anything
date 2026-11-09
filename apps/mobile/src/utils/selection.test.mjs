@@ -4,6 +4,7 @@ import { toggleSelection, toggleVisibleSelection } from './selection.ts';
 
 test('card selection toggles without mutating or duplicating IDs', () => {
   const selected = ['a'];
+
   assert.deepEqual(toggleSelection(selected, 'b'), ['a', 'b']);
   assert.deepEqual(toggleSelection(selected, 'a'), []);
   assert.deepEqual(selected, ['a']);

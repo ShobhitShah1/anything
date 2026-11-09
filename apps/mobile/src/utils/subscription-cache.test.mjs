@@ -18,6 +18,7 @@ function setup() {
     identifier: '$rc_monthly',
     product: { identifier: 'anything_pro:monthly', subscriptionPeriod: 'P1M', priceString: '₹99' },
   };
+
   runInNewContext(source, {
     exports,
     AbortController,
@@ -39,12 +40,14 @@ function setup() {
       throw new Error(name);
     },
   });
+
   return { ...exports, auth, requests, product };
 }
 
 test('startup prefetch and opening membership share a request and retain ready plans', async () => {
   const cache = setup();
   const startup = cache.loadSubscription('one');
+
   assert.equal(cache.loadSubscription('one'), startup);
   assert.equal(cache.requests.length, 1);
   cache.requests[0].resolve({ paid: false, remaining: 3 });
@@ -53,9 +56,12 @@ test('startup prefetch and opening membership share a request and retain ready p
   assert.equal(cache.subscriptionSnapshot('one').access.remaining, 3);
 
   const refreshed = cache.loadSubscription('one');
+
   assert.equal(cache.subscriptionSnapshot('one').plans[0], cache.product);
   cache.requests[1].reject(new Error('Offline'));
+
   const [usage] = await refreshed;
+
   assert.equal(usage.status, 'rejected');
   assert.equal(cache.subscriptionSnapshot('one').access.remaining, 3);
 });
@@ -63,8 +69,11 @@ test('startup prefetch and opening membership share a request and retain ready p
 test('late responses from another account cannot replace the signed-in account snapshot', async () => {
   const cache = setup();
   const first = cache.loadSubscription('one');
+
   cache.auth.currentUser = { uid: 'two' };
+
   const second = cache.loadSubscription('two');
+
   cache.requests[1].resolve({ paid: false, remaining: 2 });
   await second;
   cache.requests[0].resolve({ paid: true, remaining: 100 });
@@ -78,6 +87,7 @@ test('late responses from another account cannot replace the signed-in account s
 test('purchase and restore state can update the snapshot without fetching again', async () => {
   const cache = setup();
   const request = cache.loadSubscription('one');
+
   cache.requests[0].resolve({ paid: false, remaining: 3 });
   await request;
   cache.rememberSubscription('one', {
@@ -91,6 +101,7 @@ test('purchase and restore state can update the snapshot without fetching again'
 test('a background response cannot overwrite a newer purchase snapshot', async () => {
   const cache = setup();
   const request = cache.loadSubscription('one');
+
   cache.rememberSubscription('one', {
     access: { paid: true, remaining: 100 },
     customer: null,

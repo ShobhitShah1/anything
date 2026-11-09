@@ -1,7 +1,13 @@
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from '../../components/use-scroll-header';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  withTiming,
+} from 'react-native-reanimated';
 import Image from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DeleteSheet } from '../../components/delete-sheet';
@@ -24,10 +30,11 @@ import {
 } from 'lucide-react-native';
 import { useCollection } from '../../state/collection';
 import { Action, IconButton } from '../../components/ui';
-import { itemImage, itemText, itemUrl, typeLabel } from '../../utils/item';
+import { itemImage, itemText, itemUrl, linkPlatform, typeLabel } from '../../utils/item';
 import { getItemTitle } from '../../shared/utils/itemTitle';
 import { openLink } from '../../utils/open-link';
 import { downloadImage } from '../../utils/download-image';
+import { captureScroll } from '../../utils/capture-scroll';
 import { fonts, radius, space, type } from '../../theme';
 
 export default function ItemDetail() {
@@ -44,8 +51,42 @@ export default function ItemDetail() {
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [revealedId, setRevealedId] = useState<string>();
+  const [actionsHidden, setActionsHidden] = useState(false);
+  const scrollState = useRef({ offset: 0, travel: 0, hidden: false });
+  const reducedMotion = useReducedMotion();
   const revealed = revealedId === id;
   const insets = useSafeAreaInsets();
+  const handleScroll = useCallback(
+    (event: Parameters<typeof onScroll>[0]) => {
+      onScroll(event);
+
+      const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+      const next = captureScroll(
+        scrollState.current,
+        contentOffset.y,
+        contentSize.height - layoutMeasurement.height,
+      );
+
+      if (next.hidden !== scrollState.current.hidden) setActionsHidden(next.hidden);
+      scrollState.current = next;
+    },
+    [onScroll],
+  );
+  const actionBarStyle = useAnimatedStyle(
+    () => ({
+      opacity: withTiming(actionsHidden ? 0 : 1, { duration: reducedMotion ? 0 : 150 }),
+      transform: [
+        {
+          translateY: withTiming(actionsHidden ? insets.bottom + 84 : 0, {
+            duration: reducedMotion ? 0 : 180,
+            easing: Easing.bezier(0.23, 1, 0.32, 1),
+          }),
+        },
+      ],
+    }),
+    [actionsHidden, insets.bottom, reducedMotion],
+  );
+
   if (!item)
     return (
       <View style={{ padding: 30, gap: 18 }}>
@@ -55,8 +96,10 @@ export default function ItemDetail() {
         <Action title="Back to collection" onPress={() => router.replace('/')} />
       </View>
     );
+
   const image = itemImage(item);
   const url = itemUrl(item);
+  const platform = url ? linkPlatform(url) : undefined;
   const title = getItemTitle(item);
   const text = item.type === 'secret' ? '' : itemText(item);
   const social =
@@ -64,7 +107,10 @@ export default function ItemDetail() {
   const heading =
     item.type === 'markdown' ? item.content.trimStart().match(/^#{1,6}\s+(.+)/)?.[1] : undefined;
   const showTitle =
-    !social && (item.type !== 'image' || !!item.caption) && heading?.trim() !== title.trim();
+    !social &&
+    (item.type !== 'image' || !!item.caption) &&
+    heading?.trim() !== title.trim() &&
+    !(item.type === 'secret' && title.trim().toLowerCase() === typeLabel(item).toLowerCase());
   const copy = async () => {
     try {
       await Clipboard.setStringAsync(url || itemText(item) || item.title);
@@ -73,6 +119,7 @@ export default function ItemDetail() {
       state.setError((error as Error).message);
     }
   };
+
   return (
     <BlurTargetView ref={targetRef} style={{ flex: 1, backgroundColor: colors.canvas }}>
       <Stack.Screen
@@ -96,7 +143,7 @@ export default function ItemDetail() {
       <ScrollView
         style={{ flex: 1 }}
         contentInsetAdjustmentBehavior="never"
-        onScroll={onScroll}
+        onScroll={handleScroll}
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ top: topInset }}
         contentContainerStyle={{
@@ -130,7 +177,9 @@ export default function ItemDetail() {
                   ? item.authorName || `@${item.authorHandle}`
                   : item.type === 'link'
                     ? item.domain
-                    : typeLabel(item)}
+                    : item.type === 'secret'
+                      ? 'Protected value'
+                      : typeLabel(item)}
               </Text>
               <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
                 Saved{' '}
@@ -163,7 +212,10 @@ export default function ItemDetail() {
             style={{ borderRadius: radius.card, backgroundColor: colors.paper, overflow: 'hidden' }}
           />
         )}
-        {(showTitle || (text && text.trim() !== title.trim()) || item.tags.length > 0) && (
+        {(showTitle ||
+          (text && text.trim() !== title.trim()) ||
+          item.type === 'secret' ||
+          item.tags.length > 0) && (
           <View
             style={{
               gap: 16,
@@ -190,34 +242,97 @@ export default function ItemDetail() {
                 style={{
                   padding: 20,
                   borderRadius: radius.group,
-                  backgroundColor: colors.paper,
-                  gap: 14,
+                  backgroundColor: colors.soft,
+                  gap: 16,
                 }}
               >
-                <Text allowFontScaling={false} selectable style={{ color: colors.muted }}>
-                  {item.username}
+                <Text
+                  allowFontScaling={false}
+                  style={{ ...type.caption, color: colors.muted, letterSpacing: 1.1 }}
+                >
+                  SECRET VALUE
                 </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: 8,
+                    paddingLeft: 14,
+                    borderRadius: 16,
+                    backgroundColor: colors.paper,
+                  }}
+                >
                   <Text
                     allowFontScaling={false}
                     selectable={revealed}
-                    style={{ flex: 1, color: colors.ink, fontFamily: fonts.mono, fontSize: 17 }}
+                    accessibilityLabel={revealed ? item.secretValue : 'Hidden secret'}
+                    style={{
+                      flex: 1,
+                      color: colors.ink,
+                      fontFamily: fonts.mono,
+                      fontSize: 17,
+                      lineHeight: 25,
+                      letterSpacing: revealed ? 0 : 2.5,
+                    }}
                   >
                     {revealed ? item.secretValue : '••••••••••••'}
                   </Text>
-                  <IconButton
-                    label={revealed ? 'Hide secret' : 'Reveal secret'}
-                    icon={revealed ? EyeOff : Eye}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={revealed ? 'Hide secret' : 'Reveal secret'}
+                    accessibilityState={{ expanded: revealed }}
                     onPress={() => setRevealedId(revealed ? undefined : id)}
-                  />
+                    style={{
+                      minHeight: 44,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 10,
+                      borderRadius: 22,
+                      backgroundColor: colors.soft,
+                    }}
+                  >
+                    {revealed ? (
+                      <EyeOff size={16} color={colors.muted} strokeWidth={1.7} />
+                    ) : (
+                      <Eye size={16} color={colors.muted} strokeWidth={1.7} />
+                    )}
+                    <Text allowFontScaling={false} style={{ ...type.caption, color: colors.ink }}>
+                      {revealed ? 'Hide' : 'Reveal'}
+                    </Text>
+                  </Pressable>
                 </View>
-                <Text
-                  allowFontScaling={false}
-                  selectable
-                  style={{ color: colors.muted, lineHeight: 22 }}
-                >
-                  {item.notes}
-                </Text>
+                {item.username && (
+                  <View style={{ gap: 5 }}>
+                    <Text
+                      allowFontScaling={false}
+                      style={{ ...type.caption, color: colors.muted, letterSpacing: 0.8 }}
+                    >
+                      USERNAME
+                    </Text>
+                    <Text allowFontScaling={false} selectable style={{ color: colors.ink }}>
+                      {item.username}
+                    </Text>
+                  </View>
+                )}
+                {!!item.notes && (
+                  <View style={{ gap: 5 }}>
+                    <Text
+                      allowFontScaling={false}
+                      style={{ ...type.caption, color: colors.muted, letterSpacing: 0.8 }}
+                    >
+                      NOTES
+                    </Text>
+                    <Text
+                      allowFontScaling={false}
+                      selectable
+                      style={{ color: colors.ink, lineHeight: 22 }}
+                    >
+                      {item.notes}
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : item.type === 'markdown' ? (
               <MarkdownContent text={item.content} />
@@ -305,25 +420,32 @@ export default function ItemDetail() {
           </View>
         )}
       </ScrollView>
-      <View
-        style={{
-          position: 'absolute',
-          boxShadow: '0 8px 28px rgba(0,0,0,0.16)',
-          bottom: Math.max(insets.bottom, 14),
-          width: '92%',
-          maxWidth: 680,
-          alignSelf: 'center',
-          borderRadius: radius.pill,
-          backgroundColor: colors.paper,
-          borderWidth: 0.5,
-          borderColor: colors.line,
-          padding: 6,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-        }}
+      <Animated.View
+        pointerEvents={actionsHidden ? 'none' : 'auto'}
+        style={[
+          {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: colors.paper,
+            borderTopWidth: 0.5,
+            borderTopColor: colors.line,
+            paddingHorizontal: 12,
+            paddingTop: 10,
+            paddingBottom: insets.bottom + 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+          },
+          actionBarStyle,
+        ]}
       >
-        <IconButton label="Copy" icon={Copy} onPress={() => void copy()} />
+        <IconButton
+          label={item.type === 'secret' ? 'Copy secret' : 'Copy'}
+          icon={Copy}
+          onPress={() => void copy()}
+        />
         {!!image && (
           <IconButton
             label="Download image"
@@ -340,29 +462,41 @@ export default function ItemDetail() {
             }}
           />
         )}
-        <IconButton
-          label="Share"
-          icon={Share2}
-          onPress={() => {
-            void Share.share({ message: url || itemText(item) || item.title }).catch((error) =>
-              state.setError(error.message),
-            );
-          }}
-        />
+        {item.type !== 'secret' && (
+          <IconButton
+            label="Share"
+            icon={Share2}
+            onPress={() => {
+              void Share.share({ message: url || itemText(item) || item.title }).catch((error) =>
+                state.setError(error.message),
+              );
+            }}
+          />
+        )}
         <View style={{ flex: 1 }}>
           <Action
-            title={url ? 'Open original' : 'Edit find'}
+            title={
+              url
+                ? platform
+                  ? `Open in ${platform}`
+                  : 'Open link'
+                : item.type === 'secret'
+                  ? 'Edit secret'
+                  : 'Edit find'
+            }
+            secondary={!!url || item.type === 'secret'}
             icon={url ? ExternalLink : Edit3}
             onPress={() => {
               if (!url) {
                 router.push({ pathname: '/capture', params: { id } });
+
                 return;
               }
               void openLink(url).catch((error) => state.setError(error.message));
             }}
           />
         </View>
-      </View>
+      </Animated.View>
       <DeleteSheet
         open={deleting}
         title="Let this find go?"

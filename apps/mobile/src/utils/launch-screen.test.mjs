@@ -30,6 +30,7 @@ function startup(reduced = false, native = false) {
     effectCursor = 0,
     sharedCursor = 0;
   let finishNative;
+
   runInNewContext(source, {
     exports,
     __DEV__: true,
@@ -40,7 +41,9 @@ function startup(reduced = false, native = false) {
         return {
           useState(initial) {
             const index = cursor++;
+
             if (!(index in states)) states[index] = initial;
+
             return [
               states[index],
               (value) => {
@@ -51,6 +54,7 @@ function startup(reduced = false, native = false) {
           useEffect(effect, next) {
             const index = effectCursor++;
             const previous = effects[index];
+
             if (!previous || next.some((value, index) => previous.next[index] !== value)) {
               previous?.cleanup?.();
               effects[index] = { next, cleanup: effect() };
@@ -72,6 +76,7 @@ function startup(reduced = false, native = false) {
             ? {
                 hide: () => {
                   hides++;
+
                   return new Promise((resolve) => {
                     finishNative = resolve;
                   });
@@ -89,6 +94,7 @@ function startup(reduced = false, native = false) {
           useReducedMotion: () => reduced,
           useSharedValue(initial) {
             const index = sharedCursor++;
+
             return (shared[index] ??= {
               value: initial,
               get() {
@@ -113,12 +119,14 @@ function startup(reduced = false, native = false) {
       throw new Error(name);
     },
   });
+
   return {
     collection,
     animations,
     finishNative: () => finishNative(),
     finishAnimation(finished = true) {
       const animation = animations.shift();
+
       assert.ok(animation, 'expected a running startup animation');
       if (finished) animation.shared.value = animation.target;
       animation.callback(finished);
@@ -128,8 +136,10 @@ function startup(reduced = false, native = false) {
     },
     render() {
       cursor = effectCursor = sharedCursor = 0;
+
       const view = exports.LaunchScreen({ children: 'Routes' });
       const [content, art] = view.props.children;
+
       return {
         content,
         art,
@@ -142,6 +152,7 @@ function startup(reduced = false, native = false) {
 test('fallback artwork starts only after loading and layout, then stays until the content is ready', async () => {
   const boot = startup();
   let frame = boot.render();
+
   assert.equal(frame.content, false);
   assert.equal(frame.image.props.resizeMode, 'cover');
   assert.equal(frame.image.props.style[1].width, '100%');
@@ -168,6 +179,7 @@ test('fallback artwork starts only after loading and layout, then stays until th
 test('startup releases to a laid-out recovery screen even if hydration or artwork fails', async () => {
   const boot = startup();
   const initial = boot.render();
+
   initial.art.props.onLayout();
   initial.image.props.onError();
   boot.render();
@@ -175,7 +187,9 @@ test('startup releases to a laid-out recovery screen even if hydration or artwor
   boot.render();
   boot.finishAnimation();
   boot.collection.error = 'Could not load collection';
+
   const frame = boot.render();
+
   assert.ok(frame.content);
   frame.content.props.onLayout();
   assert.ok(boot.render().art);
@@ -185,8 +199,11 @@ test('startup releases to a laid-out recovery screen even if hydration or artwor
 
 test('fast hydration cannot skip the visible intro or unmount artwork before its fade ends', async () => {
   const boot = startup();
+
   boot.collection.ready = true;
+
   let frame = boot.render();
+
   frame.content.props.onLayout();
   frame.art.props.onLayout();
   frame.image.props.onLoad();
@@ -207,8 +224,11 @@ test('fast hydration cannot skip the visible intro or unmount artwork before its
 
 test('reduced motion skips zoom and animation duration', async () => {
   const boot = startup(true);
+
   boot.collection.ready = true;
+
   let frame = boot.render();
+
   assert.equal(frame.image.props.style[2].transform.length, 0);
   frame.content.props.onLayout();
   frame.art.props.onLayout();
@@ -227,6 +247,7 @@ test('reduced motion skips zoom and animation duration', async () => {
 test('custom Android artwork stays native until the content has laid out and native fade finishes', async () => {
   const boot = startup(false, true);
   let frame = boot.render();
+
   assert.equal(frame.art, false);
   assert.equal(frame.content, false);
   assert.equal(boot.hides, 0);
@@ -249,6 +270,7 @@ test('launch config removes Expo SplashScreen and packages the approved artwork 
       (entry) => (Array.isArray(entry) ? entry[0] : entry) === 'expo-splash-screen',
     ),
   );
+
   const png = readFileSync(new URL('../../assets/splash-art.png', import.meta.url));
   const native = readFileSync(
     new URL(
@@ -256,8 +278,11 @@ test('launch config removes Expo SplashScreen and packages the approved artwork 
       import.meta.url,
     ),
   );
+
   assert.ok(png.equals(native));
+
   const vector = readFileSync(new URL('../../assets/splash-art.svg', import.meta.url), 'utf8');
+
   assert.ok(!vector.includes('<text'), 'splash artwork contains no text');
   assert.match(vector, /#0d0d0f/);
 });

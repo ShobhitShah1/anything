@@ -9,6 +9,7 @@ export async function readChatStream(
   signal: AbortSignal,
 ) {
   if (!response.body) throw new Error('AI returned no response stream. Please try again.');
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -20,22 +21,30 @@ export async function readChatStream(
   const abort = () => {
     void reader.cancel().catch(() => {});
   };
+
   signal.addEventListener('abort', abort);
+
   const line = (value: string) => {
     if (value.startsWith('data:')) {
       data += (data ? '\n' : '') + value.slice(5).replace(/^ /, '');
       if (data.length > 256000) throw new Error('AI returned an invalid response.');
+
       return;
     }
     if (value || !data) return;
+
     const payload = data;
+
     data = '';
     if (payload.trim() === '[DONE]') {
       finished = true;
       stopped = true;
+
       return;
     }
+
     let event;
+
     try {
       event = JSON.parse(payload);
     } catch {
@@ -43,8 +52,10 @@ export async function readChatStream(
     }
     if (!event || typeof event !== 'object') throw new Error('AI returned an invalid response.');
     if (event.error) throw new Error('AI generation failed. Your partial draft is kept.');
+
     const choice = event.choices?.[0];
     const delta = choice?.delta?.content;
+
     if (typeof delta === 'string' && delta) {
       content += delta;
       if (content.length > outputLimit) {
@@ -60,13 +71,18 @@ export async function readChatStream(
       truncated ||= choice.finish_reason === 'length';
     }
   };
+
   try {
     while (!stopped) {
       if (signal.aborted) throw new Error('Request stopped. Your draft is still here.');
+
       const { value, done } = await reader.read();
+
       if (signal.aborted) throw new Error('Request stopped. Your draft is still here.');
       buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
+
       let end;
+
       while (!stopped && (end = buffer.indexOf('\n')) !== -1) {
         line(buffer.slice(0, end).replace(/\r$/, ''));
         buffer = buffer.slice(end + 1);
@@ -80,6 +96,7 @@ export async function readChatStream(
     }
     if (!finished) throw new Error('AI stream was interrupted. Your partial draft is kept.');
     if (!content.trim()) throw new Error('AI returned no answer. Please try again.');
+
     return { content, truncated };
   } finally {
     signal.removeEventListener('abort', abort);

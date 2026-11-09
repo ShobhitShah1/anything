@@ -4,6 +4,7 @@ import { applyVoiceResult, shouldCancelForBackground, voiceEndMessage } from './
 
 test('dictation replaces partial hypotheses and appends finalized segments once', () => {
   let draft = { prefix: 'My draft', committed: '', text: 'My draft' };
+
   for (const [phrase, final, expected] of [
     ['I scream', false, 'I scream'],
     ['Ice cream', false, 'Ice cream'],
@@ -20,6 +21,7 @@ test('dictation replaces partial hypotheses and appends finalized segments once'
 test('dictation preserves original whitespace and handles an empty draft', () => {
   for (const prefix of ['', '  a  ', 'a\n']) {
     const draft = applyVoiceResult({ prefix, committed: '', text: prefix }, 'Hello', false);
+
     assert.equal(draft.text, prefix + (prefix && !prefix.endsWith('\n') ? '\n' : '') + 'Hello');
   }
 });
@@ -36,6 +38,7 @@ test('the permission activity background/active sequence does not abort a grante
   const controller = new AbortController();
   let permissionPending = true;
   const recognizing = false;
+
   if (shouldCancelForBackground(permissionPending, recognizing)) controller.abort();
   permissionPending = false;
   assert.equal(controller.signal.aborted, false);

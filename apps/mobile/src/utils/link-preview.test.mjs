@@ -12,8 +12,11 @@ test('native previews share requests, cache metadata, and refresh without browse
   }));
   const url = 'https://preview-cache.example.com/article';
   const first = fetchLinkPreview(url);
+
   assert.equal(fetchLinkPreview(url), first);
+
   const preview = await first;
+
   assert.equal(preview.title, 'A useful find');
   assert.equal(preview.imageUrl, 'https://images.example.com/photo.jpg');
   assert.equal(await fetchLinkPreview(url), preview);
@@ -25,7 +28,9 @@ test('native previews share requests, cache metadata, and refresh without browse
 
 test('native previews retain useful errors and reject unsafe metadata images', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => ({ ok: false, status: 429 }));
+
   const failed = await fetchLinkPreview('https://preview-error.example.com/article');
+
   assert.match(failed.error, /busy/);
   assert.equal(failed.url, 'https://preview-error.example.com/article');
   t.mock.restoreAll();
@@ -33,7 +38,9 @@ test('native previews retain useful errors and reject unsafe metadata images', a
     ok: true,
     json: async () => ({ status: 'success', data: { image: { url: 'file:///private.jpg' } } }),
   }));
+
   const preview = await fetchLinkPreview('https://preview-image.example.com/article');
+
   assert.equal(preview.imageUrl, undefined);
   t.mock.restoreAll();
 });

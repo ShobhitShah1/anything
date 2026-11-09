@@ -36,6 +36,7 @@ function load(component) {
       },
     },
   ).outputText;
+
   runInNewContext(source, {
     exports,
     require(name) {
@@ -67,12 +68,14 @@ function load(component) {
       throw new Error(`Unexpected module: ${name}`);
     },
   });
+
   return exports;
 }
 
 function nodes(node) {
   if (Array.isArray(node)) return node.flatMap(nodes);
   if (!node || typeof node !== 'object') return [];
+
   return [node, ...nodes(node.props?.children)];
 }
 
@@ -90,9 +93,11 @@ const item = {
 
 test('grid and list cards send Markdown to the native renderer instead of a raw Text excerpt', () => {
   const { SaveCard } = load('save-card');
+
   for (const list of [false, true]) {
     const tree = nodes(SaveCard({ item, width: list ? 320 : 180, list, onMenu: () => {} }));
     const preview = tree.find((node) => node.type === 'MarkdownContent');
+
     assert.ok(preview);
     assert.equal(preview.props.text, markdown);
     assert.equal(preview.props.previewLines, list ? 3 : 6);
@@ -110,21 +115,27 @@ test('plain notes keep their text and Markdown without a heading retains its sep
       onMenu: () => {},
     }),
   );
+
   assert.ok(note.some((node) => node.type === 'Text' && node.props.children === 'A plain thought'));
   assert.ok(!note.some((node) => node.type === 'MarkdownContent'));
+
   const guide = nodes(
     SaveCard({ item: { ...item, content: '**A short guide**' }, width: 180, onMenu: () => {} }),
   );
+
   assert.ok(guide.some((node) => node.type === 'Text' && node.props.children === item.title));
 });
 
 test('previews are bounded and non-interactive while full Markdown retains reading and link behavior', () => {
   const { MarkdownContent } = load('markdown-content');
   const preview = MarkdownContent({ text: markdown, previewLines: 3 });
+
   assert.equal(preview.props.pointerEvents, 'none');
   assert.equal(preview.props.style.maxHeight, 60);
   assert.equal(preview.props.style.overflow, 'hidden');
+
   const native = preview.props.children;
+
   assert.equal(native.type, 'NativeMarkdown');
   assert.equal(native.props.markdown, markdown);
   assert.equal(native.props.flavor, 'github');
@@ -132,7 +143,9 @@ test('previews are bounded and non-interactive while full Markdown retains readi
   assert.equal(native.props.selectable, false);
   assert.equal(native.props.onLinkPress, undefined);
   assert.equal(native.props.markdownStyle.h1.fontSize, 18);
+
   const full = MarkdownContent({ text: markdown });
+
   assert.equal(full.type, 'NativeMarkdown');
   assert.equal(full.props.selectable, true);
   assert.equal(full.props.allowFontScaling, false);

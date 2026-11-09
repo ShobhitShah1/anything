@@ -24,6 +24,7 @@ export function Feedback({
   const { colors } = useCollection();
   const Icon = error ? CircleAlert : CircleCheck;
   const tint = error ? colors.danger : colors.accent;
+
   return (
     <View
       accessibilityRole="alert"
@@ -78,8 +79,10 @@ export function FeedbackHost() {
   const reduced = useReducedMotion();
   const message = error || notice;
   const isError = !!error;
+
   useEffect(() => {
     if (!message) return;
+
     const timer = setTimeout(
       () => {
         if (isError) {
@@ -89,8 +92,10 @@ export function FeedbackHost() {
       },
       isError ? 3000 : 1800,
     );
+
     return () => clearTimeout(timer);
   }, [message, isError, setError, setNotice]);
+
   return message ? (
     <Animated.View
       key={`${!!error}:${message}`}

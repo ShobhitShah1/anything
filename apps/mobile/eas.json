@@ -1,6 +1,8 @@
 {
   "build": {
     "development": {
+      "corepack": true,
+      "channel": "development",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -9,6 +11,8 @@
       "environment": "development"
     },
     "preview": {
+      "corepack": true,
+      "channel": "preview",
       "distribution": "internal",
       "android": {
         "buildType": "apk",
@@ -20,6 +24,8 @@
       "extends": "preview"
     },
     "production": {
+      "corepack": true,
+      "channel": "production",
       "android": {
         "credentialsSource": "local",
         "buildType": "app-bundle"
@@ -30,6 +36,7 @@
     },
     "store-test": {
       "extends": "production",
+      "channel": "store-test",
       "environment": "preview"
     }
   },

@@ -12,6 +12,7 @@ export type SubscriptionPlan = {
 
 export function subscriptionPlans(packages: readonly PurchasesPackage[]): SubscriptionPlan[] {
   const monthly = packages.find((item) => item.product.subscriptionPeriod === 'P1M');
+
   return packages
     .filter(
       (item) =>
@@ -32,6 +33,7 @@ export function subscriptionPlans(packages: readonly PurchasesPackage[]): Subscr
         monthlyPrice > 0
           ? Math.max(0, Math.min(99, Math.floor((1 - annualPrice / (monthlyPrice * 12)) * 100)))
           : 0;
+
       return {
         id: item.identifier,
         title: annual ? 'Yearly' : 'Monthly',

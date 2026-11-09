@@ -39,12 +39,14 @@ export function DeleteSheet({
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Could not delete. Please try again.';
+
       setLocalError(message);
     } finally {
       inFlight.current = false;
       setBusy(false);
     }
   };
+
   return (
     <Host colorScheme={dark ? 'dark' : 'light'} style={{ position: 'absolute' }}>
       <BottomSheet

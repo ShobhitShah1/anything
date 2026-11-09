@@ -8,9 +8,11 @@ export function toggleVisibleSelection(
 ): string[] {
   const next = new Set(selected);
   const remove = visible.every((id) => next.has(id));
+
   for (const id of visible) {
     if (remove) next.delete(id);
     else next.add(id);
   }
+
   return [...next];
 }

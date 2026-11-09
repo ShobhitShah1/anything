@@ -6,5 +6,6 @@ export function contextMenuPhase(
 ): ContextMenuPhase {
   if (event === 'ready') return phase === 'loading' ? 'open' : phase;
   if (event === 'close') return phase === 'finished' ? phase : 'closing';
+
   return phase === 'closing' ? 'finished' : phase;
 }

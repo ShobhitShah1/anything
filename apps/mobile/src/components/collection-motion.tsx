@@ -15,17 +15,22 @@ export const CollectionMotion = createContext<{
   ids: readonly string[];
   liftedId: SharedValue<string | null>;
 } | null>(null);
+
 const timing = { duration: 300, easing: Easing.bezier(0.77, 0, 0.175, 1) };
+
 function move(from: number, to: number) {
   'worklet';
+
   return Math.abs(from - to) > 0.5 ? withTiming(to, timing) : to;
 }
 
 export function useCollectionTransition(kind: 'position' | 'frame' | 'media') {
   const enabled = useContext(CollectionMotion)?.enabled;
+
   return useMemo<LayoutAnimationFunction>(
     () => (values) => {
       'worklet';
+
       const animate =
         enabled?.get() === true &&
         crossesViewport(
@@ -41,7 +46,9 @@ export function useCollectionTransition(kind: 'position' | 'frame' | 'media') {
         width: values.targetWidth,
         height: values.targetHeight,
       };
+
       if (!animate) return { initialValues: target, animations: target };
+
       // Native layout captures the previous presentation before the destination is painted.
       const initial = {
         ...target,
@@ -57,6 +64,7 @@ export function useCollectionTransition(kind: 'position' | 'frame' | 'media') {
           { translateY: move(values.currentOriginY - target.originY, 0) },
         ],
       };
+
       if (kind === 'frame') {
         return {
           initialValues: { ...initial, width: values.currentWidth, height: values.currentHeight },
@@ -70,6 +78,7 @@ export function useCollectionTransition(kind: 'position' | 'frame' | 'media') {
       if (kind === 'media') {
         const scale =
           target.width > 0 && values.currentWidth > 0 ? values.currentWidth / target.width : 1;
+
         return {
           initialValues: { ...initial, transform: [...initial.transform, { scale }] },
           animations: {
@@ -81,6 +90,7 @@ export function useCollectionTransition(kind: 'position' | 'frame' | 'media') {
           },
         };
       }
+
       return { initialValues: initial, animations };
     },
     [enabled, kind],
@@ -92,6 +102,7 @@ export function MotionPosition({
   ...props
 }: ComponentProps<typeof View> & { identity: string }) {
   const layout = useCollectionTransition('position');
+
   return <Animated.View key={identity} {...props} collapsable={false} layout={layout} />;
 }
 
@@ -100,6 +111,7 @@ export function CollectionCell({
   ...props
 }: ComponentProps<typeof View> & { index?: number }) {
   const motion = useContext(CollectionMotion);
+
   return <MotionPosition {...props} identity={motion?.ids[index] ?? String(index)} />;
 }
 
@@ -121,6 +133,7 @@ export function CardFrame({
   const visibility = useAnimatedStyle(() => ({
     opacity: liftedId ? (liftedId.get() === identity ? 0 : 1) : hidden ? 0 : 1,
   }));
+
   return (
     // Yoga measures the final content once; the native frame animates its presentation.
     <Animated.View

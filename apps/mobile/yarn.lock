@@ -3017,6 +3017,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@stylistic/eslint-plugin@npm:^5.10.0":
+  version: 5.10.0
+  resolution: "@stylistic/eslint-plugin@npm:5.10.0"
+  dependencies:
+    "@eslint-community/eslint-utils": "npm:^4.9.1"
+    "@typescript-eslint/types": "npm:^8.56.0"
+    eslint-visitor-keys: "npm:^4.2.1"
+    espree: "npm:^10.4.0"
+    estraverse: "npm:^5.3.0"
+    picomatch: "npm:^4.0.3"
+  peerDependencies:
+    eslint: ^9.0.0 || ^10.0.0
+  checksum: 10c0/2cc6e592d5b2ab691290cc39ed377c0f6226667b367ffc6a0bf3a4bf6dd36b011d17c83f377600a48946f6bb037390b35a8b3c273b3c40d161c00b44512a129e
+  languageName: node
+  linkType: hard
+
 "@tybys/wasm-util@npm:^0.10.3":
   version: 0.10.4
   resolution: "@tybys/wasm-util@npm:0.10.4"
@@ -3203,6 +3219,13 @@ __metadata:
   version: 8.72.0
   resolution: "@typescript-eslint/types@npm:8.72.0"
   checksum: 10c0/11ee41f1860149f3dcfe6f517840cd7254fbc90f4acaf6098f731bb00a6392f8e5d7d9d0e47e516bd0e5fcd3110e41624ad893036ad79fa6dd6b5a67d6a42aa6
+  languageName: node
+  linkType: hard
+
+"@typescript-eslint/types@npm:^8.56.0":
+  version: 8.72.1
+  resolution: "@typescript-eslint/types@npm:8.72.1"
+  checksum: 10c0/759f36d27a5b6c4dcdcd035ddec6e39d261cfcab864e641c4a6252d4be6358e53055ad737f1797e6ebb2b64b8cda380a0492acb96d7115e7ed86e6b27ceeddc3
   languageName: node
   linkType: hard
 
@@ -3562,6 +3585,7 @@ __metadata:
     "@react-native-google-signin/google-signin": "npm:^16.1.5"
     "@react-native/metro-config": "npm:0.88.0"
     "@shopify/flash-list": "npm:2.3.2"
+    "@stylistic/eslint-plugin": "npm:^5.10.0"
     "@types/react": "npm:~19.3.0"
     eslint: "npm:^9.39.5"
     eslint-config-expo: "npm:~58.0.4"
@@ -3578,6 +3602,7 @@ __metadata:
     expo-haptics: "npm:~58.0.7"
     expo-image-picker: "npm:~58.0.10"
     expo-linking: "npm:~58.0.14"
+    expo-navigation-bar: "npm:~58.0.4"
     expo-router: "npm:~58.0.25"
     expo-sharing: "npm:~58.0.20"
     expo-speech-recognition: "npm:^58.0.0"
@@ -5362,6 +5387,19 @@ __metadata:
     "@expo/modules-macros-win32-x64":
       optional: true
   checksum: 10c0/8fdf835dc64448808dcb8dc7e7d9dfbf3dce555541d3b38cdef61919421fb5cd4728052b61bd9765683a6748045c318ed17ee930cc2154558a402feb94ec3b14
+  languageName: node
+  linkType: hard
+
+"expo-navigation-bar@npm:~58.0.4":
+  version: 58.0.4
+  resolution: "expo-navigation-bar@npm:58.0.4"
+  dependencies:
+    debug: "npm:^4.3.2"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/943a984044777473da97c37f88a880f98c941bb17c5ca12ac73dd5153899ca7e1ccccba5caa7a427b9c4d9fdbcb9d4a7c60885a7be3045aadcfc3ce3af3b6432
   languageName: node
   linkType: hard
 
@@ -7713,7 +7751,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"picomatch@npm:^4.0.4":
+"picomatch@npm:^4.0.3, picomatch@npm:^4.0.4":
   version: 4.0.7
   resolution: "picomatch@npm:4.0.7"
   checksum: 10c0/beb6ae02c43ae44e84883b90830196d9046b1726ead292adcf7f57945e0bb0d992d68563d87e03b484b6f3c9a5c6defda7523477f047d7f0e663f126cc01787f

@@ -6,6 +6,7 @@ import {
   removeCollectionItems,
   validateCollection,
 } from './collection-data.ts';
+
 const note = (id, content = id) => ({
   id,
   type: 'note',
@@ -36,11 +37,13 @@ test('queued cloud snapshot preserves newer local additions, edits and deletions
     collection(note('a', 'local edit'), note('new')),
     collection(note('a', 'cloud'), note('deleted'), note('remote')),
   );
+
   assert.deepEqual(new Set(result.items.map((item) => item.id)), new Set(['a', 'new', 'remote']));
   assert.equal(result.items.find((item) => item.id === 'a').content, 'local edit');
 });
 test('unchanged local data accepts newer cloud fields', () => {
   const before = collection(note('a'));
+
   assert.equal(
     mergeQueuedCollection(before, before, collection(note('a', 'updated'))).items[0].content,
     'updated',
@@ -50,6 +53,7 @@ test('unchanged local data accepts newer cloud fields', () => {
 test('batch removal deletes only selected IDs in one immutable collection update', () => {
   const original = { ...emptyCollection, items: [note('a'), note('b'), note('c'), note('d')] };
   const result = removeCollectionItems(original, ['b', 'd', 'b', 'missing']);
+
   assert.deepEqual(
     result.items.map((item) => item.id),
     ['a', 'c'],

@@ -20,6 +20,7 @@ test('early upgrades allow remaining free responses without policy URL configura
     working: false,
     state: { busy: false },
   };
+
   assert.equal(runInNewContext(expression, ready), true);
   for (const blocked of [
     { user: null },
@@ -39,6 +40,7 @@ test('early upgrades allow remaining free responses without policy URL configura
 
 test('Test Store key is used only in development; release requires the correct store key', () => {
   const keys = { test: 'test_example', ios: 'appl_example', android: 'goog_example' };
+
   assert.equal(billingKey('android', true, keys), keys.test);
   assert.equal(billingKey('ios', false, keys), keys.ios);
   assert.equal(billingKey('android', false, keys), keys.android);
@@ -57,6 +59,7 @@ test('canceled and pending purchases never claim to unlock access', () => {
 
 test('only the active anything_pro entitlement enables the subscription UI', () => {
   const info = (active) => ({ entitlements: { active } });
+
   assert.equal(hasPro(info({})), false);
   assert.equal(hasPro(info({ anything_plus: { isActive: true } })), false);
   assert.equal(hasPro(info({ anything_pro: { isActive: false } })), false);
@@ -65,6 +68,7 @@ test('only the active anything_pro entitlement enables the subscription UI', () 
 
 test('store testing builds a signed store bundle using isolated EAS environment values', () => {
   const config = JSON.parse(readFileSync(new URL('../../eas.json', import.meta.url), 'utf8'));
+
   assert.equal(config.cli.appVersionSource, 'remote');
   assert.equal(config.build.production.android.buildType, 'app-bundle');
   assert.equal(config.build.production.distribution, 'store');

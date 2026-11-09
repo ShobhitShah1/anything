@@ -14,7 +14,6 @@ const answer = () =>
       },
     ],
   });
-
 const event = (content, finish_reason = null) =>
   `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason }] })}\n\n`;
 const streamed = (body) => new Response(body, { headers: { 'Content-Type': 'text/event-stream' } });
@@ -34,16 +33,19 @@ test('native stream publishes real text before completion and preserves the Mark
   const prompt = '  # Existing Markdown\n\n```ts\nconst value = 1;\n```\n\nExtend this.';
   const client = createGroq(['one'], async (_, options) => {
     const payload = JSON.parse(options.body);
+
     assert.equal(payload.stream, true);
     assert.equal(payload.messages.at(-1).content, prompt);
     assert.ok(payload.messages[0].content.includes('Never wrap a whole Markdown document'));
     assert.ok(payload.messages[0].content.includes('strict JSON has no fences'));
+
     return streamed(body);
   });
   const result = client.chat([{ role: 'user', content: prompt }], false, signal(), (text) => {
     updates.push(text);
     received();
   });
+
   controller.enqueue(new TextEncoder().encode(event('# Title')));
   await firstChunk;
   assert.deepEqual(updates, ['# Title']);
@@ -70,6 +72,7 @@ test('SSE decodes split UTF-8, CRLF, comments and multiline events without expos
   });
   const updates = [];
   const result = await readChatStream(streamed(body), (text) => updates.push(text), signal());
+
   assert.equal(result.content, 'Crème 🍝\n```js\nconst x = 1;\n```');
   assert.ok(updates.every((text) => !text.includes('private reasoning') && !text.includes('�')));
 });
@@ -89,12 +92,14 @@ test('an interrupted stream preserves published text and never retries another k
   const updates = [];
   const client = createGroq(['one', 'backup'], async () => {
     calls++;
+
     return streamed(body);
   });
   const result = client.chat(messages, false, signal(), (text) => {
     updates.push(text);
     first();
   });
+
   controller.enqueue(new TextEncoder().encode(event('Keep this partial draft')));
   await received;
   controller.close();
@@ -128,6 +133,7 @@ test('Stop cancels a pending stream read without further text updates', async ()
     },
     abort.signal,
   );
+
   controller.enqueue(new TextEncoder().encode(event('Partial')));
   await received;
   abort.abort();
@@ -138,6 +144,7 @@ test('Stop cancels a pending stream read without further text updates', async ()
 
 test('stream errors are sanitized, empty completions fail, and length limits are retained', async () => {
   const response = (wire) => streamed(new Blob([wire]).stream());
+
   await assert.rejects(
     readChatStream(response('data: {"error":{"message":"private-key"}}\n\n'), () => {}, signal()),
     (error) => !error.message.includes('private-key'),
@@ -150,15 +157,20 @@ test('stream errors are sanitized, empty completions fail, and length limits are
     readChatStream(response('data: [DONE]\n\n'), () => {}, signal()),
     /no answer/,
   );
+
   const result = await readChatStream(response(event('Shortened', 'length')), () => {}, signal());
+
   assert.equal(result.truncated, true);
+
   const capped = await readChatStream(response(event('x'.repeat(48001))), () => {}, signal());
+
   assert.equal(capped.content.length, 48000);
   assert.equal(capped.truncated, true);
 });
 
 test('keys are bounded, deduplicated, and reject pasted non-keys', () => {
   const key = 'gsk_abcdefghijklmnopqrst';
+
   assert.deepEqual(parseKeys(`${key},\n${key}`), [key]);
   for (const text of [
     '',
@@ -189,9 +201,11 @@ test('research enables actual browser search and manual chat leaves tools out', 
   const client = createGroq(['one'], async (url, options) => {
     assert.equal(url, 'https://api.groq.com/openai/v1/chat/completions');
     payloads.push(JSON.parse(options.body));
+
     return answer();
   });
   const result = await client.chat(messages, true, signal());
+
   assert.equal(result.searched, true);
   assert.deepEqual(payloads[0].tools, [{ type: 'browser_search' }]);
   assert.equal(payloads[0].tool_choice, 'auto');
@@ -206,13 +220,16 @@ test('invalid keys and server failures switch to backup keys and cool down failu
   const used = [];
   const client = createGroq(['bad', 'down', 'good'], async (_, options) => {
     const auth = options.headers.Authorization;
+
     used.push(auth);
+
     return auth.endsWith('bad')
       ? new Response('', { status: 401 })
       : auth.endsWith('down')
         ? new Response('', { status: 503 })
         : answer();
   });
+
   await client.chat(messages, false, signal());
   await client.chat(messages, false, signal());
   assert.deepEqual(used, ['Bearer bad', 'Bearer down', 'Bearer good', 'Bearer good']);
@@ -225,12 +242,14 @@ test('rate limits respect Retry-After and do not cycle keys in the same organiza
     ['one', 'two'],
     async () => {
       calls++;
+
       return calls === 1
         ? new Response('', { status: 429, headers: { 'retry-after': '5' } })
         : answer();
     },
     () => time,
   );
+
   await assert.rejects(client.chat(messages, true, signal()), /rate limit/);
   await assert.rejects(client.chat(messages, true, signal()), /rate limit/);
   assert.equal(calls, 1);
@@ -247,12 +266,15 @@ test('aborting never retries and provider errors never expose keys or server det
     controller.abort();
     throw new Error('private-key');
   });
+
   await assert.rejects(client.chat(messages, false, controller.signal), /Request stopped/);
   assert.equal(calls, 1);
+
   const denied = createGroq(
     ['private-key'],
     async () => new Response('private-key billing details', { status: 400 }),
   );
+
   await assert.rejects(
     denied.chat(messages, false, signal()),
     (error) => !error.message.includes('private-key'),
@@ -264,9 +286,11 @@ test('empty responses fail and token-limited answers are marked as partial', asy
     createGroq(['one'], async () => Response.json({ choices: [] })).chat(messages, false, signal()),
     /no answer/,
   );
+
   const client = createGroq(['one'], async () =>
     Response.json({ choices: [{ message: { content: 'Partial' }, finish_reason: 'length' }] }),
   );
+
   assert.equal((await client.chat(messages, false, signal())).truncated, true);
 });
 
@@ -275,8 +299,11 @@ test('generation defaults to a professional tone while preserving explicit style
     'Write exactly three Hindi captions with emojis, in a playful tone. Return JSON only.';
   const client = createGroq(['one'], async (_, options) => {
     const payload = JSON.parse(options.body);
+
     assert.equal(payload.messages.at(-1).content, prompt);
+
     const instructions = payload.messages[0].content;
+
     assert.ok(instructions.includes('professional, neutral tone by default'));
     assert.ok(instructions.includes('Do not use emojis'));
     assert.ok(instructions.includes('unless explicitly requested'));
@@ -288,7 +315,9 @@ test('generation defaults to a professional tone while preserving explicit style
     assert.ok(instructions.includes('number of items'));
     assert.ok(instructions.includes('strict JSON has no fences'));
     assert.ok(instructions.includes('never append prose or Markdown outside the JSON'));
+
     return answer();
   });
+
   await client.chat([{ role: 'user', content: prompt }], true, signal());
 });

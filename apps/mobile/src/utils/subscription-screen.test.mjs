@@ -33,6 +33,7 @@ function render({
     ],
   };
   const jsx = (type, props) => ({ type, props });
+
   runInNewContext(source, {
     exports,
     process: { env: {} },
@@ -46,6 +47,7 @@ function render({
           useRef: (current) => ({ current }),
           useState(initial) {
             const index = stateIndex++;
+
             return [index === 4 ? loading : index === 5 ? working : initial, () => {}];
           },
         };
@@ -81,33 +83,43 @@ function render({
       if (name === '../utils/open-link') return { openLink: async (url) => openPolicy(url) };
       if (name === '../components/membership-backdrop') return { MembershipBackdrop: 'Gradient' };
       if (name === '../theme') return { fonts: {} };
+
       return {};
     },
   });
+
   const wrapper = exports.default();
   const nodes = [];
+
   function visit(node, ancestors = []) {
     if (Array.isArray(node)) return node.forEach((child) => visit(child, ancestors));
     if (!node || typeof node !== 'object') return;
     nodes.push({ node, ancestors });
     visit(node.props?.children, [...ancestors, node]);
   }
+
   visit(wrapper.type(wrapper.props));
+
   return nodes;
 }
 
 test('cached plans stay visible and loading stays inside the purchase button', () => {
   for (const mode of [{}, { working: true }, { loading: true }]) {
     const nodes = render(mode);
+
     assert.equal(nodes.filter(({ node }) => node.props.accessibilityRole === 'radio').length, 1);
+
     const spinners = nodes.filter(({ node }) => node.type === 'Spinner');
+
     assert.equal(spinners.length, mode.working || mode.loading ? 1 : 0);
     assert.ok(
       spinners.every(({ ancestors }) =>
         ancestors.some((node) => node.props.accessibilityLabel === 'Subscribe to Monthly'),
       ),
     );
+
     const links = nodes.filter(({ node }) => node.props.accessibilityRole === 'link');
+
     assert.equal(links.length, 2);
     assert.deepEqual(
       links.map(({ node }) => node.props.accessibilityLabel),
@@ -123,14 +135,18 @@ test('cached plans stay visible and loading stays inside the purchase button', (
 
 test('subscription artwork uses the standard native PNG image', () => {
   const artwork = render().find(({ node }) => node.type === 'Artwork').node;
+
   assert.equal(artwork.props.source, '../../assets/pro-space/outpost-top.png');
   assert.equal(artwork.props.resizeMode, 'cover');
+
   const png = readFileSync(new URL('../../assets/pro-space/outpost-top.png', import.meta.url));
+
   assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
 });
 
 test('development preview shows the subscribed layout without exposing a checkout action', () => {
   const nodes = render({ development: true, preview: true });
+
   assert.ok(nodes.some(({ node }) => node.props.accessibilityLabel === 'Back to collection'));
   assert.ok(
     nodes.some(
@@ -147,9 +163,12 @@ test('development preview shows the subscribed layout without exposing a checkou
 
 test('preview controls and preview state are ignored in production', () => {
   const production = render({ development: false, preview: true });
+
   assert.ok(!production.some(({ node }) => /preview/i.test(node.props.accessibilityLabel || '')));
   assert.equal(production.filter(({ node }) => node.props.accessibilityRole === 'radio').length, 1);
+
   const development = render({ development: true });
+
   assert.ok(
     !development.some(({ node }) => node.props.accessibilityLabel === 'Enable Pro for my profile'),
   );
@@ -163,18 +182,22 @@ test('purchase screen shows the allowance and selectable plans without a fabrica
   const texts = nodes
     .filter(({ node }) => node.type === 'Text')
     .map(({ node }) => node.props.children);
+
   assert.ok(texts.includes('A space for'));
   assert.ok(nodes.some(({ node }) => node.type === 'Artwork'));
   assert.ok(texts.includes('AI responses'));
   assert.ok(!texts.includes('A draft with Pro · example'));
   assert.ok(!texts.includes('Write & refine'));
+
   const plans = nodes.find(({ node }) => node.props.accessibilityRole === 'radiogroup').node;
+
   assert.equal(plans.props.style.flexDirection, 'row');
 });
 
 test('policy links open the public pages and the gradient and fixed typography remain', () => {
   const opened = [];
   const nodes = render({ openPolicy: (url) => opened.push(url) });
+
   for (const { node } of nodes.filter(({ node }) => node.props.accessibilityRole === 'link'))
     node.props.onPress();
   assert.deepEqual(opened, [

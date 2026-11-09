@@ -24,9 +24,11 @@ async function request(
   const started = Date.now();
   let stage = 'configuration';
   let status: number | undefined;
+
   try {
     const configured = process.env.EXPO_PUBLIC_AI_URL?.trim();
     let url: URL;
+
     try {
       url = new URL(configured || '');
       if (
@@ -49,18 +51,24 @@ async function request(
     if (__DEV__)
       console.info('[Anything AI] request started', { action: body.action, host: url.hostname });
     stage = 'sign_in';
+
     const user = auth?.currentUser;
+
     if (!user)
       throw new AiAccessError('sign_in_required', 'Sign in to try three AI responses for free.');
     stage = 'firebase_token';
+
     const token = await user.getIdToken();
+
     stage = 'network';
+
     const response = await fetch(url.toString(), {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal,
     });
+
     status = response.status;
     stage = 'backend_response';
     if (__DEV__)
@@ -71,6 +79,7 @@ async function request(
       });
     if (!response.ok) {
       const result = await response.json().catch(() => ({}));
+
       throw new AiAccessError(
         typeof result?.error === 'string' ? result.error : 'unavailable',
         typeof result?.message === 'string'
@@ -78,6 +87,7 @@ async function request(
           : `AI server returned HTTP ${status}. Please try again.`,
       );
     }
+
     return response;
   } catch (error) {
     // Never log raw errors, request bodies, tokens, or full URLs: they can contain private data.
@@ -113,10 +123,13 @@ export function aiClient() {
       onText?: (text: string) => void,
     ): Promise<AiAnswer> {
       const response = await request({ action: 'generate', messages, search }, signal);
+
       try {
         const answer = await readChatStream(response, onText || (() => {}), signal);
+
         if (__DEV__)
           console.info('[Anything AI] generation completed', { truncated: answer.truncated });
+
         return { ...answer, searched: search };
       } catch (error) {
         if (__DEV__) console.warn('[Anything AI] stream failed', { aborted: signal.aborted });

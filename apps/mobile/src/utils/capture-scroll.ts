@@ -15,6 +15,7 @@ export function captureScroll(
     -12,
     Math.min(12, Math.sign(delta) === Math.sign(previous.travel) ? previous.travel + delta : delta),
   );
+
   return {
     offset: y,
     travel: delta === 0 ? previous.travel : travel,

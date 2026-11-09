@@ -39,13 +39,16 @@ export function CollectionAd({ colors }: { colors: Palette }) {
         // Ads remain absent when consent or the native ads SDK is unavailable.
       }
     };
+
     if (enabled && adUnitId) void prepareAds();
+
     return () => {
       active = false;
     };
   }, [enabled, adUnitId]);
 
   if (!enabled || !adUnitId) return null;
+
   return <LoadedCollectionAd adUnitId={adUnitId} consentReady={consentReady} colors={colors} />;
 }
 
@@ -59,6 +62,7 @@ function LoadedCollectionAd({
   colors: Palette;
 }) {
   const { nativeAd } = useNativeAd({ adUnitId, autoLoad: consentReady });
+
   if (!nativeAd) return null;
 
   return (

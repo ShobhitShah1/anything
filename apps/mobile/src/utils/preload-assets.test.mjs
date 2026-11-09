@@ -30,6 +30,7 @@ test('preloadCriticalAssets initiates and resolves critical visual assets', asyn
           Image: {
             prefetch: async (uri) => {
               prefetchedUris.push(uri);
+
               return true;
             },
             resolveAssetSource: (mod) => ({ uri: `https://asset.local/${mod}` }),
@@ -42,6 +43,7 @@ test('preloadCriticalAssets initiates and resolves critical visual assets', asyn
           Asset: {
             loadAsync: async (assets) => {
               loadedAssets.push(...assets);
+
               return assets;
             },
           },
@@ -91,6 +93,7 @@ test('preloadCriticalAssets resolves safely within timeout even if underlying lo
           },
         };
       }
+
       return 1;
     },
   });

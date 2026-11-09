@@ -1,6 +1,6 @@
 {
   "name": "anythingmobile",
-  "version": "1.0.0",
+  "version": "0.0.8",
   "main": "expo-router/entry",
   "packageManager": "yarn@4.18.1",
   "dependencies": {
@@ -23,6 +23,7 @@
     "expo-haptics": "~58.0.7",
     "expo-image-picker": "~58.0.10",
     "expo-linking": "~58.0.14",
+    "expo-navigation-bar": "~58.0.4",
     "expo-router": "~58.0.25",
     "expo-sharing": "~58.0.20",
     "expo-speech-recognition": "^58.0.0",
@@ -48,6 +49,7 @@
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@react-native/metro-config": "0.88.0",
+    "@stylistic/eslint-plugin": "^5.10.0",
     "@types/react": "~19.3.0",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~58.0.4",

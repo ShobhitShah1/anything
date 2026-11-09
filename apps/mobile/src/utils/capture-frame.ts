@@ -7,6 +7,7 @@ export function captureFrame(
   scrollOffset: number,
 ) {
   'worklet';
+
   return {
     height: Math.max(58, panelHeight + (expanded ? keyboardHeight : 0)),
     paddingBottom: bottomInset * (1 - keyboardProgress),

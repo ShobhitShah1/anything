@@ -19,7 +19,6 @@ const artwork =
   Platform.OS === 'android' && !__DEV__
     ? { uri: 'anything_launch_art' }
     : require('../../assets/splash-art.png');
-
 const isMockEnvironment =
   typeof (Image as unknown as { prefetch?: unknown })?.prefetch !== 'function';
 
@@ -31,31 +30,26 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
   const [contentLaidOut, setContentLaidOut] = useState(false);
   const [introFinished, setIntroFinished] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const [assetsReady, setAssetsReady] = useState(isMockEnvironment);
+  const [assetFallbackReady, setAssetFallbackReady] = useState(false);
   const [darkDecoded, setDarkDecoded] = useState(false);
   const [lightDecoded, setLightDecoded] = useState(false);
   const intro = useSharedValue(0);
   const opacity = useSharedValue(1);
   const showContent = ready || !!error;
+  const assetsReady = isMockEnvironment || assetFallbackReady || (darkDecoded && lightDecoded);
 
   useEffect(() => {
     if (isMockEnvironment || assetsReady) return;
-    if (darkDecoded && lightDecoded) {
-      setAssetsReady(true);
-    }
-  }, [assetsReady, darkDecoded, lightDecoded]);
 
-  useEffect(() => {
-    if (isMockEnvironment || assetsReady) return;
     let mounted = true;
     const timer = setTimeout(() => {
-      if (mounted) setAssetsReady(true);
+      if (mounted) setAssetFallbackReady(true);
     }, 1200);
 
     void preloadCriticalAssets().finally(() => {
       if (mounted) {
         clearTimeout(timer);
-        setAssetsReady(true);
+        setAssetFallbackReady(true);
       }
     });
 
@@ -67,13 +61,16 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!nativeLaunch || !showContent || !contentLaidOut || !assetsReady || dismissed) return;
+
     let mounted = true;
+
     void nativeLaunch
       .hide(reduced)
       .catch((error) => console.warn('[Anything startup] Custom launcher could not hide', error))
       .finally(() => {
         if (mounted) setDismissed(true);
       });
+
     return () => {
       mounted = false;
     };
@@ -93,6 +90,7 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
         },
       ),
     );
+
     return () => cancelAnimation(intro);
   }, [artReady, artLaidOut, reduced, intro]);
 
@@ -104,6 +102,7 @@ export function LaunchScreen({ children }: { children: ReactNode }) {
         if (finished) scheduleOnRN(setDismissed, true);
       }),
     );
+
     return () => cancelAnimation(opacity);
   }, [showContent, contentLaidOut, introFinished, assetsReady, reduced, opacity]);
 
@@ -188,7 +187,6 @@ const preheatContainerStyle = {
   opacity: 0.01,
   overflow: 'hidden' as const,
 };
-
 const preheatImageStyle = {
   width: 2,
   height: 2,

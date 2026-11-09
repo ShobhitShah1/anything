@@ -19,6 +19,7 @@ export function useScrollHeader(title?: string) {
   const lastScrolled = useRef(false);
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = event.nativeEvent.contentOffset.y > 2;
+
     if (lastScrolled.current !== next) {
       lastScrolled.current = next;
       setScrolled(next);
@@ -59,5 +60,6 @@ export function useScrollHeader(title?: string) {
     }),
     [background, colors.canvas, scrolled, title],
   );
+
   return { targetRef, topInset, onScroll, options };
 }

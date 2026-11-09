@@ -30,19 +30,24 @@ export const AiEditorLight = memo(function AiEditorLight({ active, working }: Ai
   const reduced = useReducedMotion();
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
   const strength = useSharedValue(0);
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (value) =>
       setForeground(value === 'active'),
     );
+
     return () => subscription.remove();
   }, []);
   useEffect(() => {
     strength.set(
       withTiming(active && foreground ? (working ? 1 : 0.65) : 0, { duration: reduced ? 0 : 420 }),
     );
+
     return () => cancelAnimation(strength);
   }, [active, foreground, working, reduced, strength]);
+
   const style = useAnimatedStyle(() => ({ opacity: strength.get() * (dark ? 0.8 : 0.65) }));
+
   return (
     <Animated.View
       pointerEvents="none"

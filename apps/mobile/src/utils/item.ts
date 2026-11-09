@@ -24,6 +24,37 @@ export function itemUrl(item: SavedItem) {
         ? item.imageUrl
         : undefined;
 }
+
+export function linkPlatform(value: string) {
+  let hostname: string;
+
+  try {
+    hostname = new URL(value).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return undefined;
+  }
+
+  const platforms: Record<string, string> = {
+    'x.com': 'X',
+    'twitter.com': 'X',
+    'instagram.com': 'Instagram',
+    'reddit.com': 'Reddit',
+    'youtube.com': 'YouTube',
+    'youtu.be': 'YouTube',
+    'tiktok.com': 'TikTok',
+    'facebook.com': 'Facebook',
+    'threads.net': 'Threads',
+    'linkedin.com': 'LinkedIn',
+    'pinterest.com': 'Pinterest',
+    'twitch.tv': 'Twitch',
+    'spotify.com': 'Spotify',
+  };
+
+  return Object.entries(platforms).find(
+    ([domain]) => hostname === domain || hostname.endsWith(`.${domain}`),
+  )?.[1];
+}
+
 export function itemImage(item: SavedItem) {
   return 'imageUrl' in item ? item.imageUrl : item.type === 'link' ? item.previewImage : undefined;
 }

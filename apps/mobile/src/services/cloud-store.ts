@@ -3,8 +3,10 @@ import { firebaseApp } from './firebase-app';
 import { isCloudEntry, type CloudStore } from '../shared/utils/cloudSync';
 export function cloudStore(uid: string, durable: () => Promise<void>): CloudStore {
   if (!firebaseApp) throw new Error('Firebase is not configured.');
+
   const db = getFirestore(firebaseApp);
   const records = collection(db, 'users', uid, 'collection');
+
   return {
     watch(receive, fail) {
       return onSnapshot(
@@ -19,12 +21,16 @@ export function cloudStore(uid: string, durable: () => Promise<void>): CloudStor
     },
     async write(entries) {
       await durable();
+
       let batch = writeBatch(db);
       let bytes = 0;
+
       for (const entry of entries) {
         if (!isCloudEntry(entry))
           throw new Error('An unsupported save cannot be synced. Local saves are safe.');
+
         const size = new TextEncoder().encode(JSON.stringify(entry)).length;
+
         if (size > 900_000)
           throw new Error(
             'An image is too large for Firestore. It remains on your device. Use an image link to sync it.',

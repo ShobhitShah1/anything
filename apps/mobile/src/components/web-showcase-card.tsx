@@ -10,7 +10,6 @@ const WEB_URL = 'https://shobhitshah1.github.io/anything/';
 
 export const WebShowcaseCard = memo(function WebShowcaseCard() {
   const { colors } = useCollection();
-
   const handlePress = () => {
     void Haptics.selectionAsync();
     void openLink(WEB_URL);

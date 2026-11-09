@@ -13,7 +13,7 @@ import {
 import { ArrowUpRight, Plus } from 'lucide-react-native';
 import { useCollection } from '../state/collection';
 import { Action, GoogleMark } from './ui';
-import { fonts, radius, space } from '../theme';
+import { fonts } from '../theme';
 import { WELCOME_SPACE_DARK, WELCOME_SPACE_LIGHT } from '../utils/preload-assets';
 
 interface WelcomeSceneProps {
@@ -32,7 +32,6 @@ export const WelcomeScene = memo(function WelcomeScene({
   const state = useCollection();
   const { colors, dark, user, busy } = state;
   const { width, height } = useWindowDimensions();
-
   const imageSource = dark ? WELCOME_SPACE_DARK : WELCOME_SPACE_LIGHT;
 
   return (

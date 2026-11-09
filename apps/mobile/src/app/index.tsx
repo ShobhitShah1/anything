@@ -31,7 +31,7 @@ import Image from 'react-native-fast-image';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from '../components/use-scroll-header';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -74,50 +74,96 @@ import { CollectionAd } from '../components/collection-ad';
 import type { SavedItem } from '../shared/types';
 import { fonts, space, type } from '../theme';
 
+const styles = StyleSheet.create({
+  viewControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 44,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flex: 1,
+  },
+  sortLabel: {
+    ...type.small,
+    includeFontPadding: false,
+  },
+  viewButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewButton: {
+    width: 40,
+    height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
 export default function Home() {
+  const router = useRouter();
   const state = useCollection();
   const { targetRef, topInset, onScroll, options: headerOptions } = useScrollHeader();
   const { colors, data } = state;
-
   const { folder } = useLocalSearchParams<{ folder?: string }>();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const keyboard = useReanimatedKeyboardAnimation();
+  const reducedMotion = useReducedMotion();
+
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [layout, setLayout] = useState('grid');
   const [sort, setSort] = useState<'newest' | 'oldest' | 'title'>('newest');
   const [viewHeight, setViewHeight] = useState(0);
-
   const [quickText, setQuickText] = useState('');
-  const quickRef = useRef<TextInputInstance>(null);
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [controlsHeight, setControlsHeight] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
+  const [deleteIds, setDeleteIds] = useState<readonly string[] | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [context, setContext] = useState<CardAnchor | null>(null);
+  const [contextReady, setContextReady] = useState(false);
+
+  const quickRef = useRef<TextInputInstance>(null);
+  const responseRef = useRef<ScrollViewInstance>(null);
+  const followResponse = useRef(true);
+  const listRef = useRef<FlashListRef<SavedItem>>(null);
+  const scrollState = useRef({ offset: 0, travel: 0, hidden: false });
+
+  const liftedId = useSharedValue<string | null>(null);
+  const motionEnabled = useSharedValue(false);
+  const expanded = useSharedValue(false);
+  const captureHidden = useSharedValue(false);
+  const capturePinned = useSharedValue(false);
+
   const ai = useQuickAi(captureOpen, quickText, setQuickText);
   const hasText = Boolean(quickText.trim());
-
-  const [editingId, setEditingId] = useState<string | null>(null);
   const rendered =
     captureOpen &&
     !!ai.generated &&
     editingId !== ai.generated.id &&
     (!ai.enabled || ai.phase === 'streaming');
-  const responseRef = useRef<ScrollViewInstance>(null);
-  const followResponse = useRef(true);
+  const captureHeight = 58 + insets.bottom;
 
   useEffect(() => {
     followResponse.current = true;
   }, [ai.generated?.id]);
+
   const dismissCapture = useCallback(() => {
     quickRef.current?.blur();
     Keyboard.dismiss();
     setCaptureOpen(false);
   }, []);
-
-  const [saving, setSaving] = useState(false);
   const aiWorking = ai.phase !== 'idle';
   const generationPhase = ai.phase === 'thinking' || ai.phase === 'streaming' ? ai.phase : 'idle';
   const generating = generationPhase !== 'idle';
-
-  const [controlsHeight, setControlsHeight] = useState(0);
-  const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
-  const [deleteIds, setDeleteIds] = useState<readonly string[] | null>(null);
   const startSelection = useCallback(
     (ids: string[] = []) => {
       dismissCapture();
@@ -133,15 +179,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!selecting || deleteIds) return;
+
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       setSelectedIds(null);
+
       return true;
     });
+
     return () => subscription.remove();
   }, [selecting, deleteIds]);
-  const [context, setContext] = useState<CardAnchor | null>(null);
-  const liftedId = useSharedValue<string | null>(null);
-  const [contextReady, setContextReady] = useState(false);
 
   const showContext = useCallback((anchor: CardAnchor) => {
     setContextReady(false);
@@ -162,42 +208,38 @@ export default function Home() {
     Keyboard.dismiss();
     router.push({ pathname: '/capture', params: folder ? { folder } : {} });
   };
-  const reducedMotion = useReducedMotion();
-  const listRef = useRef<FlashListRef<SavedItem>>(null);
-  const motionEnabled = useSharedValue(false);
   const prepareTransition = () => {
     if (!reducedMotion) listRef.current?.prepareForLayoutAnimationRender();
     motionEnabled.set(!reducedMotion);
   };
-  const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const keyboard = useReanimatedKeyboardAnimation();
-  const captureHeight = 58 + insets.bottom;
-  const expanded = useSharedValue(false);
   useEffect(() => {
     expanded.set(captureOpen);
     if (!captureOpen) return;
+
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       dismissCapture();
+
       return true;
     });
+
     return () => subscription.remove();
   }, [captureOpen, dismissCapture, expanded]);
-  const scrollState = useRef({ offset: 0, travel: 0, hidden: false });
-  const captureHidden = useSharedValue(false);
-  const capturePinned = useSharedValue(false);
+
   useEffect(() => {
     capturePinned.set(saving || captureOpen);
   }, [capturePinned, saving, captureOpen]);
+
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       onScroll(event);
+
       const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
       const next = captureScroll(
         scrollState.current,
         contentOffset.y,
         contentSize.height - layoutMeasurement.height,
       );
+
       if (next.hidden !== scrollState.current.hidden) captureHidden.set(next.hidden);
       scrollState.current = next;
     },
@@ -220,6 +262,7 @@ export default function Home() {
       expanded.get(),
       0,
     );
+
     return { height: frame.height, paddingBottom: frame.paddingBottom };
   });
   const expandProgress = useDerivedValue(() =>
@@ -230,6 +273,7 @@ export default function Home() {
   );
   const homeHeaderStyle = useAnimatedStyle(() => {
     const p = expandProgress.get();
+
     return {
       opacity: interpolate(p, [0, 0.45], [1, 0]),
       transform: [{ translateY: interpolate(p, [0, 0.45], [0, -5]) }],
@@ -237,6 +281,7 @@ export default function Home() {
   });
   const captureHeaderStyle = useAnimatedStyle(() => {
     const p = expandProgress.get();
+
     return {
       opacity: interpolate(p, [0.4, 1], [0, 1]),
       transform: [{ translateY: interpolate(p, [0.4, 1], [5, 0]) }],
@@ -260,6 +305,7 @@ export default function Home() {
       expanded.get(),
       scrollOffset.get(),
     );
+
     return {
       height: frame.height,
       opacity: withTiming(hidden ? 0 : 1, { duration: reducedMotion ? 0 : 150 }),
@@ -275,6 +321,7 @@ export default function Home() {
   }));
   const captureProps = useAnimatedProps<ViewProps>(() => {
     const hidden = captureHidden.get() && !capturePinned.get();
+
     return {
       pointerEvents: hidden ? 'none' : 'auto',
       accessibilityElementsHidden: hidden,
@@ -295,6 +342,7 @@ export default function Home() {
             !(filter === 'link' && item.type.endsWith('_post'))
           )
             return false;
+
           return `${item.title} ${item.tags.join(' ')} ${item.type === 'secret' ? '' : itemText(item)}`
             .toLowerCase()
             .includes(query.toLowerCase());
@@ -310,24 +358,17 @@ export default function Home() {
         ),
     [data.items, folder, filter, query, sort],
   );
-  const showCollectionAd =
-    state.user &&
-    state.adsEligible &&
-    !state.pro &&
-    !folder &&
-    !query &&
-    filter === 'all' &&
-    sort === 'newest' &&
-    !selectedIds &&
-    !captureOpen &&
-    items.length >= 8;
+  // Keep the ad setup intact, but hide its collection placement for now.
+  const showCollectionAd = false;
   const quickSave = async (draft?: string) => {
     if (saving) return;
     setSaving(true);
     try {
       state.setError('');
+
       const text = draft ?? (await ClipboardAPI.getStringAsync());
       const generated = ai.generated;
+
       if (generated && draft !== undefined) {
         const item = draftItem(
           'markdown',
@@ -340,6 +381,7 @@ export default function Home() {
           undefined,
           () => generated.id,
         );
+
         await state.save({ ...item, folderId: folder });
         state.setNotice('Saved to your collection');
       } else await state.capture(text, false, folder);
@@ -392,6 +434,7 @@ export default function Home() {
           }
         />
       </View>
+
       <FilterChips
         edgeInset={space.md + 6}
         value={filter}
@@ -401,7 +444,8 @@ export default function Home() {
           setFilter(value);
         }}
       />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+
+      <View style={styles.viewControlsRow}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Change sort order"
@@ -411,28 +455,15 @@ export default function Home() {
               value === 'newest' ? 'oldest' : value === 'oldest' ? 'title' : 'newest',
             );
           }}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 44 }}
+          style={styles.sortButton}
         >
-          <ArrowDownUp size={13} color={colors.muted} />
-          <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
+          <ArrowDownUp size={15} color={colors.muted} />
+          <Text allowFontScaling={false} style={[styles.sortLabel, { color: colors.muted }]}>
             {sort === 'newest' ? 'Latest first' : sort === 'oldest' ? 'Oldest first' : 'A to Z'}
           </Text>
         </Pressable>
-        <View style={{ flexDirection: 'row' }}>
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 5,
-              height: 34,
-              borderRadius: 10,
-              backgroundColor: colors.paper,
-              borderWidth: 0.5,
-              borderColor: colors.line,
-            }}
-          />
+
+        <View style={styles.viewButtons}>
           {[
             { value: 'grid', label: 'Grid view', Icon: LayoutGrid },
             { value: 'list', label: 'List view', Icon: List },
@@ -449,33 +480,13 @@ export default function Home() {
                   setLayout(value);
                 }
               }}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                overflow: 'hidden',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              style={styles.viewButton}
             >
-              <View
-                collapsable={false}
-                style={{
-                  width: 40,
-                  height: 28,
-                  borderRadius: 7,
-                  overflow: 'hidden',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: layout === value ? colors.ink : 'transparent',
-                }}
-              >
-                <Icon
-                  size={17}
-                  color={layout === value ? colors.canvas : colors.muted}
-                  strokeWidth={layout === value ? 1.9 : 1.5}
-                />
-              </View>
+              <Icon
+                size={20}
+                color={layout === value ? colors.ink : colors.muted}
+                strokeWidth={layout === value ? 2 : 1.5}
+              />
             </Pressable>
           ))}
         </View>
@@ -650,6 +661,7 @@ export default function Home() {
       colors.canvas,
       colors.ink,
       data.items.length,
+      router,
       homeHeaderStyle,
       captureHeaderStyle,
       dismissCapture,
@@ -683,7 +695,7 @@ export default function Home() {
               data={items}
               masonry={layout === 'grid'}
               numColumns={columns}
-              optimizeItemArrangement={false}
+              optimizeItemArrangement
               keyExtractor={(item) => item.id}
               getItemType={(item) => item.type}
               maintainVisibleContentPosition={{ disabled: true }}

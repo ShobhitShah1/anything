@@ -13,18 +13,23 @@ test('home shows the upgrade chip only when free, and a gold portrait ring and c
     ts.ScriptKind.TSX,
   );
   let header;
+
   function find(node) {
     if (ts.isPropertyAssignment(node) && node.name.getText(file) === 'headerRight')
       header = node.initializer.getText(file);
     ts.forEachChild(node, find);
   }
+
   find(file);
+
   const code = ts.transpileModule(`exports.header = ${header}`, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
+
   for (const pro of [false, true]) {
     const exports = {};
     const jsx = (type, props) => ({ type, props });
+
     runInNewContext(code, {
       exports,
       require: () => ({ jsx, jsxs: jsx }),
@@ -43,17 +48,22 @@ test('home shows the upgrade chip only when free, and a gold portrait ring and c
       PlusCard: 'PlusCard',
       Animated: { View: 'AnimatedView' },
     });
+
     const nodes = [];
+
     function visit(node) {
       if (Array.isArray(node)) return node.forEach(visit);
       if (!node || typeof node !== 'object') return;
       nodes.push(node);
       visit(node.props?.children);
     }
+
     visit(exports.header());
     assert.equal(nodes.filter((node) => node.type === 'PlusCard').length, pro ? 0 : 1);
     assert.equal(nodes.filter((node) => node.type === 'Crown').length, pro ? 1 : 0);
+
     const ring = nodes.find((node) => node.props.style?.borderColor === '#E8B849');
+
     assert.equal(ring.props.style.borderWidth, pro ? 2 : 0);
   }
 });
@@ -78,6 +88,7 @@ function setup(file, prompt = 'pro', signedIn = false) {
     signIn: async () => {},
   };
   const jsx = (type, props) => ({ type, props });
+
   runInNewContext(source, {
     exports,
     require(name) {
@@ -92,20 +103,26 @@ function setup(file, prompt = 'pro', signedIn = false) {
       if (name === '../services/auth') return { auth };
       if (name === './ui') return { Action: 'Action' };
       if (name === '../theme') return { fonts: {} };
+
       return {};
     },
   });
+
   function nodes(view) {
     const result = [];
+
     function visit(node) {
       if (Array.isArray(node)) return node.forEach(visit);
       if (!node || typeof node !== 'object') return;
       result.push(node);
       visit(node.props?.children);
     }
+
     visit(view);
+
     return result;
   }
+
   return { exports, state, auth, routes, prompts, nodes };
 }
 
@@ -113,6 +130,7 @@ test('Pro remains visible for guests and asks for sign-in before navigating', ()
   for (const signedIn of [false, true]) {
     const ui = setup('plus-card', null, signedIn);
     const button = ui.exports.PlusCard({ compact: true });
+
     assert.equal(button.props.accessibilityRole, 'button');
     button.props.onPress();
     assert.deepEqual(ui.routes, signedIn ? ['/subscription'] : []);
@@ -122,11 +140,16 @@ test('Pro remains visible for guests and asks for sign-in before navigating', ()
 
 test('active profile replaces upgrade labels with Pro and membership management', () => {
   const ui = setup('plus-card', null, true);
+
   ui.state.pro = true;
+
   const compact = ui.exports.PlusCard({ compact: true });
+
   assert.equal(compact.props.accessibilityLabel, 'Manage Anything Pro');
   assert.ok(ui.nodes(compact).some((node) => node.props.children === 'Pro'));
+
   const full = ui.exports.PlusCard({});
+
   assert.ok(ui.nodes(full).some((node) => node.props.children === 'Manage membership'));
   compact.props.onPress();
   assert.deepEqual(ui.routes, ['/subscription']);
@@ -137,6 +160,7 @@ test('cancelled login stays on the prompt; successful Pro login opens membership
   const button = ui
     .nodes(ui.exports.SignInSheet())
     .find((node) => node.props.title === 'Continue with Google');
+
   button.props.onPress();
   await new Promise(setImmediate);
   assert.deepEqual(ui.routes, []);
@@ -153,6 +177,7 @@ test('cancelled login stays on the prompt; successful Pro login opens membership
 test('save-limit prompt allows dismissal and never navigates to paid plans', async () => {
   const ui = setup('sign-in-sheet', 'saves');
   const nodes = ui.nodes(ui.exports.SignInSheet());
+
   assert.ok(
     nodes
       .filter((node) => node.type === 'Text')

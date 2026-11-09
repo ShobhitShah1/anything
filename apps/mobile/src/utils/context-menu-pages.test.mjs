@@ -39,6 +39,7 @@ function menu(reduced = false) {
       this.value = value;
     },
   };
+
   runInNewContext(source, {
     exports,
     setTimeout: () => 0,
@@ -57,7 +58,9 @@ function menu(reduced = false) {
           ],
           useState(initial) {
             const index = stateIndex++;
+
             if (!(index in states)) states[index] = initial;
+
             return [
               states[index],
               (value) => {
@@ -81,6 +84,7 @@ function menu(reduced = false) {
           useAnimatedStyle: (fn) => fn(),
           useSharedValue(initial) {
             const index = sharedIndex++;
+
             return (shared[index] ??= {
               value: initial,
               get() {
@@ -94,6 +98,7 @@ function menu(reduced = false) {
           withTiming: (value) => value,
           withSpring: (value, _, finished) => {
             finished?.(true);
+
             return value;
           },
           interpolate: () => 1,
@@ -107,13 +112,16 @@ function menu(reduced = false) {
         return { itemUrl: () => '', itemText: () => 'note', itemImage: () => undefined };
       if (name === '../utils/context-geometry') return { contextGeometry };
       if (name === '../theme') return { radius: {}, type: {} };
+
       return {};
     },
   });
+
   return ({ ready = true, lifted = liftedId.value } = {}) => {
     stateIndex = refIndex = sharedIndex = 0;
     effects.length = 0;
     liftedId.value = lifted;
+
     const view = exports.CardContextMenu({
       item: { id: 'one', type: 'note' },
       anchor: { rect: { x: 20, y: 180, width: 160, height: 200 } },
@@ -125,14 +133,18 @@ function menu(reduced = false) {
       onClose: () => {},
     });
     const nodes = [];
+
     function visit(node) {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) return node.forEach(visit);
       nodes.push(node);
       visit(node.props?.children);
     }
+
     visit(view);
+
     const styles = nodes.flatMap((node) => [node.props?.style].flat()).filter(Boolean);
+
     return {
       nodes,
       styles,
@@ -151,6 +163,7 @@ test('first-open handoff waits for both modal visibility and image readiness, in
     let view = render({ ready: false, lifted: null });
     const imageReady = view.nodes.find((node) => node.props?.onPreviewReady).props.onPreviewReady;
     const shown = view.nodes.find((node) => node.type === 'Modal').props.onShow;
+
     (imageFirst ? imageReady : shown)();
     view = render({ ready: false });
     view.flushEffects();
@@ -166,6 +179,7 @@ test('closing before the modal shows prevents late readiness from lifting the so
   const render = menu();
   let view = render({ ready: false, lifted: null });
   const modal = view.nodes.find((node) => node.type === 'Modal');
+
   modal.props.onRequestClose();
   modal.props.onShow();
   view.nodes.find((node) => node.props?.onPreviewReady).props.onPreviewReady();
@@ -180,18 +194,25 @@ test('preview keeps its layout and shares source visibility, and dismissal hides
       for (let cycle = 0; cycle < 3; cycle++) {
         const render = menu(reduced);
         const loading = render({ ready: false, lifted: null });
+
         assert.equal(loading.preview.opacity, 0);
         assert.equal(loading.preview.display, undefined);
         // Source and preview must swap on the same UI-thread value, before React commits ready.
         assert.equal(render({ ready: false, lifted: 'one' }).preview.opacity, 1);
         assert.equal(render({ lifted: null }).preview.opacity, 0);
+
         const open = render({ ready, lifted: 'one' });
+
         assert.equal(open.preview.opacity, 1);
         assert.equal(open.preview.display, undefined);
+
         const modal = open.nodes.find((node) => node.type === 'Modal');
+
         assert.equal(modal.props.visible, true);
         modal.props.onRequestClose();
+
         const closed = render();
+
         assert.equal(closed.nodes.find((node) => node.type === 'Modal').props.visible, false);
         assert.equal(closed.preview, undefined);
       }
@@ -204,11 +225,16 @@ test('folder pages slide forward and back, resize to content, and leave the prev
     const render = menu(reduced);
     const actions = render();
     const scrolls = actions.nodes.filter((node) => node.type === 'ScrollView');
+
     scrolls[1].props.onContentSizeChange(320, 147);
     actions.row('Move to folder').props.onPress();
+
     const folders = render();
+
     assert.equal(folders.viewport.height, 147);
+
     const folderScroll = folders.nodes.filter((node) => node.type === 'ScrollView')[1];
+
     assert.equal(folderScroll.props.style.height, folders.viewport.height);
     assert.equal(folderScroll.props.style.flexShrink, 0);
     assert.equal(
@@ -219,7 +245,9 @@ test('folder pages slide forward and back, resize to content, and leave the prev
     );
     assert.deepEqual(folders.preview, actions.preview);
     folders.row('Back to actions').props.onPress();
+
     const back = render();
+
     assert.equal(
       back.styles.find(
         (style) => style.transform?.length === 1 && style.transform[0].translateX !== undefined,
@@ -234,12 +262,15 @@ test('folder pages slide forward and back, resize to content, and leave the prev
 test('long folder lists scroll inside the visible viewport without losing bottom rows', () => {
   const render = menu();
   const actions = render();
+
   actions.nodes
     .filter((node) => node.type === 'ScrollView')[1]
     .props.onContentSizeChange(320, 1800);
   actions.row('Move to folder').props.onPress();
+
   const folders = render();
   const scroll = folders.nodes.filter((node) => node.type === 'ScrollView')[1];
+
   assert.ok(folders.viewport.height < 1800);
   assert.equal(scroll.props.style.height, folders.viewport.height);
   assert.equal(scroll.props.pointerEvents, 'auto');

@@ -11,7 +11,9 @@ export function SignInSheet() {
   const state = useCollection();
   const insets = useSafeAreaInsets();
   const { signInPrompt, user, busy, colors, dark, error } = state;
+
   if (!signInPrompt || user) return null;
+
   const dismiss = () => state.setSignInPrompt(null);
   const signIn = async () => {
     await state.signIn();
@@ -20,6 +22,7 @@ export function SignInSheet() {
     if (signInPrompt === 'pro') router.push('/subscription');
     else state.setNotice('Signed in. Save your draft when you’re ready.');
   };
+
   return (
     <Host colorScheme={dark ? 'dark' : 'light'} style={{ position: 'absolute' }}>
       <BottomSheet

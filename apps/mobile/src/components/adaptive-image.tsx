@@ -49,6 +49,7 @@ export function AdaptiveImage({
     [width, thumbnail, thumbnailHeight, box, aspectRatio],
   );
   const layout = useCollectionTransition('media');
+
   return (
     <View
       onLayout={({ nativeEvent: { layout } }) => {
@@ -73,7 +74,9 @@ export function AdaptiveImage({
         onError={onReady}
         onLoad={({ nativeEvent }) => {
           onReady?.();
+
           const measured = imageRatio(nativeEvent.width, nativeEvent.height);
+
           if (!measured) return;
           if (!uri.startsWith('data:')) {
             if (ratios.size >= 256) ratios.delete(ratios.keys().next().value!);

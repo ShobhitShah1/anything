@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
+
 const require = createRequire(import.meta.url);
 const { patchActivity } = require('../../plugins/with-android-launch.cjs');
 
@@ -17,6 +18,7 @@ class MainActivity : ReactActivity() {
   }
 }`;
   const patched = patchActivity(source);
+
   assert.ok(!patched.includes('SplashScreenManager'));
   assert.match(
     patched,
@@ -33,7 +35,9 @@ test('custom Android module is autolinkable and has the full-screen artwork draw
       'utf8',
     ),
   );
+
   assert.deepEqual(config.android.modules, ['expo.modules.anythinglaunch.AnythingLaunchModule']);
+
   const native = readFileSync(
     new URL(
       '../../modules/anything-launch/android/src/main/java/expo/modules/anythinglaunch/AnythingLaunch.kt',
@@ -41,6 +45,7 @@ test('custom Android module is autolinkable and has the full-screen artwork draw
     ),
     'utf8',
   );
+
   assert.match(native, /ScaleType.CENTER_CROP/);
   assert.match(native, /R.drawable.anything_launch_art/);
   assert.ok(native.indexOf('removeView(this)') < native.indexOf('setImageDrawable(null)'));

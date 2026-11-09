@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
+
 const source = ts.transpileModule(
   readFileSync(new URL('../components/ai-response-status.tsx', import.meta.url), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } },
 ).outputText;
+
 function render(phase, reduced = false) {
   const exports = {};
   const jsx = (type, props) => ({ type, props });
+
   runInNewContext(source, {
     exports,
     require: (name) => {
@@ -26,6 +29,7 @@ function render(phase, reduced = false) {
       throw new Error(name);
     },
   });
+
   const nodes = [];
   const visit = (node) => {
     if (!node || typeof node !== 'object') return;
@@ -33,9 +37,12 @@ function render(phase, reduced = false) {
     nodes.push(node);
     visit(node.props.children);
   };
+
   visit(exports.AiResponseStatus({ prompt: 'A reading list for later', phase }));
+
   return nodes;
 }
+
 test('generation announces waiting, writing and completion without retaining loading placeholders', () => {
   for (const [phase, label, animated] of [
     ['thinking', 'Preparing your draft', 4],
@@ -44,6 +51,7 @@ test('generation announces waiting, writing and completion without retaining loa
   ]) {
     const nodes = render(phase);
     const status = nodes.find((node) => node.props.accessibilityLiveRegion === 'polite');
+
     assert.equal(status.props.accessibilityLabel, label);
     assert.equal(status.props.accessibilityState.busy, phase !== 'idle');
     assert.equal(nodes.filter((node) => node.type === 'Animated').length, animated);
@@ -56,6 +64,7 @@ test('generation announces waiting, writing and completion without retaining loa
 });
 test('reduced motion keeps generation readable without any looping animation', () => {
   const indicators = render('thinking', true).filter((node) => node.type === 'Animated');
+
   assert.equal(indicators.length, 4);
   assert.ok(indicators.every((node) => node.props.style.animationName === undefined));
 });

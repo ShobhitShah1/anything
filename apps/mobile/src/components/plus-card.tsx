@@ -7,6 +7,7 @@ import { MembershipBackdrop } from './membership-backdrop';
 
 export function PlusCard({ compact = false }: { compact?: boolean }) {
   const { colors, user, setSignInPrompt, pro } = useCollection();
+
   return (
     <Pressable
       accessibilityRole="button"

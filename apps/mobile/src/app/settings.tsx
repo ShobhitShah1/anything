@@ -35,9 +35,12 @@ export default function Settings() {
   const exportSaves = async () => {
     const text = JSON.stringify(data.items, null, 2);
     const name = `anything-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
     if (!(await Sharing.isAvailableAsync()))
       throw new Error('File sharing is unavailable on this device.');
+
     const file = new File(Paths.cache, name);
+
     file.write(text);
     await Sharing.shareAsync(file.uri, { mimeType: 'application/json', UTI: 'public.json' });
   };
@@ -47,13 +50,20 @@ export default function Settings() {
       type: '*/*',
       copyToCacheDirectory: true,
     });
+
     if (result.canceled) return;
+
     const asset = result.assets[0];
+
     if ((asset.size || 0) > 15_000_000) throw new Error('Import a backup smaller than 15 MB.');
+
     const file = new File(asset.uri);
+
     if (file.size > 15_000_000) throw new Error('Import a backup smaller than 15 MB.');
+
     const text = await file.text();
     const parsed = parseBackup(text);
+
     await state.commit((value) => ({
       ...value,
       items: [...new Map([...parsed, ...value.items].map((item) => [item.id, item])).values()],
@@ -70,6 +80,7 @@ export default function Settings() {
           : state.status === 'error'
             ? 'Connection needs attention'
             : 'Saved on this device';
+
   return (
     <BlurTargetView ref={targetRef} style={{ flex: 1, backgroundColor: colors.canvas }}>
       <Stack.Screen options={headerOptions} />

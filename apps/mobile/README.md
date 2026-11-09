@@ -157,15 +157,19 @@ Before enabling production ads:
 2. Add `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID`, `EXPO_PUBLIC_ADMOB_ANDROID_NATIVE_UNIT_ID`, and `EXPO_PUBLIC_ADMOB_IOS_NATIVE_UNIT_ID` to the EAS `production` environment. Production ads remain disabled unless all four are present.
 3. Configure the applicable privacy and consent messages in AdMob's Privacy & messaging, and declare that the Play app contains ads. Rebuild after changing native app IDs.
 
-`expo-updates` is installed, but this project is not linked to an Expo account yet. After signing in from this folder, let EAS configure the project URL, runtime version, project ID, and build channels:
+Expo Update is configured for the linked `anything` project. The `appVersion` runtime policy keeps updates on the same native app version; bump `version` in `app.config.ts` and create a new build after native code or native configuration changes. Existing installs need a new build once to receive the update URL and channel.
+
+Build profiles use separate update channels: `development`, `preview` (also used by `preview-arm64`), `production`, and `store-test`. `store-test` has its own channel even though it uses the preview EAS environment, so its test updates cannot flow into production. The project’s `APP_ENV` EAS variable is set for development, preview, and production so dynamic config stays correct when an update is exported; `store-test` uses the preview environment.
+
+Publish JavaScript and asset changes from `apps/mobile/` with a message that describes the change:
 
 ```bash
-npx eas-cli@latest login
-npx eas-cli@latest init
-npx eas-cli@latest update:configure
+npx eas-cli@latest update --channel preview --environment preview --message "Describe the preview update"
+npx eas-cli@latest update --channel production --environment production --message "Describe the production update"
+npx eas-cli@latest update --channel store-test --environment preview --message "Describe the store-test update"
 ```
 
-Review the resulting app config and `eas.json` diff, then create a fresh preview/production build before publishing updates. OTA updates cannot add the native AdMob module to an already installed build.
+The app checks for updates on launch and when it returns to the foreground. When a downloaded update is ready, Anything shows a persistent pixel-art launch-pad sheet with a **Restart Anything** action. Updates cannot add native modules or native configuration such as AdMob, which still require a new build.
 
 ### Quick Add AI and Anything Pro
 

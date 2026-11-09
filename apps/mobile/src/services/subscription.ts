@@ -10,6 +10,7 @@ type Snapshot = {
   customer: CustomerInfo | null;
   plans: PurchasesPackage[];
 };
+
 let snapshot: { uid: string; value: Snapshot } | undefined;
 let pending: { uid: string; promise: ReturnType<typeof fetchSubscription> } | undefined;
 
@@ -32,11 +33,13 @@ async function fetchSubscription(uid: string) {
         client.getOfferings(),
         client.getCustomerInfo(),
       ]);
+
       return { offerings, customer, active: hasPro(customer) };
     }),
   ]);
   const [usage, billing] = results;
   const previous = subscriptionSnapshot(uid);
+
   if (snapshot === initial)
     rememberSubscription(uid, {
       access: usage.status === 'fulfilled' ? usage.value : (previous?.access ?? null),
@@ -49,15 +52,19 @@ async function fetchSubscription(uid: string) {
             )
           : (previous?.plans ?? []),
     });
+
   return results;
 }
 
 export function loadSubscription(uid: string) {
   if (pending?.uid === uid) return pending.promise;
+
   const request = { uid, promise: fetchSubscription(uid) };
+
   pending = request;
   void request.promise.finally(() => {
     if (pending === request) pending = undefined;
   });
+
   return request.promise;
 }

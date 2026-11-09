@@ -20,6 +20,7 @@ android {
 }
 `;
     }
+
     return config;
   });
 };

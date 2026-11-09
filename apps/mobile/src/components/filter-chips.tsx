@@ -20,6 +20,7 @@ export function FilterChips({
   const center = useCallback(
     (selected: string, animated = true) => {
       const rect = rects.current[selected];
+
       if (!rect || !viewportWidth) return;
       scrollRef.current?.scrollTo({
         x: Math.max(0, rect.x + (rect.width - viewportWidth) / 2),
@@ -28,7 +29,9 @@ export function FilterChips({
     },
     [viewportWidth, reduced],
   );
+
   useEffect(() => center(value), [center, value]);
+
   return (
     <ScrollView
       ref={scrollRef}

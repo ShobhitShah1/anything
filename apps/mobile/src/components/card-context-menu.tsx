@@ -63,6 +63,7 @@ function MenuRow({
   disabled?: boolean;
 }) {
   const { colors } = useCollection();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -92,6 +93,7 @@ function MenuRow({
     </Pressable>
   );
 }
+
 export function CardContextMenu({
   item,
   anchor,
@@ -129,6 +131,7 @@ export function CardContextMenu({
   const previewReady = useCallback(() => {
     if (mounted.current && !closing.current) setPreviewLoaded(true);
   }, []);
+
   useEffect(() => {
     // Cached images can load before the native modal window is visible.
     if (shown && previewLoaded && mounted.current && !closing.current) {
@@ -136,6 +139,7 @@ export function CardContextMenu({
       onReady();
     }
   }, [shown, previewLoaded, onReady]);
+
   const [page, setPage] = useState<'actions' | 'folders' | 'delete'>('actions');
   const [actionsHeight, setActionsHeight] = useState(0);
   const [subpageHeight, setSubpageHeight] = useState(0);
@@ -172,7 +176,9 @@ export function CardContextMenu({
   }, [phase, ready, reduced, progress]);
   useEffect(() => {
     mounted.current = true;
+
     const timer = setTimeout(previewReady, 250);
+
     return () => {
       mounted.current = false;
       clearTimeout(timer);
@@ -182,7 +188,9 @@ export function CardContextMenu({
     if (phase !== 'finished') return;
     // The UI thread has already handed visibility back to the source card.
     onClose();
+
     const action = afterClose.current;
+
     afterClose.current = undefined;
     Promise.resolve()
       .then(() => action?.())
@@ -190,6 +198,7 @@ export function CardContextMenu({
         setError(error instanceof Error ? error.message : 'Could not update this find.'),
       );
   }, [phase, onClose, setError]);
+
   const finish = () => dispatch('finished');
   const close = (action?: () => unknown) => {
     if (closing.current) return;
@@ -200,6 +209,7 @@ export function CardContextMenu({
       progress.set(0);
       liftedId.set(null);
       finish();
+
       return;
     }
     progress.set(
@@ -246,6 +256,7 @@ export function CardContextMenu({
       commit((value) => {
         if (folderId && !value.folders.some((folder) => folder.id === folderId))
           throw new Error('That folder was removed. Choose another one.');
+
         return {
           ...value,
           items: value.items.map((saved) =>
@@ -254,6 +265,7 @@ export function CardContextMenu({
         };
       }),
     );
+
   return (
     <Modal
       transparent

@@ -11,9 +11,9 @@ export interface DetectedClipboardInfo {
 
 export function autoDetectClipboardContent(text: string): DetectedClipboardInfo {
   const trimmed = text.trim();
-
   // Social link check
   const social = parseSocialUrl(trimmed);
+
   if (social.detectedType === 'x_post') {
     return {
       type: 'x_post',
@@ -56,6 +56,7 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
 
   if (isUrl && !trimmed.includes('\n')) {
     let domain = 'link';
+
     try {
       domain = new URL(
         trimmed.startsWith('http') ? trimmed : `https://${trimmed}`,
@@ -63,6 +64,7 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
     } catch {
       domain = 'link';
     }
+
     return {
       type: 'link',
       title: domain,
@@ -75,6 +77,7 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
   // Markdown check
   if (trimmed.startsWith('# ') || trimmed.includes('```') || trimmed.startsWith('## ')) {
     const firstLine = trimmed.split('\n')[0].replace(/^#+\s*/, '') || 'Markdown Document';
+
     return {
       type: 'markdown',
       title: firstLine,
@@ -115,6 +118,7 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
 
   // General Note
   const preview = trimmed.split('\n')[0];
+
   return {
     type: 'note',
     title: preview.length > 40 ? `${preview.slice(0, 38)}...` : preview,
@@ -125,7 +129,9 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
 
 export function findDuplicateItem(queryUrlOrContent: string, items: SavedItem[]): SavedItem | null {
   const clean = queryUrlOrContent.trim();
+
   if (!clean) return null;
+
   const canonicalUrl = (value: string) => {
     try {
       return new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`).href;

@@ -53,6 +53,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
   const logVoice = useCallback(
     (event: string, details: Record<string, string | number | boolean | null | undefined> = {}) => {
       const session = voiceSession.current;
+
       // Never log transcripts, draft contents, or account credentials.
       console.info('[dictation]', {
         event,
@@ -72,7 +73,9 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
     request.current = null;
     clearTimeout(paintTimer.current);
     paintTimer.current = undefined;
+
     const draft = stream.current;
+
     stream.current = null;
     if (draft?.content) {
       setText(draft.content);
@@ -88,11 +91,13 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
     setPhase('idle');
   };
   const cancelEffect = useEffectEvent(cancel);
+
   useEffect(() => {
     if (!active) cancelEffect('capture-closed');
   }, [active]);
   useEffect(() => {
     live.current = true;
+
     const subscription = AppState.addEventListener('change', (value) => {
       if (recognizing.current || voiceBusy.current) logVoice('app-state', { state: value });
       if (value === 'background') {
@@ -101,41 +106,52 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
         else logVoice('permission-background-deferred');
       }
     });
+
     return () => {
       live.current = false;
       subscription.remove();
       cancelEffect('unmount');
     };
   }, [logVoice]);
+
   const fail = (error: unknown) =>
     state.setError(
       error instanceof Error ? error.message : 'AI is unavailable. Your draft is still here.',
     );
   const ask = async () => {
     if (phase !== 'idle' || request.current || voiceBusy.current || !text.trim()) return;
+
     const controller = new AbortController();
+
     request.current = controller;
+
     const timeout = setTimeout(() => controller.abort(), 60000);
     const prompt = text;
     const draft = { prompt, id: randomUUID(), content: '', paintedAt: 0 };
+
     stream.current = draft;
     setPhase('thinking');
     Keyboard.dismiss();
     try {
       const client = await aiClient();
+
       if (controller.signal.aborted) return;
+
       const result = await client.chat(
         [{ role: 'user', content: prompt }],
         true,
         controller.signal,
         (content) => {
           if (!live.current || controller.signal.aborted || request.current !== controller) return;
+
           const first = !draft.content;
+
           draft.content = content;
           if (first) {
             setGenerated({ prompt, id: draft.id });
             setPhase('streaming');
           }
+
           const paint = () => {
             if (live.current && !controller.signal.aborted && request.current === controller) {
               paintTimer.current = undefined;
@@ -144,12 +160,14 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
             }
           };
           const elapsed = Date.now() - draft.paintedAt;
+
           if (elapsed >= 40) {
             clearTimeout(paintTimer.current);
             paint();
           } else if (!paintTimer.current) paintTimer.current = setTimeout(paint, 40 - elapsed);
         },
       );
+
       if (!live.current || controller.signal.aborted) return;
       setGenerated({ prompt, id: draft.id, truncated: result.truncated });
       setText(result.content);
@@ -162,6 +180,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
           ['sign_in_required', 'subscription_required'].includes(error.code)
         ) {
           router.push('/settings');
+
           return;
         }
         if (draft.content) {
@@ -199,6 +218,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
     if (recognizing.current && error !== 'aborted') {
       const detail =
         error === 'no-speech' ? 'No speech detected. Tap the mic to try again.' : message;
+
       setVoiceError(detail);
       fail(new Error(detail));
     }
@@ -206,15 +226,20 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
   const handleVoiceEnd = useEffectEvent(() => {
     if (!voiceBusy.current && !recognizing.current) {
       logVoice('end-ignored', { reason: 'no-active-session' });
+
       return;
     }
+
     const session = voiceSession.current;
+
     logVoice('end', {
       started: session.started,
       resultEvents: session.resultEvents,
       reason: session.reason || 'service-ended',
     });
+
     const message = voiceEndMessage(session.started, session.resultEvents, session.reason);
+
     recognizing.current = false;
     voiceBusy.current = false;
     voiceDraft.current = null;
@@ -227,8 +252,10 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
       setPhase('idle');
     }
   });
+
   useEffect(() => {
     if (!recognition) return;
+
     const subscriptions = [
       recognition.addListener('start', () => {
         logVoice('start');
@@ -252,8 +279,10 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
       ),
       recognition.addListener('end', () => handleVoiceEnd()),
     ];
+
     return () => subscriptions.forEach((subscription) => subscription.remove());
   }, [voiceLevel, logVoice]);
+
   const finishVoice = () => {
     if (!recognizing.current) return;
     // Keep accepting results until end so the recognizer can correct the last partial phrase.
@@ -265,6 +294,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
   const voice = async () => {
     if (phase === 'listening') {
       finishVoice();
+
       return;
     }
     if (phase !== 'idle' || request.current || voiceBusy.current) {
@@ -273,6 +303,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
         requestInFlight: !!request.current,
         voiceBusy: voiceBusy.current,
       });
+
       return;
     }
     voiceSession.current = {
@@ -287,7 +318,9 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
       osVersion: String(Platform.Version),
       appState: AppState.currentState,
     });
+
     const controller = new AbortController();
+
     request.current = controller;
     voiceBusy.current = true;
     setVoiceError('');
@@ -298,7 +331,9 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
         logVoice('native-module-missing');
         throw new Error('Rebuild the app to enable live dictation.');
       }
+
       const available = recognition.isRecognitionAvailable();
+
       logVoice('availability', { available });
       if (Platform.OS === 'android') {
         try {
@@ -315,7 +350,9 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
         );
       // Android permission activities can briefly background the app before resolving.
       permissionPending.current = true;
+
       let permission;
+
       try {
         permission = await recognition.getPermissionsAsync();
         if (!permission.granted) {
@@ -328,6 +365,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
       logVoice('permission', { granted: permission.granted, canAskAgain: permission.canAskAgain });
       if (controller.signal.aborted) {
         logVoice('permission-returned-after-cancel');
+
         return;
       }
       if (!permission.granted)
@@ -336,13 +374,16 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
         );
       if (AppState.currentState !== 'active') {
         cancel('background');
+
         return;
       }
       voiceDraft.current = { prefix: text, committed: '', text };
       setGenerated(null);
       Keyboard.dismiss();
       recognizing.current = true;
+
       const lang = Intl.DateTimeFormat().resolvedOptions().locale;
+
       logVoice('start-called', { lang, continuous: Platform.OS === 'ios', interimResults: true });
       recognition.start({
         lang,
@@ -374,6 +415,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
       if (request.current === controller) request.current = null;
     }
   };
+
   return {
     enabled,
     setEnabled,

@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   type TextInputInstance,
   type TextInputProps,
+  type TextStyle,
 } from 'react-native';
 import { padding as composePadding } from '@expo/ui/jetpack-compose/modifiers';
 import { padding as swiftPadding } from '@expo/ui/swift-ui/modifiers';
@@ -19,8 +20,9 @@ import { router } from 'expo-router';
 import { useCollection } from '../state/collection';
 import { fonts, radius } from '../theme';
 
-export function HeaderBackTitle({ title }: { title: string }) {
+export function HeaderBackTitle({ title, titleStyle }: { title: string; titleStyle?: TextStyle }) {
   const { colors } = useCollection();
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, maxWidth: 240 }}>
       <Pressable
@@ -36,14 +38,17 @@ export function HeaderBackTitle({ title }: { title: string }) {
         allowFontScaling={false}
         accessibilityRole="header"
         numberOfLines={1}
-        style={{
-          flexShrink: 1,
-          color: colors.ink,
-          fontSize: 18,
-          fontWeight: '500',
-          lineHeight: 24,
-          includeFontPadding: false,
-        }}
+        style={[
+          {
+            flexShrink: 1,
+            color: colors.ink,
+            fontSize: 18,
+            fontWeight: '500',
+            lineHeight: 24,
+            includeFontPadding: false,
+          },
+          titleStyle,
+        ]}
       >
         {title}
       </Text>
@@ -66,6 +71,7 @@ export function Action({
   leading?: ReactNode;
 }) {
   const { colors } = useCollection();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -116,6 +122,7 @@ export function IconButton({
   disabled?: boolean;
 }) {
   const { colors } = useCollection();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -151,6 +158,7 @@ export function CollectionSearch({
 }) {
   const { colors } = useCollection();
   const { width } = useWindowDimensions();
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 }}>
       <Search size={22} color={colors.searchPlaceholder} strokeWidth={1.3} />
@@ -185,6 +193,7 @@ export function CollectionSearch({
 
 export function Field({ ref, ...props }: TextInputProps & { ref?: Ref<TextInputInstance> }) {
   const { colors } = useCollection();
+
   return (
     <TextInput
       allowFontScaling={false}
@@ -208,6 +217,7 @@ export function Field({ ref, ...props }: TextInputProps & { ref?: Ref<TextInputI
 }
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   const { colors } = useCollection();
+
   return (
     <View style={{ gap: 10 }}>
       <Text
@@ -236,6 +246,7 @@ export function Chip({
   onPress: () => void;
 }) {
   const { colors } = useCollection();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -287,6 +298,7 @@ export function Chip({
 
 export function NativeGroup({ children }: { children: ReactNode }) {
   const { colors, dark } = useCollection();
+
   return (
     <View style={{ borderRadius: radius.group, overflow: 'hidden', backgroundColor: colors.paper }}>
       <Host
@@ -305,6 +317,7 @@ export function SettingRow({ children, supportingText, ...props }: ListItemProps
   const { colors } = useCollection();
   const { fontScale } = useWindowDimensions();
   const scale = Platform.OS === 'android' ? fontScale : 1;
+
   return (
     <ListItem
       {...props}

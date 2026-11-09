@@ -1,28 +1,39 @@
 import type { ExpoConfig } from 'expo/config';
+
 const iosUrlScheme = process.env.GOOGLE_IOS_URL_SCHEME;
 const compactApk = process.env.EAS_BUILD_PROFILE === 'preview-arm64';
 const productionBuild = process.env.EAS_BUILD_PROFILE === 'production';
+const productionEnvironment = productionBuild || process.env.APP_ENV === 'production';
+const productionAndroidAppId = process.env.ADMOB_ANDROID_APP_ID;
+const productionIosAppId = process.env.ADMOB_IOS_APP_ID;
+
 const admobAndroidAppId = productionBuild
-  ? process.env.ADMOB_ANDROID_APP_ID
+  ? productionAndroidAppId
   : 'ca-app-pub-3940256099942544~3347511713';
+
 const admobIosAppId = productionBuild
-  ? process.env.ADMOB_IOS_APP_ID
+  ? productionIosAppId
   : 'ca-app-pub-3940256099942544~1458002511';
+
 const productionAdsReady =
-  productionBuild &&
-  !!admobAndroidAppId &&
-  !!admobIosAppId &&
+  !!productionAndroidAppId &&
+  !!productionIosAppId &&
   !!process.env.EXPO_PUBLIC_ADMOB_ANDROID_NATIVE_UNIT_ID &&
   !!process.env.EXPO_PUBLIC_ADMOB_IOS_NATIVE_UNIT_ID;
+
 const config: ExpoConfig = {
   name: 'Anything',
   icon: './assets/icon.png',
-  slug: 'anything-mobile',
+  slug: 'anything',
   scheme: 'anything',
-  version: '1.0.0',
+  version: '0.0.8',
   orientation: 'default',
   userInterfaceStyle: 'automatic',
   platforms: ['ios', 'android'],
+  runtimeVersion: { policy: 'appVersion' },
+  updates: {
+    url: 'https://u.expo.dev/46845190-3f80-495e-ba63-a888e2fdb9c7',
+  },
   ios: {
     bundleIdentifier: 'app.anything.mobile',
     supportsTablet: true,
@@ -43,6 +54,7 @@ const config: ExpoConfig = {
       'expo-build-properties',
       {
         android: {
+          cmakeVersion: process.platform === 'win32' ? '3.31.6' : undefined,
           enableMinifyInReleaseBuilds: true,
           enableShrinkResourcesInReleaseBuilds: true,
           enableBundleCompression: true,
@@ -60,6 +72,7 @@ const config: ExpoConfig = {
     './plugins/with-fingerprint-fix.cjs',
     './plugins/with-signing.cjs',
     'expo-router',
+    ['expo-navigation-bar', { enforceContrast: false }],
     'react-native-fast-image',
     'expo-web-browser',
     'expo-asset',
@@ -99,8 +112,10 @@ const config: ExpoConfig = {
       : []),
   ],
   extra: {
-    admobTestMode: !productionBuild,
-    admobEnabled: !productionBuild || productionAdsReady,
+    admobTestMode: !productionEnvironment,
+    admobEnabled: !productionEnvironment || productionAdsReady,
+    eas: { projectId: '46845190-3f80-495e-ba63-a888e2fdb9c7' },
   },
 };
+
 export default config;

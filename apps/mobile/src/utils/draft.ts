@@ -10,9 +10,11 @@ export function draftItem(
   randomUUID: () => string,
 ): SavedItem {
   const content = text.trim();
+
   if (!content) throw new Error('Add something to keep before saving.');
   if (content.length > 12_000_000)
     throw new Error('This save is too large. Use a hosted image link instead.');
+
   const base = {
     id: existing?.id || randomUUID(),
     createdAt: existing?.createdAt || Date.now(),
@@ -29,8 +31,10 @@ export function draftItem(
           ? 'Image'
           : content.split('\n')[0].slice(0, 90)),
   };
+
   if (kind === 'link') {
     const url = normalizeUrl(content);
+
     return {
       ...base,
       type: 'link',
@@ -48,6 +52,7 @@ export function draftItem(
   if (kind === 'image') {
     if (!/^data:image\/(?:png|jpe?g|gif|webp|heic|heif);base64,/i.test(content))
       normalizeUrl(content);
+
     return {
       ...base,
       type: 'image',
@@ -98,6 +103,7 @@ export function draftItem(
             existing?.type === 'note' ? existing.checklist?.[index]?.completed || false : false,
         })),
     };
+
   return {
     ...base,
     type: 'note',

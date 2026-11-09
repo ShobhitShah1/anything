@@ -11,6 +11,7 @@ const note = {
   isPinned: false,
   tags: [],
 };
+
 test('backup import accepts exported JSON and a UTF-8 BOM from file providers', () => {
   assert.deepEqual(parseBackup(JSON.stringify([note])), [note]);
   assert.deepEqual(parseBackup('\uFEFF' + JSON.stringify([note])), [note]);

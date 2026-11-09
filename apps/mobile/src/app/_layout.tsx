@@ -5,9 +5,11 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { ActivityIndicator, Appearance, Pressable, Text, View } from 'react-native';
 import { useEffect } from 'react';
 import * as SystemUI from 'expo-system-ui';
+import { NavigationBar } from 'expo-navigation-bar';
 import { useReducedMotion } from 'react-native-reanimated';
 import { CollectionProvider, useCollection } from '../state/collection';
 import { Feedback, FeedbackHost } from '../components/feedback';
+import { UpdateNotice } from '../components/update-notice';
 import { LaunchScreen } from '../components/launch-screen';
 import { loadSubscription } from '../services/subscription';
 import { SignInSheet } from '../components/sign-in-sheet';
@@ -22,13 +24,16 @@ function Routes() {
   const { colors, dark, ready, error } = state;
   const uid = state.user?.uid;
   const { setMembership } = state;
+
   useEffect(() => {
     if (!uid) return;
+
     let disposed = false;
     let client: Awaited<ReturnType<typeof billingClient>> | undefined;
     const changed = (info: Parameters<typeof hasPro>[0]) => {
       if (!disposed) setMembership({ uid, active: hasPro(info), adsEligible: false });
     };
+
     void loadSubscription(uid).then(([usage, billing]) => {
       if (!disposed && (usage.status === 'fulfilled' || billing.status === 'fulfilled'))
         setMembership({
@@ -49,6 +54,7 @@ function Routes() {
         client.addCustomerInfoUpdateListener(changed);
       })
       .catch(() => {});
+
     return () => {
       disposed = true;
       client?.removeCustomerInfoUpdateListener(changed);
@@ -83,9 +89,11 @@ function Routes() {
         )}
       </View>
     );
+
   return (
     <>
       <StatusBar style={dark ? 'light' : 'dark'} />
+      <NavigationBar style={dark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           contentStyle: { backgroundColor: colors.canvas },
@@ -116,10 +124,12 @@ function Routes() {
         <Stack.Screen name="folders" options={{ title: 'Folders' }} />
       </Stack>
       {segments[0] !== 'capture' && <FeedbackHost />}
+      <UpdateNotice />
       <SignInSheet />
     </>
   );
 }
+
 export default function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

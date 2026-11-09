@@ -9,6 +9,7 @@ const effect = source.slice(
   source.indexOf('    if (!ready || !data.autoClipboard) return;'),
   source.indexOf('  }, [ready, data.autoClipboard, capture]);'),
 );
+
 function setup({ enabled = true, ready = true, fail = false } = {}) {
   const listeners = new Map();
   const saved = [];
@@ -19,6 +20,7 @@ function setup({ enabled = true, ready = true, fail = false } = {}) {
     currentState: 'active',
     addEventListener: (name, fn) => {
       listeners.set(name, fn);
+
       return { remove: () => listeners.delete(name) };
     },
   };
@@ -37,11 +39,13 @@ function setup({ enabled = true, ready = true, fail = false } = {}) {
       },
       setInterval: (fn) => {
         interval = fn;
+
         return 1;
       },
       clearInterval: () => {},
     },
   );
+
   return {
     saved,
     listeners,
@@ -53,9 +57,12 @@ function setup({ enabled = true, ready = true, fail = false } = {}) {
     },
   };
 }
+
 const flush = () => new Promise((resolve) => setImmediate(resolve));
+
 test('checks at startup and resume, ignores duplicates and background polling', async () => {
   const app = setup();
+
   await flush();
   assert.deepEqual(app.saved, ['first']);
   app.AppState.currentState = 'background';
@@ -76,6 +83,7 @@ test('checks at startup and resume, ignores duplicates and background polling', 
 });
 test('failed capture retries the same clipboard instead of marking it handled', async () => {
   const app = setup({ fail: true });
+
   await flush();
   app.tick();
   await flush();
@@ -84,6 +92,7 @@ test('failed capture retries the same clipboard instead of marking it handled', 
 test('disabled capture and unhydrated storage never read the clipboard', async () => {
   for (const options of [{ enabled: false }, { ready: false }]) {
     const app = setup(options);
+
     await flush();
     assert.equal(app.listeners.size, 0);
     assert.deepEqual(app.saved, []);

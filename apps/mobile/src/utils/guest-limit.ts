@@ -6,7 +6,9 @@ export function guestLimitReached(
   signedIn: boolean,
 ) {
   if (signedIn || next.length <= GUEST_ITEM_LIMIT) return false;
+
   const existing = new Set(previous.map((item) => item.id));
+
   return next.some((item) => !existing.has(item.id));
 }
 

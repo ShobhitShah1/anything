@@ -3,6 +3,7 @@ const { withAppBuildGradle } = require('expo/config-plugins');
 module.exports = function withSigning(config) {
   return withAppBuildGradle(config, (config) => {
     const marker = '// Anything: private local signing for both build variants.';
+
     if (!config.modResults.contents.includes(marker)) {
       config.modResults.contents += `
 ${marker}
@@ -28,6 +29,7 @@ if (anythingCredentials.isFile()) {
 }
 `;
     }
+
     return config;
   });
 };

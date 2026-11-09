@@ -22,6 +22,7 @@ export const AiResponseStatus = memo(function AiResponseStatus({
   const working = phase !== 'idle';
   const waiting = phase === 'thinking';
   const label = waiting ? 'Preparing your draft' : working ? 'Writing your draft' : 'Your draft';
+
   return (
     <View style={{ marginBottom: 24 }}>
       <Text

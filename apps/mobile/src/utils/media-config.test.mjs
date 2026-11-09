@@ -11,7 +11,9 @@ test('image and browser native modules replace Expo Image in dependencies and co
   assert.ok(pkg.dependencies['react-native-fast-image']);
   assert.ok(pkg.dependencies['expo-web-browser']);
   assert.equal(pkg.dependencies['expo-image'], undefined);
+
   const plugins = config.plugins.map((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin));
+
   assert.ok(plugins.includes('react-native-fast-image'));
   assert.ok(plugins.includes('expo-web-browser'));
   assert.ok(!plugins.includes('expo-image'));
@@ -25,6 +27,7 @@ test('release builds shrink unused code and resources through Expo configuration
   const plugin = config.plugins.find(
     (entry) => Array.isArray(entry) && entry[0] === 'expo-build-properties',
   );
+
   assert.equal(plugin[1].android.enableMinifyInReleaseBuilds, true);
   assert.equal(plugin[1].android.enableShrinkResourcesInReleaseBuilds, true);
   assert.equal(plugin[1].android.enableBundleCompression, true);
@@ -37,13 +40,17 @@ test('compact APK packaging is opt-in and does not restrict production device su
     readFileSync(new URL('../../app.config.ts', import.meta.url), 'utf8'),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
   ).outputText;
+
   for (const profile of ['production', 'store-test', 'development', 'preview', 'preview-arm64']) {
     const exports = {};
+
     runInNewContext(source, { exports, process: { env: { EAS_BUILD_PROFILE: profile } } });
+
     const plugin = exports.default.plugins.find(
       (entry) => Array.isArray(entry) && entry[0] === 'expo-build-properties',
     );
     const android = plugin[1].android;
+
     assert.equal(android.useLegacyPackaging, profile === 'preview-arm64');
     if (profile === 'preview-arm64')
       assert.deepEqual(Array.from(android.buildArchs), ['arm64-v8a']);
@@ -55,18 +62,23 @@ test('compact APK packaging is opt-in and does not restrict production device su
         'x86_64',
       ]);
   }
+
   const eas = JSON.parse(readFileSync(new URL('../../eas.json', import.meta.url), 'utf8'));
+
   assert.equal(eas.build['preview-arm64'].extends, 'preview');
   assert.equal(eas.build.production.android.buildType, 'app-bundle');
 });
 
 test('AI calls the authenticated backend without bundling provider keys or an audio recorder', () => {
   const plugins = config.plugins.map((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin));
+
   assert.ok(!plugins.includes('expo-secure-store'));
   assert.ok(!plugins.includes('expo-audio'));
   assert.equal(pkg.dependencies['expo-audio'], undefined);
   assert.equal(pkg.dependencies['expo-speech'], undefined);
+
   const service = readFileSync(new URL('../services/ai.ts', import.meta.url), 'utf8');
+
   assert.ok(service.includes('process.env.EXPO_PUBLIC_AI_URL'));
   assert.ok(service.includes('getIdToken()'));
   assert.ok(!service.includes('EXPO_PUBLIC_GROQ'));
@@ -79,6 +91,7 @@ test('both package managers lock the new native modules', () => {
     readFileSync(new URL('../../package-lock.json', import.meta.url), 'utf8'),
   );
   const yarn = readFileSync(new URL('../../yarn.lock', import.meta.url), 'utf8');
+
   assert.ok(yarn.includes('__metadata:'));
   for (const name of [
     'react-native-fast-image',
@@ -108,6 +121,7 @@ test('live dictation config includes microphone and speech recognition permissio
   const plugin = config.plugins.find(
     (entry) => Array.isArray(entry) && entry[0] === 'expo-speech-recognition',
   );
+
   assert.ok(plugin);
   assert.ok(plugin[1].microphonePermission);
   assert.ok(plugin[1].speechRecognitionPermission);

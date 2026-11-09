@@ -37,6 +37,7 @@ function collection(count, loginSucceeds = true, development = true) {
     refIndex = 0;
   const auth = { currentUser: null };
   const empty = { items: items(count), folders: [], journals: {}, theme: 'light', syncUid: '' };
+
   runInNewContext(source, {
     exports,
     __DEV__: development,
@@ -49,8 +50,10 @@ function collection(count, loginSucceeds = true, development = true) {
           useRef: (current) => (refs[refIndex++] ??= { current }),
           useState(initial) {
             const index = stateIndex++;
+
             if (index === 5) initial = true;
             if (!(index in states)) states[index] = initial;
+
             return [
               states[index],
               (value) => {
@@ -73,20 +76,25 @@ function collection(count, loginSucceeds = true, development = true) {
       if (name === '../utils/guest-limit') return { guestLimitReached, GuestLimitError };
       if (name === '../utils/device-storage')
         return { saveText: async (_, __, value) => writes.push(JSON.parse(value)) };
+
       return {};
     },
   });
+
   const render = () => {
     stateIndex = refIndex = 0;
+
     return exports.CollectionProvider({ children: null }).props.value;
   };
   const state = render();
+
   return { state, render, auth, writes, states };
 }
 
 test('profile-wide development Pro is account-scoped, reversible and never persisted', () => {
   for (const development of [false, true]) {
     const app = collection(10, true, development);
+
     app.states[4] = { uid: 'one' };
     app.render().setDevPro(true);
     assert.equal(app.render().pro, development);
@@ -102,6 +110,7 @@ test('profile-wide development Pro is account-scoped, reversible and never persi
 
 test('real membership updates the whole profile independently of development preview', () => {
   const app = collection(10, true, false);
+
   app.states[4] = { uid: 'one' };
   app.render().setMembership({ uid: 'one', active: true });
   assert.equal(app.render().pro, true);
@@ -115,6 +124,7 @@ test('serialized saves cannot race past ten, and signing in unlocks saving', asy
     state.save({ id: 'a', type: 'note' }),
     state.save({ id: 'b', type: 'note' }),
   ]);
+
   assert.equal(results[0].status, 'fulfilled');
   assert.equal(results[1].status, 'rejected');
   assert.ok(results[1].reason instanceof GuestLimitError);
@@ -128,6 +138,7 @@ test('serialized saves cannot race past ten, and signing in unlocks saving', asy
 
 test('an oversized import is rejected before any device write; existing items stay editable', async () => {
   const { state, writes } = collection(10);
+
   await assert.rejects(
     state.commit((value) => ({ ...value, items: items(20) })),
     GuestLimitError,
@@ -140,6 +151,7 @@ test('an oversized import is rejected before any device write; existing items st
 
 test('successful login enables cloud sync and keeps the local collection intact', async () => {
   const { state, writes } = collection(10);
+
   await state.signIn();
   assert.equal(writes.length, 1);
   assert.equal(writes[0].syncUid, 'signed-in');
@@ -148,6 +160,7 @@ test('successful login enables cloud sync and keeps the local collection intact'
 
 test('cancelled login never enables sync or writes collection data', async () => {
   const { state, writes } = collection(10, false);
+
   await state.signIn();
   assert.equal(writes.length, 0);
 });

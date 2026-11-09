@@ -38,6 +38,7 @@ const privacy =
 
 export default function Subscription() {
   const { user } = useCollection();
+
   return <Membership key={user?.uid || 'guest'} />;
 }
 
@@ -73,6 +74,7 @@ function Membership() {
   const operation = useRef(false);
   const focusController = useRef<AbortController | null>(null);
   const refreshVersion = useRef(0);
+
   useEffect(() => {
     if (user) rememberSubscription(user.uid, { access, customer, plans });
   }, [user, access, customer, plans]);
@@ -80,19 +82,25 @@ function Membership() {
   const refresh = useCallback(
     async (signal: AbortSignal) => {
       if (!user) return;
+
       const version = ++refreshVersion.current;
       const cached = subscriptionSnapshot(user.uid);
+
       setLoading(!cached?.access || (!cached.customer && !cached.plans.length));
       setError('');
       setNotice('');
+
       const results = await loadSubscription(user.uid);
+
       if (
         signal.aborted ||
         version !== refreshVersion.current ||
         auth?.currentUser?.uid !== user.uid
       )
         return;
+
       const [usage, offerings] = results;
+
       if (usage.status === 'fulfilled') setAccess(usage.value);
       if (
         usage.status === 'fulfilled' &&
@@ -103,18 +111,23 @@ function Membership() {
         setNotice(
           'A store subscription was found. Server access is still being verified; refresh or restore in a moment.',
         );
+
       const messages: string[] = [];
+
       if (usage.status === 'rejected')
         messages.push(
           usage.reason instanceof Error ? usage.reason.message : 'Could not load AI usage.',
         );
       if (offerings.status === 'fulfilled') {
         const current = offerings.value.offerings.current;
+
         setCustomer(offerings.value.customer);
         if (offerings.value.active) setPending(null);
+
         const available = subscriptionPlans(current?.availablePackages || []).map(
           (plan) => plan.storePackage,
         );
+
         if (__DEV__)
           console.info('[billing] Offerings response', {
             currentOffering: current?.identifier ?? null,
@@ -163,10 +176,12 @@ function Membership() {
   useFocusEffect(
     useCallback(() => {
       const controller = new AbortController();
+
       focusController.current = controller;
       setNotice('');
       setError('');
       void refresh(controller.signal);
+
       const subscription = AppState.addEventListener('change', (value) => {
         if (value === 'active' && !operation.current) void refresh(controller.signal);
       });
@@ -183,6 +198,7 @@ function Membership() {
             })
             .catch(() => {});
       };
+
       if (user)
         void billingClient()
           .then((client) => {
@@ -191,6 +207,7 @@ function Membership() {
             client.addCustomerInfoUpdateListener(onCustomerInfo);
           })
           .catch(() => {}); // refresh reports initialization failures.
+
       return () => {
         controller.abort();
         focusController.current = null;
@@ -207,7 +224,9 @@ function Membership() {
     setWorking(true);
     setError('');
     setNotice('');
+
     const uid = user?.uid;
+
     try {
       await action();
     } catch (reason) {
@@ -220,14 +239,16 @@ function Membership() {
       setWorking(false);
     }
   };
-
   const verifyPurchase = async () => {
     const uid = user?.uid;
     const signal = focusController.current?.signal;
+
     if (!signal || signal.aborted || auth?.currentUser?.uid !== uid) return;
     setPending('verification');
     setNotice('Confirming your membership…');
+
     const result = await verifySubscription(getAiAccess, signal);
+
     if (signal.aborted || auth?.currentUser?.uid !== uid) return;
     setAccess(result);
     setPending(result.paid ? null : 'verification');
@@ -257,24 +278,32 @@ function Membership() {
   const subscribe = () => {
     if (!user) {
       void state.signIn();
+
       return;
     }
     void run(async () => {
       const client = await billingClient();
+
       if (paid || storeActive) {
         if (REVENUECAT_TEST_MODE) {
           setNotice(
             'Manage or cancel this test subscription in RevenueCat → Customers. Test Store renewals expire automatically.',
           );
+
           return;
         }
+
         const info = await client.getCustomerInfo();
+
         if (info.managementURL) await openLink(info.managementURL);
         else await client.showManageSubscriptions();
+
         return;
       }
       if (!canPurchase || !plan?.storePackage) return;
+
       const purchase = await client.purchasePackage(plan.storePackage);
+
       if (auth?.currentUser?.uid !== user.uid) return;
       setCustomer(purchase.customerInfo);
       if (!hasPro(purchase.customerInfo)) {
@@ -282,6 +311,7 @@ function Membership() {
         setError(
           'Purchase completed, but subscription access is not active. Refresh or restore; do not buy again.',
         );
+
         return;
       }
       try {
@@ -308,10 +338,12 @@ function Membership() {
     void run(async () => {
       const client = await billingClient();
       const info = await client.restorePurchases();
+
       if (auth?.currentUser?.uid !== user?.uid) return;
       setCustomer(info);
       if (!hasPro(info)) {
         setNotice('No active subscription was found for this account.');
+
         return;
       }
       try {
@@ -320,8 +352,8 @@ function Membership() {
         setError('Subscription restored. Refresh to verify access; do not buy again.');
       }
     });
-
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.canvas }}>
       <Stack.Screen options={{ headerShown: false, statusBarStyle: 'light' }} />

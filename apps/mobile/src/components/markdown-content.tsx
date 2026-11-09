@@ -132,6 +132,7 @@ export const MarkdownContent = memo(function MarkdownContent({
       markdownStyle={markdownStyle}
     />
   );
+
   // GitHub-flavored native Markdown ignores numberOfLines, so clip previews at the container.
   return previewLines ? (
     <View

@@ -13,6 +13,7 @@ export const emptyCollection: CollectionData = {
   autoClipboard: false,
   journals: {},
 };
+
 function validRecords(data: CloudCollection) {
   return (
     data &&
@@ -26,8 +27,10 @@ function validRecords(data: CloudCollection) {
     )
   );
 }
+
 export function validateCollection(value: unknown): CollectionData {
   const data = value as CollectionData;
+
   if (!validRecords(data))
     throw new Error(
       'This collection contains unsupported records. Your existing saves have not been replaced.',
@@ -47,6 +50,7 @@ export function validateCollection(value: unknown): CollectionData {
     throw new Error(
       'Pending cloud changes could not be read. Your collection has not been replaced.',
     );
+
   return {
     ...emptyCollection,
     ...data,
@@ -66,11 +70,14 @@ export function mergeQueuedCollection(
     const original = new Map(before.map((item) => [item.id, item]));
     const latest = new Map(local.map((item) => [item.id, item]));
     const result = new Map(remote.map((item) => [item.id, item]));
+
     for (const [id, item] of latest)
       if (JSON.stringify(original.get(id)) !== JSON.stringify(item)) result.set(id, item);
     for (const id of original.keys()) if (!latest.has(id)) result.delete(id);
+
     return [...result.values()];
   }
+
   return {
     items: merge(before.items, local.items, remote.items),
     folders: merge(before.folders, local.folders, remote.folders),
@@ -82,5 +89,6 @@ export function removeCollectionItems(
   ids: readonly string[],
 ): CollectionData {
   const removed = new Set(ids);
+
   return { ...value, items: value.items.filter((item) => !removed.has(item.id)) };
 }

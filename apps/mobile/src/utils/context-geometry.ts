@@ -13,6 +13,7 @@ export function contextGeometry(
   const scale = Math.min(1.05, (width - 48) / source.width, available / source.height);
   const previewHeight = source.height * scale;
   const y = top + 16 + Math.max(0, (available - previewHeight) / 2);
+
   return {
     x: (width - source.width * scale) / 2,
     y,

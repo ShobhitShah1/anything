@@ -1,10 +1,12 @@
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from './use-scroll-header';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { NavigationBar } from 'expo-navigation-bar';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useReducedMotion } from 'react-native-reanimated';
 import Image from 'react-native-fast-image';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,14 +16,13 @@ import {
   Clipboard as ClipboardIcon,
   ImagePlus,
   Pin,
-  Check,
   ChevronDown,
   ChevronUp,
   Folder,
   Tags,
 } from 'lucide-react-native';
 import { useCollection } from '../state/collection';
-import { Field, IconButton } from './ui';
+import { Chip, Field, IconButton } from './ui';
 import { draftItem, type DraftKind } from '../utils/draft';
 import { itemText, itemUrl } from '../utils/item';
 import { createQuickCaptures } from '../shared/utils/quickCapture';
@@ -30,11 +31,22 @@ import { FeedbackHost } from './feedback';
 import { ChoiceMenu } from './choice-menu';
 import { fonts, space, type } from '../theme';
 
+const saveKinds: DraftKind[] = [
+  'auto',
+  'note',
+  'checklist',
+  'link',
+  'image',
+  'markdown',
+  'code',
+  'secret',
+];
+
 export function CaptureEditor() {
   const { id, folder } = useLocalSearchParams<{ id?: string; folder?: string }>();
   const close = () => router.back();
   const state = useCollection();
-  const { data, colors } = state;
+  const { data, colors, dark } = state;
   const existing = data.items.find((item) => item.id === id);
   const {
     targetRef,
@@ -74,6 +86,25 @@ export function CaptureEditor() {
   const [busy, setBusy] = useState(false);
   const { setError } = state;
   const insets = useSafeAreaInsets();
+  const chipScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const chipRects = useRef<Partial<Record<DraftKind, { x: number; width: number }>>>({});
+  const [chipViewportWidth, setChipViewportWidth] = useState(0);
+  const reducedMotion = useReducedMotion();
+  const centerKind = useCallback(
+    (value: DraftKind, animated = true) => {
+      const rect = chipRects.current[value];
+
+      if (!rect || !chipViewportWidth) return;
+      chipScrollRef.current?.scrollTo({
+        x: Math.max(0, rect.x + (rect.width - chipViewportWidth) / 2),
+        animated: animated && !reducedMotion,
+      });
+    },
+    [chipViewportWidth, reducedMotion],
+  );
+
+  useEffect(() => centerKind(kind), [centerKind, kind]);
+
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -81,8 +112,11 @@ export function CaptureEditor() {
         base64: true,
         quality: 0.8,
       });
+
       if (result.canceled) return;
+
       const image = result.assets[0];
+
       if (!image.base64 || image.base64.length > 12_000_000)
         throw new Error('Choose an image smaller than 9 MB, or use an image link.');
       setText(`data:${image.mimeType || 'image/jpeg'};base64,${image.base64}`);
@@ -99,6 +133,7 @@ export function CaptureEditor() {
     setError('');
     try {
       let items: SavedItem[];
+
       if (kind === 'auto') {
         items = createQuickCaptures(
           text,
@@ -114,6 +149,7 @@ export function CaptureEditor() {
                 : { ...item, id: existing.id, createdAt: existing.createdAt },
             );
       } else items = [draftItem(kind, text, title, existing, randomUUID)];
+
       const cleanTags = [
         ...new Set(
           tags
@@ -122,6 +158,7 @@ export function CaptureEditor() {
             .filter(Boolean),
         ),
       ].slice(0, 30);
+
       for (const entry of items) {
         let item = {
           ...entry,
@@ -131,6 +168,7 @@ export function CaptureEditor() {
           isPinned: pinned,
           mediaAspectRatio: mediaRatio,
         };
+
         if (item.type === 'code') item = { ...item, language };
         if (item.type === 'secret') item = { ...item, username, notes };
         await state.save(item);
@@ -152,6 +190,7 @@ export function CaptureEditor() {
       setBusy(false);
     }
   };
+
   return (
     <BlurTargetView ref={targetRef} style={{ flex: 1, backgroundColor: colors.canvas }}>
       <Stack.Screen
@@ -178,30 +217,36 @@ export function CaptureEditor() {
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
             gap: 12,
           }}
         >
-          <ChoiceMenu
-            label="Save as"
-            value={kind}
-            options={(
-              [
-                'auto',
-                'note',
-                'checklist',
-                'link',
-                'image',
-                'markdown',
-                'code',
-                'secret',
-              ] as DraftKind[]
-            ).map((value) => ({
-              value,
-              label: value === 'auto' ? 'Anything' : value[0].toUpperCase() + value.slice(1),
-            }))}
-            onSelect={setKind}
-          />
+          <ScrollView
+            ref={chipScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            onLayout={({ nativeEvent }) => setChipViewportWidth(nativeEvent.layout.width)}
+            style={{ flex: 1, minWidth: 0 }}
+            contentContainerStyle={{ gap: 2 }}
+          >
+            {saveKinds.map((value) => (
+              <View
+                key={value}
+                onLayout={({ nativeEvent: { layout } }) => {
+                  chipRects.current[value] = { x: layout.x, width: layout.width };
+                  if (value === kind) centerKind(value, false);
+                }}
+              >
+                <Chip
+                  title={value === 'auto' ? 'Anything' : value[0].toUpperCase() + value.slice(1)}
+                  selected={kind === value}
+                  onPress={() => {
+                    centerKind(value);
+                    setKind(value);
+                  }}
+                />
+              </View>
+            ))}
+          </ScrollView>
           <IconButton
             label={pinned ? 'Unpin save' : 'Pin save'}
             icon={Pin}
@@ -417,43 +462,43 @@ export function CaptureEditor() {
           left: 0,
           right: 0,
           bottom: 0,
-          paddingBottom: insets.bottom,
           backgroundColor: colors.paper,
           borderTopWidth: 0.5,
           borderTopColor: colors.line,
         }}
       >
+        <NavigationBar style={dark || Boolean(text.trim()) ? 'light' : 'dark'} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={existing ? 'Save changes' : 'Save find'}
+          accessibilityLabel={existing ? 'Save changes' : 'Save to Anything'}
           accessibilityState={{ disabled: !text.trim() || busy, busy }}
           disabled={!text.trim() || busy}
           onPress={() => void submit()}
           style={{
-            minHeight: 60,
+            minHeight: 58 + insets.bottom,
             padding: 16,
+            paddingBottom: 16 + insets.bottom,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 9,
-            backgroundColor: text.trim() ? colors.ink : colors.soft,
+            backgroundColor: colors.paper,
             opacity: busy ? 0.65 : 1,
           }}
         >
-          {busy ? (
-            <ActivityIndicator color={colors.canvas} />
-          ) : (
-            <Check size={19} color={text.trim() ? colors.canvas : colors.muted} />
-          )}
+          {busy && <ActivityIndicator color={colors.accent} />}
           <Text
             allowFontScaling={false}
             style={{
-              color: text.trim() ? colors.canvas : colors.muted,
-              fontSize: 15,
-              fontWeight: '600',
+              color: colors.accent,
+              fontFamily: fonts.editorial,
+              fontSize: 21,
+              lineHeight: 26,
+              fontWeight: '700',
+              letterSpacing: -0.3,
             }}
           >
-            {busy ? 'Saving...' : existing ? 'Save changes' : 'Save find'}
+            {busy ? 'Saving...' : existing ? 'Save changes' : 'Save to Anything'}
           </Text>
         </Pressable>
       </KeyboardStickyView>

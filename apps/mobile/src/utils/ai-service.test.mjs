@@ -19,6 +19,7 @@ function service({
   const logs = [];
   const calls = [];
   const exports = {};
+
   runInNewContext(source, {
     exports,
     __DEV__: dev,
@@ -32,6 +33,7 @@ function service({
         return {
           fetch: async (...args) => {
             calls.push(args);
+
             return fetchImpl(...args);
           },
         };
@@ -42,6 +44,7 @@ function service({
               ? {
                   getIdToken: async () => {
                     if (tokenError) throw tokenError;
+
                     return 'private-firebase-token';
                   },
                 }
@@ -52,8 +55,10 @@ function service({
       throw new Error(`Unexpected module ${name}`);
     },
   });
+
   return { ...exports, logs, calls };
 }
+
 const signal = () => new AbortController().signal;
 
 test('missing or invalid AI endpoints give a configuration error before sending credentials', async () => {
@@ -66,6 +71,7 @@ test('missing or invalid AI endpoints give a configuration error before sending 
     'https://worker.example/ai?key=private',
   ]) {
     const ai = service({ endpoint });
+
     await assert.rejects(
       ai.getAiAccess(signal()),
       (error) =>
@@ -97,8 +103,10 @@ test('logs identify sign-in, token, network and backend failures without exposin
       'backend_response',
     ],
   ];
+
   for (const [options, stage] of cases) {
     const ai = service(options);
+
     await assert.rejects(ai.getAiAccess(signal()));
     assert.equal(ai.logs.at(-1)[1].stage, stage);
     assert.ok(!JSON.stringify(ai.logs).includes('private'));
@@ -107,12 +115,15 @@ test('logs identify sign-in, token, network and backend failures without exposin
 
 test('successful requests use the authenticated Worker and report HTTP status only in development', async () => {
   const ai = service({ endpoint: '  https://worker.example/ai  ' });
+
   assert.deepEqual(await ai.getAiAccess(signal()), { remaining: 3 });
   assert.equal(ai.calls[0][0], 'https://worker.example/ai');
   assert.equal(ai.calls[0][1].headers.Authorization, 'Bearer private-firebase-token');
   assert.equal(ai.logs.at(-1)[1].status, 200);
   assert.ok(!JSON.stringify(ai.logs).includes('private'));
+
   const release = service({ dev: false });
+
   await release.getAiAccess(signal());
   assert.equal(release.logs.length, 0);
 });

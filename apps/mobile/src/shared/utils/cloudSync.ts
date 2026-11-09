@@ -14,6 +14,7 @@ export interface CloudStore {
   watch: (receive: (entries: CloudEntry[]) => void, fail: (error: unknown) => void) => () => void;
   write: (entries: CloudEntry[]) => Promise<void>;
 }
+
 const itemTypes = new Set([
   'note',
   'markdown',
@@ -28,6 +29,7 @@ const itemTypes = new Set([
 const webUrl = (value: unknown) => {
   try {
     const url = new URL(value as string);
+
     return (
       typeof value === 'string' &&
       ['http:', 'https:'].includes(url.protocol) &&
@@ -38,9 +40,12 @@ const webUrl = (value: unknown) => {
     return false;
   }
 };
+
 export function isCloudEntry(value: unknown): value is CloudEntry {
   if (!value || typeof value !== 'object') return false;
+
   const entry = value as CloudEntry;
+
   if (
     !['item', 'folder'].includes(entry.kind) ||
     typeof entry.id !== 'string' ||
@@ -58,7 +63,9 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
   )
     return false;
   if (entry.kind === 'folder') return typeof (entry.data as Folder).name === 'string';
+
   const item = entry.data as SavedItem;
+
   if (
     !itemTypes.has(item.type) ||
     typeof item.title !== 'string' ||
@@ -114,6 +121,7 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
       );
   }
 }
+
 const keyOf = (entry: CloudEntry) => `${entry.kind}:${entry.id}`;
 // Firestore map field order is not meaningful; normalize it before comparing snapshots.
 const clean = <T>(value: T): T =>
@@ -128,12 +136,14 @@ const clean = <T>(value: T): T =>
         : entry,
     ),
   );
+
 function sameEntries(a: Map<string, CloudEntry>, b: Map<string, CloudEntry>) {
   return (
     a.size === b.size &&
     [...a].every(([key, entry]) => JSON.stringify(entry) === JSON.stringify(b.get(key)))
   );
 }
+
 function entriesOf(value: CloudCollection): Map<string, CloudEntry> {
   return new Map(
     [
@@ -160,17 +170,22 @@ export function startCollectionSync(options: {
   status: (status: 'connecting' | 'syncing' | 'synced' | 'error', error?: unknown) => void;
 }) {
   let current = entriesOf(options.initial);
+
   if (!options.pending.every(isCloudEntry))
     throw new Error('Pending sync data could not be read. Your local saves are unchanged.');
+
   const pending = new Map(options.pending.map((entry) => [keyOf(entry), clean(entry)]));
+
   if (options.baseline) {
     const baseline = entriesOf(options.baseline);
+
     for (const [key, entry] of current)
       if (JSON.stringify(baseline.get(key)) !== JSON.stringify(entry)) pending.set(key, entry);
     for (const [key, entry] of baseline)
       if (!current.has(key))
         pending.set(key, { kind: entry.kind, id: entry.id, deleted: true, data: null });
   }
+
   let ready = false;
   let stopped = false;
   let writing = false;
@@ -185,6 +200,7 @@ export function startCollectionSync(options: {
   }, 15_000);
   const localCollection = () => {
     const active = [...current.values()].filter((entry) => !entry.deleted);
+
     return {
       items: active
         .filter((entry) => entry.kind === 'item')
@@ -206,6 +222,7 @@ export function startCollectionSync(options: {
     if (sameEntries(current, entries)) return false;
     current = entries;
     options.apply(localCollection());
+
     return true;
   };
   const flush = async () => {
@@ -215,6 +232,7 @@ export function startCollectionSync(options: {
     try {
       while (pending.size && !stopped) {
         const batch = [...pending.entries()].slice(0, 100);
+
         await options.store.write(batch.map(([, entry]) => entry));
         if (stopped) return;
         for (const [key, entry] of batch) if (pending.get(key) === entry) pending.delete(key);
@@ -227,7 +245,9 @@ export function startCollectionSync(options: {
       writing = false;
     }
   };
+
   options.status('connecting');
+
   const unsubscribe = options.store.watch((entries) => {
     if (stopped) return;
     try {
@@ -235,16 +255,22 @@ export function startCollectionSync(options: {
         throw new Error(
           'The cloud collection contains an unsupported record. Local saves are unchanged.',
         );
+
       const merged = new Map(entries.map((entry) => [keyOf(entry), clean(entry)]));
+
       if (!ready) {
         for (const [key, entry] of current)
           if (!merged.has(key) && !pending.has(key)) pending.set(key, entry);
       }
       for (const [key, entry] of pending) merged.set(key, entry);
+
       const initial = !ready;
+
       ready = true;
       clearTimeout(connectionTimer);
+
       const changed = publish(merged);
+
       if (initial || changed || pending.size) persist();
       if (pending.size) void flush();
       else options.status('synced');
@@ -252,10 +278,13 @@ export function startCollectionSync(options: {
       fail(error);
     }
   }, fail);
+
   return {
     update(value: CloudCollection) {
       if (stopped) return;
+
       const next = entriesOf(value);
+
       for (const [key, entry] of next) {
         if (JSON.stringify(current.get(key)) !== JSON.stringify(entry)) pending.set(key, entry);
       }

@@ -8,6 +8,7 @@ import {
   View,
   useWindowDimensions,
   type TextInputInstance,
+  type ViewProps,
 } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import Animated, {
@@ -15,24 +16,31 @@ import Animated, {
   FadeIn,
   FadeOut,
   LinearTransition,
+  useAnimatedProps,
+  useAnimatedStyle,
   useReducedMotion,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { MenuView } from '@expo/ui/community/menu';
 import Image from 'react-native-fast-image';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Folder, MoreHorizontal, Plus, X } from 'lucide-react-native';
+import { Folder, MoreHorizontal, X } from 'lucide-react-native';
 import { useScrollHeader } from '../components/use-scroll-header';
 import { Feedback } from '../components/feedback';
 import { DeleteSheet } from '../components/delete-sheet';
 import { MarkdownContent } from '../components/markdown-content';
 import type { Folder as FolderRecord, SavedItem } from '../shared/types';
 import { useCollection } from '../state/collection';
-import { Action, CollectionSearch, Field, IconButton } from '../components/ui';
+import { Action, CollectionSearch, Field, HeaderBackTitle, IconButton } from '../components/ui';
 import { getItemTitle } from '../shared/utils/itemTitle';
 import { itemImage, itemText } from '../utils/item';
+import { captureScroll } from '../utils/capture-scroll';
 import { fonts, space, type } from '../theme';
+
+const FOLDER_PANEL_TRANSITION = LinearTransition.springify().dampingRatio(0.82).duration(320);
 
 export default function Folders() {
   const { targetRef, topInset, onScroll, options: headerOptions } = useScrollHeader('Folders');
@@ -50,31 +58,83 @@ export default function Folders() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const reduced = useReducedMotion();
+  const scrollState = useRef({ offset: 0, travel: 0, hidden: false });
+  const actionsHidden = useSharedValue(false);
+  const actionsPinned = useSharedValue(false);
   const panelWidth = Math.min(width - 40, 460);
   const fieldRef = useRef<TextInputInstance>(null);
-  const focusTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const dismissForm = useCallback(() => {
     if (inFlight.current) return;
     Keyboard.dismiss();
-    clearTimeout(focusTimer.current);
     setFormOpen(false);
   }, []);
+
   useEffect(() => {
     if (!formOpen) return;
+
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       dismissForm();
+
       return true;
     });
+
     return () => subscription.remove();
   }, [formOpen, dismissForm]);
+  useEffect(() => {
+    actionsPinned.set(formOpen);
+  }, [actionsPinned, formOpen]);
+
+  const handleScroll = useCallback(
+    (event: Parameters<typeof onScroll>[0]) => {
+      onScroll(event);
+
+      const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+      const next = captureScroll(
+        scrollState.current,
+        contentOffset.y,
+        contentSize.height - layoutMeasurement.height,
+      );
+
+      if (next.hidden !== scrollState.current.hidden) actionsHidden.set(next.hidden);
+      scrollState.current = next;
+    },
+    [actionsHidden, onScroll],
+  );
+  const actionBarStyle = useAnimatedStyle(() => {
+    const hidden = actionsHidden.get() && !actionsPinned.get() && !reduced;
+
+    return {
+      opacity: withTiming(hidden ? 0 : 1, { duration: reduced ? 0 : 150 }),
+      transform: [
+        {
+          translateY: withTiming(hidden ? 100 + insets.bottom : 0, {
+            duration: reduced ? 0 : 180,
+            easing: Easing.bezier(0.23, 1, 0.32, 1),
+          }),
+        },
+      ],
+    };
+  }, [actionsHidden, actionsPinned, insets.bottom, reduced]);
+  const actionBarProps = useAnimatedProps<ViewProps>(() => {
+    const hidden = actionsHidden.get() && !actionsPinned.get() && !reduced;
+
+    return {
+      pointerEvents: hidden ? 'none' : 'auto',
+      accessibilityElementsHidden: hidden,
+      importantForAccessibility: hidden ? 'no-hide-descendants' : 'auto',
+    };
+  });
   const grouped = useMemo(() => {
     const groups = new Map<string, SavedItem[]>();
+
     for (const item of data.items)
       if (item.folderId) {
         const group = groups.get(item.folderId) || [];
+
         group.push(item);
         groups.set(item.folderId, group);
       }
+
     return groups;
   }, [data.items]);
   const folders = useMemo(
@@ -89,8 +149,6 @@ export default function Folders() {
     setName(folder?.name || '');
     setError('');
     setFormOpen(true);
-    clearTimeout(focusTimer.current);
-    focusTimer.current = setTimeout(() => fieldRef.current?.focus(), reduced ? 0 : 280);
   };
   const save = async () => {
     if (!name.trim() || inFlight.current) return;
@@ -116,9 +174,27 @@ export default function Folders() {
       setSaving(false);
     }
   };
+
   return (
     <BlurTargetView ref={targetRef} style={{ flex: 1, backgroundColor: colors.canvas }}>
-      <Stack.Screen options={{ ...headerOptions, title: 'Folders' }} />
+      <Stack.Screen
+        options={{
+          ...headerOptions,
+          title: 'Folders',
+          headerLeft: () => (
+            <HeaderBackTitle
+              title="Folders"
+              titleStyle={{
+                fontFamily: fonts.editorial,
+                fontSize: 23,
+                lineHeight: 28,
+                letterSpacing: -0.6,
+                fontWeight: '400',
+              }}
+            />
+          ),
+        }}
+      />
       <FlatList
         accessibilityElementsHidden={formOpen}
         importantForAccessibility={formOpen ? 'no-hide-descendants' : 'auto'}
@@ -126,7 +202,7 @@ export default function Folders() {
         numColumns={2}
         keyExtractor={(folder) => folder.id}
         contentInsetAdjustmentBehavior="never"
-        onScroll={onScroll}
+        onScroll={handleScroll}
 
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ top: topInset }}
@@ -161,6 +237,7 @@ export default function Folders() {
             .filter((uri): uri is string => !!uri)
             .slice(0, 3);
           const thought = saves.find((item) => item.type !== 'secret');
+
           return (
             <View style={{ width: tileWidth, marginBottom: 26 }}>
               <Pressable
@@ -381,39 +458,46 @@ export default function Folders() {
         style={{
           position: 'absolute',
           top: 0,
-          left: 20,
-          right: 20,
-          bottom: insets.bottom + 16,
-          alignItems: 'center',
+          left: 0,
+          right: 0,
+          bottom: 0,
         }}
       >
         <Animated.View
           collapsable={false}
+          animatedProps={actionBarProps}
           accessibilityViewIsModal={formOpen}
-          layout={
-            reduced
-              ? undefined
-              : LinearTransition.duration(260).easing(Easing.bezier(0.23, 1, 0.32, 1))
-          }
-          style={{
-            // Keep the parent fixed so both the origin and size animate from the button.
-            position: 'absolute',
-            bottom: 0,
-            width: formOpen ? panelWidth : 176,
-            borderRadius: formOpen ? 28 : 26,
-            backgroundColor: colors.paper,
-            borderWidth: 0.5,
-            borderColor: colors.line,
-            overflow: 'hidden',
-            boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
-          }}
+          layout={reduced ? undefined : FOLDER_PANEL_TRANSITION}
+          style={[
+            {
+              position: 'absolute',
+              bottom: 0,
+              width: '100%',
+              maxWidth: 720,
+              alignSelf: 'center',
+              borderTopLeftRadius: formOpen ? 28 : 0,
+              borderTopRightRadius: formOpen ? 28 : 0,
+              backgroundColor: colors.soft,
+              borderTopWidth: 0.5,
+              borderTopColor: colors.line,
+              overflow: 'hidden',
+            },
+            actionBarStyle,
+          ]}
         >
           {formOpen ? (
             <Animated.View
               key="folder-form"
-              entering={reduced ? undefined : FadeIn.duration(160).delay(80)}
+              entering={reduced ? undefined : FadeIn.duration(180)}
               exiting={reduced ? undefined : FadeOut.duration(150)}
-              style={{ width: panelWidth - 1, padding: 20, gap: 16 }}
+              style={{
+                width: panelWidth,
+                maxWidth: 720,
+                alignSelf: 'center',
+                padding: 20,
+                paddingBottom: 20 + insets.bottom,
+                gap: 16,
+              }}
             >
               <View
                 style={{
@@ -439,6 +523,7 @@ export default function Folders() {
               <Field
                 ref={fieldRef}
                 accessibilityLabel="Folder name"
+                onLayout={() => fieldRef.current?.focus()}
                 editable={!saving}
                 value={name}
                 onChangeText={setName}
@@ -458,7 +543,7 @@ export default function Folders() {
           ) : (
             <Animated.View
               key="folder-button"
-              entering={reduced ? undefined : FadeIn.duration(160).delay(80)}
+              entering={reduced ? undefined : FadeIn.duration(180)}
               exiting={reduced ? undefined : FadeOut.duration(120)}
             >
               <Pressable
@@ -466,17 +551,26 @@ export default function Folders() {
                 accessibilityLabel="New folder"
                 onPress={() => openForm()}
                 style={{
-                  minHeight: 52,
+                  minHeight: 58 + insets.bottom,
+                  paddingTop: 0,
+                  paddingBottom: insets.bottom,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 9,
+                  backgroundColor: colors.paper,
                 }}
               >
-                <Plus size={18} color={colors.ink} strokeWidth={1.6} />
                 <Text
                   allowFontScaling={false}
-                  style={{ color: colors.ink, fontSize: 15, fontWeight: '500' }}
+                  style={{
+                    color: colors.ink,
+                    fontFamily: fonts.editorial,
+                    fontSize: 22,
+                    lineHeight: 28,
+                    fontWeight: '700',
+                    letterSpacing: -0.4,
+                  }}
                 >
                   New folder
                 </Text>

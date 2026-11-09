@@ -18,6 +18,7 @@ export function ChoiceMenu<T extends string>({
 }) {
   const { colors, dark } = useCollection();
   const selected = options.find((option) => option.value === value);
+
   return (
     <MenuView
       colorScheme={dark ? 'dark' : 'light'}
@@ -29,6 +30,7 @@ export function ChoiceMenu<T extends string>({
       }))}
       onPressAction={({ nativeEvent }) => {
         const option = options.find((option) => option.value === nativeEvent.event);
+
         if (option) onSelect(option.value);
       }}
     >

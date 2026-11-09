@@ -59,8 +59,9 @@ export const SaveCard = memo(function SaveCard({
   const { width: cardWidth, contentWidth } = cardWidths(width, list, !!image);
   const title = getItemTitle(item) || typeLabel(item);
   const showTitle =
-    item.type !== 'markdown' ||
-    (!!item.title.trim() && !/^#{1,6}\s/.test(item.content.trimStart()));
+    (item.type !== 'markdown' ||
+      (!!item.title.trim() && !/^#{1,6}\s/.test(item.content.trimStart()))) &&
+    !(item.type === 'secret' && title.trim().toLowerCase() === typeLabel(item).toLowerCase());
   const note = item.type === 'note';
   const social =
     item.type === 'x_post' || item.type === 'instagram_post' || item.type === 'reddit_post';
@@ -246,6 +247,7 @@ export const SaveCard = memo(function SaveCard({
       </View>
     </MotionPosition>
   );
+
   return (
     <CardFrame hidden={hidden} identity={item.id} width={cardWidth} backgroundColor={colors.paper}>
       <Pressable

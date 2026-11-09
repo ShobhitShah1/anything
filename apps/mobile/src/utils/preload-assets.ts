@@ -32,10 +32,8 @@ export function preloadCriticalAssets(): Promise<void> {
         resolve();
       }
     };
-
     // Safety timeout: never block splash screen for more than 1200ms
     const timer = setTimeout(markDone, 1200);
-
     const tasks: Promise<unknown>[] = [];
 
     // 1. Expo Asset loader
@@ -54,6 +52,7 @@ export function preloadCriticalAssets(): Promise<void> {
         for (const asset of CRITICAL_ASSETS) {
           try {
             const resolved = Image.resolveAssetSource(asset);
+
             if (resolved?.uri) {
               tasks.push(Image.prefetch(resolved.uri).catch(() => false));
             }
@@ -65,6 +64,7 @@ export function preloadCriticalAssets(): Promise<void> {
     if (tasks.length === 0) {
       clearTimeout(timer);
       markDone();
+
       return;
     }
 

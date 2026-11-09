@@ -19,6 +19,7 @@ function patchActivity(contents) {
   if (contents.includes('AnythingLaunch.show(this)')) return contents;
   if (!contents.includes('super.onCreate(null)'))
     throw new Error('Custom launch expects the Expo Kotlin MainActivity onCreate(null) template.');
+
   return contents
     .replace(/(package [^\r\n]+)/, '$1\nimport expo.modules.anythinglaunch.AnythingLaunch')
     .replace(
@@ -30,35 +31,44 @@ function patchActivity(contents) {
 module.exports = function withAndroidLaunch(config) {
   config = withMainActivity(config, (mod) => {
     mod.modResults.contents = patchActivity(mod.modResults.contents);
+
     return mod;
   });
   config = withAndroidManifest(config, (mod) => {
     const main = mod.modResults.manifest.application[0].activity.find(
       (activity) => activity.$['android:name'] === '.MainActivity',
     );
+
     if (!main) throw new Error('MainActivity is missing from the Android manifest.');
     main.$['android:theme'] = '@style/AnythingLaunchTheme';
+
     return mod;
   });
   config = withAndroidStyles(config, (mod) => {
     const styles = (mod.modResults.resources.style ??= []);
+
     mod.modResults.resources.style = styles.filter(
       (style) => style.$.name !== 'Theme.App.SplashScreen',
     );
+
     const current = mod.modResults.resources.style;
     const launch = {
       $: { name: 'AnythingLaunchTheme', parent: 'AppTheme' },
       item: [{ $: { name: 'android:windowBackground' }, _: '@drawable/anything_launch_window' }],
     };
     const index = current.findIndex((style) => style.$.name === 'AnythingLaunchTheme');
+
     if (index < 0) current.push(launch);
     else current[index] = launch;
+
     return mod;
   });
+
   return withDangerousMod(config, [
     'android',
     (mod) => {
       const dir = join(mod.modRequest.platformProjectRoot, 'app/src/main/res/values-v31');
+
       mkdirSync(dir, { recursive: true });
       writeFileSync(
         join(dir, 'anything-launch.xml'),
@@ -73,6 +83,7 @@ module.exports = function withAndroidLaunch(config) {
 </resources>
 `,
       );
+
       return mod;
     },
   ]);

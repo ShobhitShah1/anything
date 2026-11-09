@@ -30,7 +30,9 @@ import {
   removeCollectionItems,
   type CollectionData,
 } from '../utils/collection-data';
+
 const KEY = 'anything_native_v2';
+
 function useCollectionState() {
   const system = useColorScheme();
   const [data, setData] = useState<CollectionData>(empty);
@@ -63,6 +65,7 @@ function useCollectionState() {
         .then(async () => {
           const previous = current.current;
           const next = update(previous);
+
           if (next === previous && !beforePublish) return;
           if (guestLimitReached(previous.items, next.items, !!auth?.currentUser)) {
             setNotice('');
@@ -81,6 +84,7 @@ function useCollectionState() {
             sync.current?.update(next);
           }
         });
+
       writes.current = task;
       void task.catch((error) => {
         if (error instanceof GuestLimitError) return;
@@ -88,6 +92,7 @@ function useCollectionState() {
           `Could not save on this device: ${error.message}. Your previous collection is unchanged.`,
         );
       });
+
       return task;
     },
     [],
@@ -95,8 +100,11 @@ function useCollectionState() {
   const reload = useCallback(async () => {
     try {
       const raw = await loadText(AsyncStorage, KEY);
+
       setError('');
+
       const next = raw ? validateCollection(JSON.parse(raw)) : { ...empty };
+
       current.current = next;
       setData(next);
       setReady(true);
@@ -104,6 +112,7 @@ function useCollectionState() {
       setError(error instanceof Error ? error.message : 'Could not read this collection.');
     }
   }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate device storage before exposing the collection.
     void reload();
@@ -132,6 +141,7 @@ function useCollectionState() {
     if (!ready || !enabled) {
       return;
     }
+
     let disposed = false;
     let controller: ReturnType<typeof startCollectionSync> | null = null;
     const journal = current.current.journals[uid] || { pending: [] };
@@ -144,6 +154,7 @@ function useCollectionState() {
         },
       }));
     };
+
     try {
       controller = startCollectionSync({
         initial: current.current,
@@ -153,6 +164,7 @@ function useCollectionState() {
         persistBaseline: (baseline) => persistJournal({ baseline }),
         apply: (collection) => {
           const before = current.current;
+
           if (!disposed)
             void commit((value) =>
               disposed ? value : { ...value, ...mergeQueuedCollection(before, value, collection) },
@@ -176,12 +188,14 @@ function useCollectionState() {
       setStatus('error');
       setError(error instanceof Error ? error.message : 'Could not start sync.');
     }
+
     return () => {
       disposed = true;
       controller?.stop();
       sync.current = null;
     };
   }, [ready, uid, enabled, attempt, commit]);
+
   const previewQueue = useRef<{ item: SavedItem; forceFresh: boolean }[]>([]);
   const previewWorkers = useRef(0);
   const enrich = useCallback(
@@ -191,6 +205,7 @@ function useCollectionState() {
           .filter((item) => 'url' in item || 'postUrl' in item)
           .map((item) => ({ item, forceFresh })),
       );
+
       const work = async () => {
         if (previewWorkers.current >= 2) return;
         previewWorkers.current++;
@@ -198,8 +213,11 @@ function useCollectionState() {
           while (previewQueue.current.length) {
             const { item, forceFresh } = previewQueue.current.shift()!;
             const url = 'url' in item ? item.url : 'postUrl' in item ? item.postUrl : undefined;
+
             if (!url) continue;
+
             const preview = await fetchLinkPreview(url, forceFresh);
+
             if (forceFresh && preview.error)
               setNotice('Preview unavailable. Your save is unchanged.');
             if (!preview.error)
@@ -218,6 +236,7 @@ function useCollectionState() {
           previewWorkers.current--;
         }
       };
+
       void work();
       void work();
     },
@@ -226,8 +245,10 @@ function useCollectionState() {
   const capture = useCallback(
     async (text: string, linksOnly = false, folderId?: string, quiet = false) => {
       let created: SavedItem[] = [];
+
       await commit((value) => {
         const result = createQuickCaptures(text, value.items, linksOnly, folderId);
+
         created = result.items;
         if (!quiet)
           setNotice(
@@ -235,6 +256,7 @@ function useCollectionState() {
               ? `Saved ${result.items.length === 1 ? 'to your collection' : `${result.items.length} finds`}`
               : 'Already in your collection',
           );
+
         return created.length ? { ...value, items: [...created, ...value.items] } : value;
       });
       enrich(created);
@@ -254,8 +276,10 @@ function useCollectionState() {
     [commit, enrich],
   );
   const lastClipboard = useRef('');
+
   useEffect(() => {
     if (!ready || !data.autoClipboard) return;
+
     let checking = false;
     let disposed = false;
     const check = async () => {
@@ -263,6 +287,7 @@ function useCollectionState() {
       checking = true;
       try {
         const text = (await Clipboard.getStringAsync()).trim();
+
         if (
           !disposed &&
           AppState.currentState === 'active' &&
@@ -286,8 +311,11 @@ function useCollectionState() {
       Platform.OS === 'android'
         ? AppState.addEventListener('focus', () => void check())
         : undefined;
+
     void check();
+
     const timer = setInterval(() => void check(), 4000);
+
     return () => {
       disposed = true;
       clearInterval(timer);
@@ -298,9 +326,11 @@ function useCollectionState() {
   useEffect(() => {
     if (notice) {
       const timer = setTimeout(() => setNotice(''), 1800);
+
       return () => clearTimeout(timer);
     }
   }, [notice]);
+
   const accountAction = async (action: () => Promise<void>) => {
     if (busy || !authReady) return;
     setBusy(true);
@@ -313,6 +343,7 @@ function useCollectionState() {
       setBusy(false);
     }
   };
+
   return {
     data,
     ready,
@@ -342,7 +373,9 @@ function useCollectionState() {
     signIn: () =>
       accountAction(async () => {
         await login();
+
         const signedIn = auth?.currentUser;
+
         if (signedIn) await commit((value) => ({ ...value, syncUid: signedIn.uid }));
       }),
     signOut: () =>
@@ -374,12 +407,16 @@ function useCollectionState() {
       })),
   };
 }
+
 const CollectionContext = createContext<ReturnType<typeof useCollectionState> | null>(null);
+
 export function CollectionProvider({ children }: { children: ReactNode }) {
   return <CollectionContext value={useCollectionState()}>{children}</CollectionContext>;
 }
 export function useCollection() {
   const context = use(CollectionContext);
+
   if (!context) throw new Error('Missing collection provider');
+
   return context;
 }

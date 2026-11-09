@@ -13,6 +13,7 @@ const monthly = {
 
 test('plans use actual localized store prices and exact purchase packages', () => {
   const plans = subscriptionPlans([monthly, annual]);
+
   assert.equal(plans[0].price, '¥9,800');
   assert.equal(plans[0].storePackage, annual);
   assert.equal(plans[0].period, 'year');
@@ -62,6 +63,7 @@ test('product IDs can change in the current offering without a new app SKU list'
     identifier: 'a-new-package',
     product: { ...monthly.product, identifier: 'new-subscription:new-base-plan' },
   };
+
   assert.equal(subscriptionPlans([changed])[0].storePackage, changed);
   assert.equal(subscriptionPlans([changed])[0].price, changed.product.priceString);
 });
@@ -69,6 +71,7 @@ test('product IDs can change in the current offering without a new app SKU list'
 test('annual savings compare real prices in the same currency only', () => {
   const year = { ...annual, product: { ...annual.product, price: 80, currencyCode: 'USD' } };
   const month = { ...monthly, product: { ...monthly.product, price: 10, currencyCode: 'USD' } };
+
   assert.equal(subscriptionPlans([year, month])[0].savings, 33);
   assert.equal(subscriptionPlans([year])[0].savings, 0);
   for (const price of [0, -1, NaN, Infinity, 130]) {

@@ -32,9 +32,11 @@ export const QuickCaptureToolbar = memo(function QuickCaptureToolbar({
   const { voiceLevel } = ai;
   const reduced = useReducedMotion();
   const mode = useSharedValue(ai.enabled ? 1 : 0);
+
   useEffect(() => {
     mode.set(withTiming(ai.enabled ? 1 : 0, { duration: reduced ? 0 : 160 }));
   }, [ai.enabled, reduced, mode]);
+
   const modeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: mode.get() * 36 }] }));
   const micHaloStyle = useAnimatedStyle(() => ({
     opacity: listening ? 0.08 + voiceLevel.get() * 0.18 : 0,
@@ -225,13 +227,13 @@ const VoiceBar = memo(function VoiceBar({
   const style = useAnimatedStyle(() => ({
     transform: [{ scaleY: reduced ? 0.7 : 0.3 + level.get() * 0.7 }],
   }));
+
   return (
     <Animated.View
       style={[{ width: 3.5, height, borderRadius: 2, backgroundColor: color }, style]}
     />
   );
 });
-
 const styles = StyleSheet.create({
   toolbar: {
     paddingHorizontal: 20,

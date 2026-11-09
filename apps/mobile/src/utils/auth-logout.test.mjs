@@ -19,6 +19,7 @@ function restoredSession({
   const account = { currentUser: { uid: 'restored-user' } };
   let configured = false;
   const exports = {};
+
   runInNewContext(source, {
     exports,
     process: { env: { EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 'test-web-client' } },
@@ -41,6 +42,7 @@ function restoredSession({
       if (name === 'react-native') return { Platform: { OS: 'android' } };
       if (name === '@react-native-google-signin/google-signin') {
         events.push('google-import');
+
         return {
           GoogleSignin: {
             configure(options) {
@@ -60,11 +62,13 @@ function restoredSession({
       throw new Error(`Unexpected module: ${name}`);
     },
   });
+
   return { logout: exports.logout, account, events };
 }
 
 test('logout after a cold-start restored session configures Google before native sign-out', async () => {
   const app = restoredSession();
+
   await app.logout();
   assert.equal(app.account.currentUser, null);
   assert.deepEqual(app.events, ['firebase-out', 'google-import', 'configure', 'google-out']);
@@ -73,6 +77,7 @@ test('logout after a cold-start restored session configures Google before native
 test('logout works without a cached Google account and in Expo Go', async () => {
   for (const options of [{ previous: false }, { expo: true }]) {
     const app = restoredSession(options);
+
     await app.logout();
     assert.equal(app.account.currentUser, null);
     assert.ok(!app.events.includes('google-out'));
@@ -82,12 +87,14 @@ test('logout works without a cached Google account and in Expo Go', async () => 
 
 test('Google cleanup failure cannot leave the Firebase session signed in', async () => {
   const app = restoredSession({ googleFailure: true });
+
   await assert.rejects(app.logout(), /Google cleanup failed/);
   assert.equal(app.account.currentUser, null);
 });
 
 test('a Firebase sign-out failure is surfaced before touching the Google session', async () => {
   const app = restoredSession({ firebaseFailure: true });
+
   await assert.rejects(app.logout(), /Firebase sign-out failed/);
   assert.ok(app.account.currentUser);
   assert.deepEqual(app.events, ['firebase-out']);

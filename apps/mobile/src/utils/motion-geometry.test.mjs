@@ -21,6 +21,7 @@ test('grid, list, and expanded media preserve the complete image and the same pr
       [375, 375 / ratio],
     ]) {
       const rect = containedMedia(width, height, ratio);
+
       assert.ok(Math.abs(rect.width / rect.height - ratio) < 1e-8);
       assert.ok(rect.x >= 0 && rect.y >= 0);
       assert.ok(rect.x + rect.width <= width + 1e-8);
