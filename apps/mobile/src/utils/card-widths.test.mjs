@@ -4,9 +4,9 @@ import { cardWidths } from './card-widths.ts';
 
 test('list text gets its destination width before recycled grid cells catch up', () => {
   assert.deepEqual(cardWidths(192, false, true), { width: 180, contentWidth: 180 });
-  assert.deepEqual(cardWidths(384, true, true), { width: 372, contentWidth: 252 });
+  assert.deepEqual(cardWidths(384, true, true), { width: 372, contentWidth: 256 });
   // The image panel, gap, body, and its right inset must fit the row exactly.
-  assert.equal(104 + 16 + cardWidths(384, true, true).contentWidth, 372);
+  assert.equal(104 + 12 + cardWidths(384, true, true).contentWidth, 372);
   assert.deepEqual(cardWidths(384, true, false), { width: 372, contentWidth: 340 });
 });
 

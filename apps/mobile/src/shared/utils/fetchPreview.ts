@@ -379,6 +379,7 @@ async function fetchVideoPreview(url: string, fallback: LinkPreviewData, signal:
     data = await fetchJson(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, signal);
   } catch (error) {
     if (signal.aborted) throw error;
+
     return fetchMetadata(url, fallback, signal, false);
   }
 

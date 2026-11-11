@@ -1,7 +1,13 @@
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from '../../components/use-scroll-header';
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import type { ComponentProps } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ComponentRef,
+} from 'react';
 import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
@@ -111,7 +117,9 @@ export default function ItemDetail() {
   const [downloading, setDownloading] = useState(false);
   const [revealedId, setRevealedId] = useState<string>();
   const [actionsHidden, setActionsHidden] = useState(false);
-  const [activeGalleryImage, setActiveGalleryImage] = useState(0);
+  const [galleryIndex, setGalleryIndex] = useState({ id, index: 0 });
+  const activeGalleryImage = galleryIndex.id === id ? galleryIndex.index : 0;
+  const setActiveGalleryImage = (index: number) => setGalleryIndex({ id, index });
   const galleryRef = useRef<ComponentRef<typeof Animated.ScrollView>>(null);
   const galleryScrollX = useSharedValue(0);
   const { width: windowWidth } = useWindowDimensions();
@@ -145,8 +153,7 @@ export default function ItemDetail() {
   }, [item, enrich]);
   useEffect(() => {
     if (!hasGallery) return;
-    galleryScrollX.value = galleryPitch;
-    setActiveGalleryImage(0);
+    galleryScrollX.set(galleryPitch);
     const frame = requestAnimationFrame(() =>
       galleryRef.current?.scrollTo({ x: galleryPitch, animated: false }),
     );
@@ -362,14 +369,14 @@ export default function ItemDetail() {
 
                 if (position === 0) {
                   setActiveGalleryImage(images.length - 1);
-                  galleryScrollX.value = images.length * galleryPitch;
+                  galleryScrollX.set(images.length * galleryPitch);
                   galleryRef.current?.scrollTo({
                     x: images.length * galleryPitch,
                     animated: false,
                   });
                 } else if (position === images.length + 1) {
                   setActiveGalleryImage(0);
-                  galleryScrollX.value = galleryPitch;
+                  galleryScrollX.set(galleryPitch);
                   galleryRef.current?.scrollTo({ x: galleryPitch, animated: false });
                 } else setActiveGalleryImage(position - 1);
               }}
@@ -400,7 +407,7 @@ export default function ItemDetail() {
                     accessibilityState={{ selected: activeGalleryImage === index }}
                     onPress={() => {
                       setActiveGalleryImage(index);
-                      galleryScrollX.value = (index + 1) * galleryPitch;
+                      galleryScrollX.set((index + 1) * galleryPitch);
                       galleryRef.current?.scrollTo({
                         x: (index + 1) * galleryPitch,
                         animated: true,
@@ -719,8 +726,7 @@ export default function ItemDetail() {
                   ? 'Edit secret'
                   : 'Edit find'
             }
-            secondary={!!url || item.type === 'secret'}
-            backgroundColor={item.type === 'secret' ? colors.paper : undefined}
+            secondary
             icon={url ? ExternalLink : Edit3}
             onPress={() => {
               if (!url) {

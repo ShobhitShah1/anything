@@ -47,7 +47,7 @@ test('generation announces waiting, writing and completion without retaining loa
   for (const [phase, label, animated] of [
     ['thinking', 'Preparing your draft', 4],
     ['streaming', 'Writing your draft', 1],
-    ['idle', 'Your draft', 0],
+    ['idle', 'Made with AI', 0],
   ]) {
     const nodes = render(phase);
     const status = nodes.find((node) => node.props.accessibilityLiveRegion === 'polite');

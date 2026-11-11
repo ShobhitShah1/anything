@@ -7,7 +7,6 @@ import { NavigationBar } from 'expo-navigation-bar';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReducedMotion } from 'react-native-reanimated';
-import Image from 'react-native-fast-image';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -149,6 +148,7 @@ export function CaptureEditor() {
       const picked = result.assets.map((image) => {
         if (!image.base64 || image.base64.length > 12_000_000)
           throw new Error('Choose images smaller than 9 MB each, or use an image link.');
+
         return {
           uri: `data:${image.mimeType || 'image/jpeg'};base64,${image.base64}`,
           ratio: image.width > 0 && image.height > 0 ? image.width / image.height : undefined,

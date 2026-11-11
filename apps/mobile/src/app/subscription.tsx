@@ -159,7 +159,7 @@ function Membership() {
       setError(messages.join('\n'));
       setLoading(false);
     },
-    [user],
+    [setError, setLoading, setNotice, user],
   );
 
   useFocusEffect(
@@ -203,7 +203,7 @@ function Membership() {
         subscription.remove();
         listeningClient?.removeCustomerInfoUpdateListener(onCustomerInfo);
       };
-    }, [refresh, user]),
+    }, [refresh, setCustomer, setError, setNotice, setPending, setAccess, user]),
   );
 
   const run = async (action: () => Promise<void>) => {

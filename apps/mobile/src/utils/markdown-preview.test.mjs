@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { cardWidths } from './card-widths.ts';
-import { itemImage, itemText, typeLabel } from './item.ts';
+import { imageSet, itemImage, itemText, typeLabel } from './item.ts';
 import { getItemTitle } from '../shared/utils/itemTitle.ts';
 
 const colors = {
@@ -59,7 +59,7 @@ function load(component) {
         };
       if (name === '../utils/open-link') return { openLink: async () => {} };
       if (name === '../utils/card-widths') return { cardWidths };
-      if (name === '../utils/item') return { itemImage, itemText, typeLabel };
+      if (name === '../utils/item') return { imageSet, itemImage, itemText, typeLabel };
       if (name === '../shared/utils/itemTitle') return { getItemTitle };
       if (name === './markdown-content') return { MarkdownContent: 'MarkdownContent' };
       if (name === './collection-motion')

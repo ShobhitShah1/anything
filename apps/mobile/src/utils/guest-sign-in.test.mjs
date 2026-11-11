@@ -102,7 +102,7 @@ function setup(file, prompt = 'pro', signedIn = false) {
       if (name === '../state/collection') return { useCollection: () => state };
       if (name === '../services/auth') return { auth };
       if (name === './ui') return { Action: 'Action' };
-      if (name === '../theme') return { fonts: {} };
+      if (name === '../theme') return { fonts: {}, type: { title: {} } };
 
       return {};
     },

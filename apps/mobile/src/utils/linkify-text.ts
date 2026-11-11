@@ -38,5 +38,6 @@ export function linkifyText(text: string): TextSegment[] {
   }
 
   if (cursor < text.length) segments.push({ text: text.slice(cursor) });
+
   return segments.length ? segments : [{ text }];
 }
