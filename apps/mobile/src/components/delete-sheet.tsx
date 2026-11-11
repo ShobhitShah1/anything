@@ -63,7 +63,7 @@ export function DeleteSheet({
             <Text
               allowFontScaling={false}
               accessibilityRole="header"
-              style={{ color: colors.ink, fontSize: 26, lineHeight: 32, letterSpacing: -0.7 }}
+              style={{ ...type.title, color: colors.ink, fontWeight: '600' }}
             >
               {title}
             </Text>

@@ -21,7 +21,7 @@ export const AiResponseStatus = memo(function AiResponseStatus({
   const reduced = useReducedMotion();
   const working = phase !== 'idle';
   const waiting = phase === 'thinking';
-  const label = waiting ? 'Preparing your draft' : working ? 'Writing your draft' : 'Your draft';
+  const label = waiting ? 'Preparing your draft' : working ? 'Writing your draft' : 'Made with AI';
 
   return (
     <View style={{ marginBottom: 24 }}>

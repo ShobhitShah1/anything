@@ -1,11 +1,23 @@
-import { collection, doc, getFirestore, onSnapshot, writeBatch } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  initializeFirestore,
+  onSnapshot,
+  writeBatch,
+  type Firestore,
+} from 'firebase/firestore';
 import { firebaseApp } from './firebase-app';
 import { isCloudEntry, type CloudStore } from '../shared/utils/cloudSync';
+
+let db: Firestore | undefined;
+
 export function cloudStore(uid: string, durable: () => Promise<void>): CloudStore {
   if (!firebaseApp) throw new Error('Firebase is not configured.');
 
-  const db = getFirestore(firebaseApp);
-  const records = collection(db, 'users', uid, 'collection');
+  const database = (db ??= initializeFirestore(firebaseApp, {
+    experimentalForceLongPolling: true,
+  }));
+  const records = collection(database, 'users', uid, 'collection');
 
   return {
     watch(receive, fail) {
@@ -22,7 +34,7 @@ export function cloudStore(uid: string, durable: () => Promise<void>): CloudStor
     async write(entries) {
       await durable();
 
-      let batch = writeBatch(db);
+      let batch = writeBatch(database);
       let bytes = 0;
 
       for (const entry of entries) {
@@ -37,7 +49,7 @@ export function cloudStore(uid: string, durable: () => Promise<void>): CloudStor
           );
         if (bytes + size > 5_000_000) {
           await batch.commit();
-          batch = writeBatch(db);
+          batch = writeBatch(database);
           bytes = 0;
         }
         batch.set(doc(records, `${entry.kind}-${encodeURIComponent(entry.id)}`), entry);

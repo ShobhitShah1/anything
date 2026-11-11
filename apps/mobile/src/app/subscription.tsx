@@ -45,18 +45,9 @@ export default function Subscription() {
 function Membership() {
   const state = useCollection();
   const { user } = state;
-  // The Pro screen uses the About site's nocturnal palette in either app theme.
-  const colors = {
-    ...state.colors,
-    canvas: '#10120F',
-    paper: '#191C17',
-    ink: '#F1EFE3',
-    muted: '#A9ACA1',
-    line: '#383D32',
-    soft: '#292F23',
-    accent: '#E2E8CC',
-    aiBlue: '#CEDBB2',
-  };
+  const { colors } = state;
+  const setError = state.setError;
+  const setNotice = state.setNotice;
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const artWidth = Math.max(380, screenWidth);
@@ -69,8 +60,6 @@ function Membership() {
   const [loading, setLoading] = useState(!!user && !cached);
   const [working, setWorking] = useState(false);
   const [pending, setPending] = useState<'approval' | 'verification' | null>(null);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const operation = useRef(false);
   const focusController = useRef<AbortController | null>(null);
   const refreshVersion = useRef(0);
@@ -356,7 +345,7 @@ function Membership() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.canvas }}>
-      <Stack.Screen options={{ headerShown: false, statusBarStyle: 'light' }} />
+      <Stack.Screen options={{ headerShown: false, statusBarStyle: state.dark ? 'light' : 'dark' }} />
       <MembershipBackdrop />
       <View
         pointerEvents="none"
@@ -365,7 +354,11 @@ function Membership() {
         style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 340, overflow: 'hidden' }}
       >
         <Image
-          source={require('../../assets/pro-space/outpost-top.png')}
+          source={
+            state.dark
+              ? require('../../assets/pro-space/outpost-top.png')
+              : require('../../assets/pro-space/outpost-top-light.png')
+          }
           resizeMode="cover"
           style={{
             position: 'absolute',
@@ -380,7 +373,9 @@ function Membership() {
             position: 'absolute',
             inset: 0,
             experimental_backgroundImage:
-              'linear-gradient(to right, rgba(16,18,15,0.8) 0%, rgba(16,18,15,0.7) 55%, rgba(16,18,15,0) 100%), linear-gradient(to bottom, rgba(16,18,15,0) 75%, #10120F 100%)',
+              state.dark
+                ? 'linear-gradient(to right, rgba(13,13,15,0.8) 0%, rgba(13,13,15,0.7) 55%, rgba(13,13,15,0) 100%), linear-gradient(to bottom, rgba(13,13,15,0) 75%, #0d0d0f 100%)'
+                : 'linear-gradient(to right, rgba(244,245,247,0.8) 0%, rgba(244,245,247,0.7) 55%, rgba(244,245,247,0) 100%), linear-gradient(to bottom, rgba(244,245,247,0) 75%, #f4f5f7 100%)',
           }}
         />
       </View>
@@ -646,10 +641,6 @@ function Membership() {
                     padding: 16,
                     borderRadius: 20,
                     backgroundColor: selected === item.id ? colors.ink : colors.paper,
-                    experimental_backgroundImage:
-                      selected === item.id
-                        ? 'linear-gradient(145deg, #F1EFE3 0%, #D9E0CC 100%)'
-                        : 'linear-gradient(145deg, #252B21 0%, #181C16 100%)',
                     opacity: pressed ? 0.65 : 1,
                   })}
                 >
@@ -714,7 +705,7 @@ function Membership() {
                     <Text
                       allowFontScaling={false}
                       style={{
-                        color: selected === item.id ? '#535C49' : colors.muted,
+                        color: selected === item.id ? colors.canvas : colors.muted,
                         fontSize: 11,
                         lineHeight: 16,
                       }}
@@ -725,7 +716,7 @@ function Membership() {
                   <Text
                     allowFontScaling={false}
                     style={{
-                      color: selected === item.id ? '#535C49' : colors.muted,
+                      color: selected === item.id ? colors.canvas : colors.muted,
                       fontSize: 10,
                       lineHeight: 16,
                       minHeight: 32,
@@ -740,42 +731,6 @@ function Membership() {
           </View>
         )}
 
-        {!previewing && !!(error || notice) && (
-          <View
-            style={{
-              gap: 4,
-              paddingLeft: 12,
-              borderLeftWidth: 2,
-              borderLeftColor: error ? colors.danger : colors.aiBlue,
-            }}
-          >
-            <Text
-              allowFontScaling={false}
-              selectable
-              accessibilityRole={error ? 'alert' : undefined}
-              accessibilityLiveRegion="polite"
-              style={{ color: error ? colors.danger : colors.accent, fontSize: 12, lineHeight: 19 }}
-            >
-              {error || notice}
-            </Text>
-            {!!user && !working && !loading && (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  if (focusController.current) void refresh(focusController.current.signal);
-                }}
-                style={{ minHeight: 44, justifyContent: 'center' }}
-              >
-                <Text
-                  allowFontScaling={false}
-                  style={{ color: colors.accent, fontSize: 12, fontWeight: '600' }}
-                >
-                  Check again
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        )}
       </ScrollView>
       <View
         style={{
@@ -784,7 +739,9 @@ function Membership() {
           paddingBottom: Math.max(insets.bottom, 8),
           backgroundColor: 'transparent',
           experimental_backgroundImage:
-            'linear-gradient(to bottom, rgba(16,18,15,0) 0%, rgba(16,18,15,0.95) 55%, #10120F 100%)',
+            state.dark
+              ? 'linear-gradient(to bottom, rgba(13,13,15,0) 0%, rgba(13,13,15,0.95) 55%, #0d0d0f 100%)'
+              : 'linear-gradient(to bottom, rgba(244,245,247,0) 0%, rgba(244,245,247,0.95) 55%, #f4f5f7 100%)',
         }}
       >
         <View style={{ maxWidth: 512, width: '100%', alignSelf: 'center' }}>

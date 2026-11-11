@@ -14,7 +14,7 @@ import { RotateCw } from 'lucide-react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../state/collection';
-import { fonts } from '../theme';
+import { type } from '../theme';
 
 export function UpdateNotice() {
   const { colors, dark } = useCollection();
@@ -98,11 +98,9 @@ export function UpdateNotice() {
             <Text
               allowFontScaling={false}
               style={{
+                ...type.title,
                 color: colors.ink,
-                fontFamily: fonts.editorial,
-                fontSize: 30,
-                lineHeight: 36,
-                letterSpacing: -0.6,
+                fontWeight: '600',
               }}
             >
               Update ready

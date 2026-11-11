@@ -16,7 +16,7 @@ import {
 import { router } from 'expo-router';
 import type { SavedItem } from '../shared/types';
 import { getItemTitle } from '../shared/utils/itemTitle';
-import { itemImage, itemText, typeLabel } from '../utils/item';
+import { imageSet, itemImage, itemText, typeLabel } from '../utils/item';
 import { cardWidths } from '../utils/card-widths';
 import { useCollection } from '../state/collection';
 import { fonts, radius, type } from '../theme';
@@ -56,6 +56,14 @@ export const SaveCard = memo(function SaveCard({
   const { colors } = useCollection();
   const mediaHeight = 124;
   const image = itemImage(item);
+  const gallery = imageSet(item);
+  const groupedImages = !list && gallery.length > 1;
+  const listImageColumns =
+    gallery.length === 2
+      ? gallery.map((entry) => [entry])
+      : gallery.length === 3
+        ? [gallery.slice(0, 1), gallery.slice(1, 3)]
+        : [gallery.slice(0, 2), gallery.slice(2, 4)];
   const { width: cardWidth, contentWidth } = cardWidths(width, list, !!image);
   const title = getItemTitle(item) || typeLabel(item);
   const showTitle =
@@ -82,7 +90,7 @@ export const SaveCard = memo(function SaveCard({
       style={{
         // FlashList measures columns in a later commit; do not wrap text at the old column width.
         width: contentWidth,
-        padding: list ? 0 : 16,
+        padding: list ? 0 : groupedImages ? 12 : 16,
         ...(list && image ? { paddingVertical: 14, paddingRight: 16 } : {}),
       }}
     >
@@ -256,7 +264,13 @@ export const SaveCard = memo(function SaveCard({
         accessibilityRole={selecting ? 'checkbox' : 'button'}
         accessibilityState={selecting ? { checked: selected } : undefined}
         accessibilityLabel={
-          selecting ? `Select ${title}` : `Open ${title}${item.isPinned ? ', pinned' : ''}`
+          selecting
+            ? `Select ${title}`
+            : `Open ${title}${item.isPinned ? ', pinned' : ''}${
+                item.type === 'image' && item.additionalImages?.length
+                  ? `, ${item.additionalImages.length + 1} images`
+                  : ''
+              }`
         }
         onPress={() =>
           selecting
@@ -278,7 +292,7 @@ export const SaveCard = memo(function SaveCard({
                 flexDirection: 'row',
                 paddingHorizontal: image ? 0 : 16,
                 paddingVertical: image ? 0 : 12,
-                gap: 16,
+                gap: list && image ? 12 : 16,
                 alignItems: 'center',
                 minHeight: image ? mediaHeight : 100,
               }
@@ -293,24 +307,105 @@ export const SaveCard = memo(function SaveCard({
                 ? {
                     width: 104,
                     height: mediaHeight,
-                    backgroundColor: colors.canvas,
+                    backgroundColor: colors.paper,
                   }
                 : undefined
             }
           >
-            <AdaptiveImage
-              key={image}
-              width={list ? 104 : cardWidth}
-              thumbnailHeight={mediaHeight}
-              onReady={onPreviewReady}
-              uri={image}
-              ratio={item.mediaAspectRatio}
-
-              thumbnail={list}
-              style={{
-                backgroundColor: list ? colors.canvas : colors.paper,
-              }}
-            />
+            {list && item.type === 'image' && gallery.length > 1 ? (
+              <View
+                style={{
+                  width: 104,
+                  height: mediaHeight,
+                  flexDirection: 'row',
+                  gap: 2,
+                  overflow: 'hidden',
+                  backgroundColor: colors.paper,
+                }}
+              >
+                {listImageColumns.map((column, columnIndex) => (
+                  <View key={columnIndex} style={{ flex: 1, gap: 2 }}>
+                    {column.map(({ uri }, imageIndex) => (
+                      <View
+                        key={`${uri.slice(-24)}-${imageIndex}`}
+                        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+                      >
+                        <Image
+                          source={{ uri }}
+                          objectFit="cover"
+                          transition={0}
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                        {gallery.length > 4 && columnIndex === 1 && imageIndex === 1 && (
+                          <View
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#00000066',
+                            }}
+                          >
+                            <Text
+                              allowFontScaling={false}
+                              style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}
+                            >
+                              +{gallery.length - 4}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            ) : groupedImages ? (
+              <View
+                style={{
+                  width: cardWidth,
+                  height: cardWidth * 1.18,
+                  flexDirection: 'row',
+                  gap: 4,
+                  overflow: 'hidden',
+                  borderRadius: radius.card,
+                  backgroundColor: colors.canvas,
+                }}
+              >
+                <Image
+                  source={{ uri: gallery[0].uri }}
+                  objectFit="cover"
+                  transition={0}
+                  style={{ flex: 1.45 }}
+                />
+                <View style={{ flex: 1, gap: 4 }}>
+                  {gallery.slice(1, 3).map(({ uri }, index) => (
+                    <View key={`${uri.slice(-24)}-${index}`} style={{ flex: 1, minHeight: 0 }}>
+                      <Image
+                        source={{ uri }}
+                        objectFit="cover"
+                        transition={0}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <AdaptiveImage
+                key={image}
+                width={list ? 104 : cardWidth}
+                thumbnailHeight={mediaHeight}
+                onReady={onPreviewReady}
+                uri={image}
+                ratio={item.mediaAspectRatio}
+                objectFit={list ? 'cover' : 'contain'}
+                animateLayout={false}
+                thumbnail={list}
+                style={{
+                  backgroundColor: colors.paper,
+                }}
+              />
+            )}
             {item.isPinned && !list && (
               <View
                 style={{

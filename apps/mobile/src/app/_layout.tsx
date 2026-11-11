@@ -122,6 +122,7 @@ function Routes() {
           options={{ title: 'Anything Pro', presentation: 'modal' }}
         />
         <Stack.Screen name="folders" options={{ title: 'Folders' }} />
+        <Stack.Screen name="folder/[id]" options={{ title: 'Folder' }} />
       </Stack>
       {segments[0] !== 'capture' && <FeedbackHost />}
       <UpdateNotice />

@@ -61,5 +61,5 @@ export function useScrollHeader(title?: string) {
     [background, colors.canvas, scrolled, title],
   );
 
-  return { targetRef, topInset, onScroll, options };
+  return { targetRef, topInset, onScroll, scrolled, options };
 }

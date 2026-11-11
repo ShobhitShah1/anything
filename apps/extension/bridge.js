@@ -1,6 +1,6 @@
 (() => {
-  if (window.__anythingBridgeInstalled) return;
-  window.__anythingBridgeInstalled = true;
+  if (window.__anythingBridgeInstalled === '1.3.0') return;
+  window.__anythingBridgeInstalled = '1.3.0';
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (
       sender.id !== chrome.runtime.id ||
@@ -29,5 +29,4 @@
     window.postMessage({ source: 'anything-extension', entries: message.entries }, location.origin);
     return true;
   });
-  chrome.runtime.sendMessage({ type: 'anything:ready' }).catch(() => {});
 })();

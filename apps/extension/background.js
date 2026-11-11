@@ -60,9 +60,35 @@ async function flush() {
   }
 }
 
-async function capture(text) {
-  await changeQueue((queue) => appendCapture(queue, text));
+async function capture(text, folderId) {
+  await changeQueue((queue) => appendCapture(queue, text, folderId));
   void flush();
+}
+
+async function openPagePicker(tabId, text, info) {
+  if (typeof text !== 'string' || !text.trim() || text.length > 50_000)
+    throw new Error('Choose a capture between 1 and 50,000 characters.');
+  await syncAppFolders();
+  await chrome.storage.local.set({ pendingCapture: text.trim() });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    args: [{ linkUrl: info.linkUrl || '', srcUrl: info.srcUrl || '' }],
+    func: ({ linkUrl, srcUrl }) => {
+      if (window.__anythingContextPoint) return;
+      const target = linkUrl
+        ? [...document.links].find((link) => link.href === linkUrl)
+        : srcUrl
+          ? [...document.images].find((image) => image.currentSrc === srcUrl || image.src === srcUrl)
+          : null;
+      const selection = window.getSelection();
+      const rect = target?.getBoundingClientRect() ||
+        (selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null);
+      window.__anythingContextPoint = rect
+        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+        : { x: innerWidth / 2, y: innerHeight / 2 };
+    },
+  });
+  await chrome.scripting.executeScript({ target: { tabId }, files: ['widget.js'] });
 }
 
 async function configureCopyCapture() {
@@ -97,6 +123,48 @@ async function configureCopyCapture() {
   }
 }
 
+async function removeLegacyAppBridge() {
+  const registered = await chrome.scripting.getRegisteredContentScripts({ ids: ['anything-bridge'] });
+  if (registered.length) await chrome.scripting.unregisterContentScripts({ ids: ['anything-bridge'] });
+}
+
+async function syncAppFolders() {
+  const { appUrl = DEFAULT_APP_URL } = await chrome.storage.local.get('appUrl');
+  const origin = `${new URL(normalizeAppUrl(appUrl)).origin}/*`;
+  if (!(await chrome.permissions.contains({ origins: [origin] }))) return;
+  const tab = (await chrome.tabs.query({})).find(
+    (candidate) => candidate.status !== 'loading' && isAppPage(candidate.url, appUrl),
+  );
+  if (!tab?.id) return;
+  const [injected] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: 'MAIN',
+    func: () => {
+      let folders = [];
+      try {
+        folders = JSON.parse(localStorage.getItem('anything_folders_v1') || '[]');
+      } catch {}
+      return { folders, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light' };
+    },
+  });
+  const result = injected?.result;
+  if (!Array.isArray(result?.folders)) return;
+  const values = {
+    folders: result.folders
+      .slice(0, 100)
+      .filter(
+        (folder) =>
+          typeof folder?.id === 'string' &&
+          folder.id.length <= 100 &&
+          typeof folder?.name === 'string' &&
+          folder.name.length <= 120,
+      )
+      .map(({ id, name }) => ({ id, name })),
+  };
+  if (result.theme === 'light' || result.theme === 'dark') values.theme = result.theme;
+  await chrome.storage.local.set(values);
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() =>
     chrome.contextMenus.create({
@@ -107,17 +175,19 @@ chrome.runtime.onInstalled.addListener(() => {
     }),
   );
   void configureCopyCapture();
+  void removeLegacyAppBridge();
 });
 chrome.runtime.onStartup.addListener(() => {
   void configureCopyCapture();
+  void removeLegacyAppBridge();
   void flush();
 });
 chrome.permissions.onRemoved.addListener(() => {
   void configureCopyCapture();
 });
-chrome.contextMenus.onClicked.addListener((info) => {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== 'anything-save') return;
-  void capture(info.selectionText || info.srcUrl || info.linkUrl || info.pageUrl).catch(
+  void openPagePicker(tab.id, info.selectionText || info.srcUrl || info.linkUrl || info.pageUrl, info).catch(
     async (error) => {
       await chrome.storage.local.set({ lastError: error.message });
       await chrome.action.setBadgeText({ text: '!' });
@@ -135,19 +205,40 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     const fromPopup = sender.url === chrome.runtime.getURL('popup.html');
     if (message.type === 'anything:settings' && fromPopup) {
       await configureCopyCapture();
+      await syncAppFolders();
       void flush();
       return;
     }
-    if (message.type === 'anything:ready' && isAppPage(sender.tab?.url, appUrl)) {
-      void flush();
+    if (message.type === 'anything:syncFolders' && fromPopup) {
+      await syncAppFolders();
+      return;
+    }
+    if (message.type === 'anything:trackPointer' && fromPopup) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id && /^https?:\/\//.test(tab.url || ''))
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['pointer.js'] });
       return;
     }
     if (message.type === 'anything:capture' && fromPopup) {
       await capture(message.text);
       return;
     }
+    if (message.type === 'anything:save' && (fromPopup || sender.tab)) {
+      const folders = (await chrome.storage.local.get('folders')).folders || [];
+      const folderId =
+        message.folderId === null || !folders.some((folder) => folder.id === message.folderId)
+          ? null
+          : message.folderId;
+      await capture(message.text, folderId);
+      await chrome.storage.local.set({ pendingCapture: '' });
+      return;
+    }
     if (message.type === 'anything:copied' && sender.tab && settings.copyEnabled) {
-      if (!isAppPage(sender.tab.url, appUrl)) await capture(message.text);
+      if (!isAppPage(sender.tab.url, appUrl)) {
+        if (/^https?:\/\/\S+$/i.test(message.text.trim()) && message.text.length <= 2048)
+          await chrome.storage.local.set({ pendingCapture: message.text.trim() });
+        else await capture(message.text);
+      }
       return;
     }
     throw new Error('This capture source is not enabled.');

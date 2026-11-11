@@ -58,6 +58,17 @@ export function linkPlatform(value: string) {
 export function itemImage(item: SavedItem) {
   return 'imageUrl' in item ? item.imageUrl : item.type === 'link' ? item.previewImage : undefined;
 }
+export function imageSet(item: SavedItem) {
+  return item.type === 'image'
+    ? [
+        { uri: item.imageUrl, ratio: item.mediaAspectRatio },
+        ...(item.additionalImages || []).map(({ url, aspectRatio }) => ({
+          uri: url,
+          ratio: aspectRatio,
+        })),
+      ]
+    : [];
+}
 export function typeLabel(item: SavedItem) {
   return {
     x_post: 'X post',

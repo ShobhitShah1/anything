@@ -266,7 +266,7 @@ export function App() {
   };
 
   const captureTexts = useCallback(
-    (texts: string[], linksOnly = false) => {
+    (texts: string[], linksOnly = false, requestedFolderId?: string | null) => {
       try {
         const result = { items: [] as SavedItem[], duplicates: 0 };
         for (const text of texts) {
@@ -274,7 +274,11 @@ export function App() {
             text,
             [...result.items, ...itemsRef.current],
             linksOnly,
-            selectedFolderId || undefined,
+            requestedFolderId === undefined
+              ? selectedFolderId || undefined
+              : requestedFolderId && folders.some((folder) => folder.id === requestedFolderId)
+                ? requestedFolderId
+                : undefined,
           );
           result.items.push(...batch.items);
           result.duplicates += batch.duplicates;
@@ -323,7 +327,7 @@ export function App() {
         return false;
       }
     },
-    [selectedFolderId, setItems],
+    [folders, selectedFolderId, setItems],
   );
 
   const captureText = useCallback(
@@ -426,17 +430,19 @@ export function App() {
       )
         return;
       const entries = event.data.entries.filter(
-        (entry: { id?: unknown; text?: unknown }) =>
+        (entry: { id?: unknown; text?: unknown; folderId?: unknown }) =>
           typeof entry?.id === 'string' &&
           entry.id.length <= 100 &&
           typeof entry.text === 'string' &&
           entry.text.trim() &&
-          entry.text.length <= 50_000,
+          entry.text.length <= 50_000 &&
+          (entry.folderId === undefined || entry.folderId === null || typeof entry.folderId === 'string'),
       );
-      const ids =
-        entries.length && captureTexts(entries.map((entry: { text: string }) => entry.text))
-          ? entries.map((entry: { id: string }) => entry.id)
-          : [];
+      const ids = entries
+        .filter((entry: { text: string; folderId?: string | null }) =>
+          captureTexts([entry.text], false, entry.folderId),
+        )
+        .map((entry: { id: string }) => entry.id);
       window.postMessage({ source: 'anything-app', savedIds: ids }, location.origin);
     };
     window.addEventListener('message', receive);

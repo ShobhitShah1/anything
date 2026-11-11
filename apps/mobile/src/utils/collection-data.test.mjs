@@ -26,6 +26,16 @@ test('dark is the default while explicitly saved appearance preferences are pres
 });
 test('hydrates valid saves and refuses invalid records and journals', () => {
   assert.equal(validateCollection({ ...emptyCollection, items: [note('a')] }).items.length, 1);
+  assert.equal(
+    validateCollection({
+      ...emptyCollection,
+      folders: [
+        { id: 'parent', name: 'Parent', createdAt: 1 },
+        { id: 'child', name: 'Child', parentId: 'parent', createdAt: 2 },
+      ],
+    }).folders[1].parentId,
+    'parent',
+  );
   assert.throws(() => validateCollection({ items: [{ id: 'bad' }], folders: [] }));
   assert.throws(() =>
     validateCollection({ ...emptyCollection, journals: { user: { pending: [{}] } } }),

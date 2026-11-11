@@ -1,10 +1,25 @@
 (() => {
   if (window.__anythingCopyInstalled) return;
   window.__anythingCopyInstalled = true;
+  const send = (message) => {
+    try {
+      chrome.runtime.sendMessage(message).catch(() => {});
+    } catch {
+      // Chrome can invalidate an old content-script context during extension reload.
+    }
+  };
+  if (!window.__anythingPointerInstalled) {
+    window.__anythingPointerInstalled = true;
+    const rememberPointer = (event) => {
+      window.__anythingContextPoint = { x: event.clientX, y: event.clientY };
+    };
+    document.addEventListener('pointermove', rememberPointer, { capture: true, passive: true });
+    document.addEventListener('contextmenu', rememberPointer, true);
+  }
   let enabled = false;
   chrome.storage.local.get('copyEnabled').then((settings) => {
     enabled = !!settings.copyEnabled;
-  });
+  }).catch(() => {});
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.copyEnabled) enabled = !!changes.copyEnabled.newValue;
   });
@@ -28,8 +43,7 @@
         } catch {
           /* Selection capture also works on pages without Clipboard API access. */
         }
-        if (text.trim())
-          chrome.runtime.sendMessage({ type: 'anything:copied', text }).catch(() => {});
+        if (text.trim()) send({ type: 'anything:copied', text });
       }, 0);
     },
     true,

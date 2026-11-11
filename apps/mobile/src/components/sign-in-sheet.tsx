@@ -6,6 +6,7 @@ import { auth } from '../services/auth';
 import { useCollection } from '../state/collection';
 import { Action, GoogleMark } from './ui';
 import { Feedback } from './feedback';
+import { type } from '../theme';
 
 export function SignInSheet() {
   const state = useCollection();
@@ -38,7 +39,7 @@ export function SignInSheet() {
             <Text
               allowFontScaling={false}
               accessibilityRole="header"
-              style={{ color: colors.ink, fontSize: 26, lineHeight: 32, letterSpacing: -0.7 }}
+              style={{ ...type.title, color: colors.ink, fontWeight: '600' }}
             >
               {signInPrompt === 'pro' ? 'Sign in for Anything Pro' : 'Keep collecting.'}
             </Text>

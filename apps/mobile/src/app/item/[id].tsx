@@ -1,12 +1,18 @@
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from '../../components/use-scroll-header';
-import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import type { ComponentProps } from 'react';
+import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useReducedMotion,
+  useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import Image from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,17 +36,70 @@ import {
 } from 'lucide-react-native';
 import { useCollection } from '../../state/collection';
 import { Action, IconButton } from '../../components/ui';
-import { itemImage, itemText, itemUrl, linkPlatform, typeLabel } from '../../utils/item';
+import { imageSet, itemImage, itemText, itemUrl, linkPlatform, typeLabel } from '../../utils/item';
 import { getItemTitle } from '../../shared/utils/itemTitle';
 import { openLink } from '../../utils/open-link';
+import { linkifyText } from '../../utils/linkify-text';
 import { downloadImage } from '../../utils/download-image';
 import { captureScroll } from '../../utils/capture-scroll';
 import { fonts, radius, space, type } from '../../theme';
+
+function PhotoCarouselSlide({
+  uri,
+  ratio,
+  index,
+  labelIndex,
+  width,
+  height,
+  pitch,
+  scrollX,
+}: {
+  uri: string;
+  ratio?: number;
+  index: number;
+  labelIndex: number;
+  width: number;
+  height: number;
+  pitch: number;
+  scrollX: SharedValue<number>;
+}) {
+  const motion = useAnimatedStyle(() => {
+    const range = [(index - 1) * pitch, index * pitch, (index + 1) * pitch];
+
+    return {
+      opacity: interpolate(scrollX.value, range, [0.82, 1, 0.82], Extrapolation.CLAMP),
+      transform: [
+        { perspective: 900 },
+        {
+          rotateY: `${interpolate(scrollX.value, range, [8, 0, -8], Extrapolation.CLAMP)}deg`,
+        },
+        { translateY: interpolate(scrollX.value, range, [6, 0, 6], Extrapolation.CLAMP) },
+        { scale: interpolate(scrollX.value, range, [0.92, 1, 0.92], Extrapolation.CLAMP) },
+      ],
+    };
+  });
+
+  return (
+    <Animated.View
+      style={[{ width, height, justifyContent: 'center' }, motion]}
+      accessibilityLabel={`Photo ${labelIndex + 1}`}
+    >
+      <AdaptiveImage
+        uri={uri}
+        ratio={ratio}
+        width={width}
+        priority="high"
+        style={{ borderRadius: radius.card, backgroundColor: 'transparent', overflow: 'hidden' }}
+      />
+    </Animated.View>
+  );
+}
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const state = useCollection();
   const { colors, data } = state;
+  const enrich = state.enrich;
   const item = data.items.find((item) => item.id === id);
   const {
     targetRef,
@@ -52,10 +111,48 @@ export default function ItemDetail() {
   const [downloading, setDownloading] = useState(false);
   const [revealedId, setRevealedId] = useState<string>();
   const [actionsHidden, setActionsHidden] = useState(false);
+  const [activeGalleryImage, setActiveGalleryImage] = useState(0);
+  const galleryRef = useRef<ComponentRef<typeof Animated.ScrollView>>(null);
+  const galleryScrollX = useSharedValue(0);
+  const { width: windowWidth } = useWindowDimensions();
+  const galleryWidth = Math.min(windowWidth, 720) - space.lg * 2;
+  const gallerySlideWidth = galleryWidth * 0.88;
+  const galleryGap = 4;
+  const galleryPitch = gallerySlideWidth + galleryGap;
+  const hasGallery = item?.type === 'image' && !!item.additionalImages?.length;
+  const onGalleryScroll = useAnimatedScrollHandler({
+    onScroll: ({ contentOffset }) => {
+      galleryScrollX.value = contentOffset.x;
+    },
+  });
   const scrollState = useRef({ offset: 0, travel: 0, hidden: false });
+  const requestedRedditPreview = useRef<string | null>(null);
   const reducedMotion = useReducedMotion();
   const revealed = revealedId === id;
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (
+      item?.type !== 'reddit_post' ||
+      item.content.trim() ||
+      item.imageUrl ||
+      requestedRedditPreview.current === item.id
+    )
+      return;
+
+    requestedRedditPreview.current = item.id;
+    void enrich([item]);
+  }, [item, enrich]);
+  useEffect(() => {
+    if (!hasGallery) return;
+    galleryScrollX.value = galleryPitch;
+    setActiveGalleryImage(0);
+    const frame = requestAnimationFrame(() =>
+      galleryRef.current?.scrollTo({ x: galleryPitch, animated: false }),
+    );
+
+    return () => cancelAnimationFrame(frame);
+  }, [galleryPitch, galleryScrollX, hasGallery, id]);
   const handleScroll = useCallback(
     (event: Parameters<typeof onScroll>[0]) => {
       onScroll(event);
@@ -98,6 +195,13 @@ export default function ItemDetail() {
     );
 
   const image = itemImage(item);
+  const images = imageSet(item);
+  const galleryHeight = Math.max(
+    0,
+    ...images.map(({ ratio }) => gallerySlideWidth / (ratio || 4 / 3)),
+  );
+  const carouselImages =
+    images.length > 1 ? [images[images.length - 1], ...images, images[0]] : images;
   const url = itemUrl(item);
   const platform = url ? linkPlatform(url) : undefined;
   const title = getItemTitle(item);
@@ -105,11 +209,20 @@ export default function ItemDetail() {
   const social =
     item.type === 'x_post' || item.type === 'instagram_post' || item.type === 'reddit_post';
   const heading =
-    item.type === 'markdown' ? item.content.trimStart().match(/^#{1,6}\s+(.+)/)?.[1] : undefined;
+    item.type === 'markdown'
+      ? item.content
+          .replace(/^\uFEFF/, '')
+          .trimStart()
+          .match(/^#{1,6}\s+(.+)/)?.[1]
+      : undefined;
+  const markdownTitle = title.replace(/^#{1,6}\s+/, '').trim();
   const showTitle =
-    !social &&
-    (item.type !== 'image' || !!item.caption) &&
-    heading?.trim() !== title.trim() &&
+    (item.type === 'reddit_post' || !social) &&
+    (item.type !== 'image' ||
+      (!!item.title.trim() &&
+        item.title.trim().toLowerCase() !== 'image' &&
+        item.title.trim() !== item.caption?.trim())) &&
+    (item.type !== 'markdown' || !heading || heading.trim() !== markdownTitle) &&
     !(item.type === 'secret' && title.trim().toLowerCase() === typeLabel(item).toLowerCase());
   const copy = async () => {
     try {
@@ -119,6 +232,27 @@ export default function ItemDetail() {
       state.setError((error as Error).message);
     }
   };
+  const renderLinkedText = (value: string, style: ComponentProps<typeof Text>['style']) => (
+    <Text allowFontScaling={false} selectable style={style}>
+      {linkifyText(value).map((segment, index) =>
+        segment.href ? (
+          <Text
+            key={`${segment.href}-${index}`}
+            allowFontScaling={false}
+            accessibilityRole="link"
+            onPress={() =>
+              void openLink(segment.href!).catch((error) => state.setError(error.message))
+            }
+            style={{ color: colors.ink, textDecorationLine: 'underline' }}
+          >
+            {segment.text}
+          </Text>
+        ) : (
+          segment.text
+        ),
+      )}
+    </Text>
+  );
 
   return (
     <BlurTargetView ref={targetRef} style={{ flex: 1, backgroundColor: colors.canvas }}>
@@ -175,11 +309,15 @@ export default function ItemDetail() {
               >
                 {item.type === 'x_post'
                   ? item.authorName || `@${item.authorHandle}`
-                  : item.type === 'link'
-                    ? item.domain
-                    : item.type === 'secret'
-                      ? 'Protected value'
-                      : typeLabel(item)}
+                  : item.type === 'reddit_post'
+                    ? `${item.subreddit}${item.author ? ` · u/${item.author.replace(/^u\//, '')}` : ''}`
+                    : item.type === 'link'
+                      ? item.domain
+                      : item.type === 'secret'
+                        ? 'Protected value'
+                        : item.type === 'image'
+                          ? `${images.length} ${images.length === 1 ? 'photo' : 'photos'}`
+                          : typeLabel(item)}
               </Text>
               <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
                 Saved{' '}
@@ -202,7 +340,93 @@ export default function ItemDetail() {
             />
           </View>
         </View>
-        {!!image && (
+        {!!image && images.length > 1 ? (
+          <View style={{ gap: 6 }}>
+            <Animated.ScrollView
+              ref={galleryRef}
+              horizontal
+              snapToInterval={galleryPitch}
+              decelerationRate="fast"
+              disableIntervalMomentum
+              showsHorizontalScrollIndicator={false}
+              onScroll={onGalleryScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={{
+                paddingHorizontal: (galleryWidth - gallerySlideWidth) / 2,
+                gap: galleryGap,
+                alignItems: 'center',
+              }}
+              style={{ width: galleryWidth, height: galleryHeight, overflow: 'visible' }}
+              onMomentumScrollEnd={({ nativeEvent }) => {
+                const position = Math.round(nativeEvent.contentOffset.x / galleryPitch);
+
+                if (position === 0) {
+                  setActiveGalleryImage(images.length - 1);
+                  galleryScrollX.value = images.length * galleryPitch;
+                  galleryRef.current?.scrollTo({
+                    x: images.length * galleryPitch,
+                    animated: false,
+                  });
+                } else if (position === images.length + 1) {
+                  setActiveGalleryImage(0);
+                  galleryScrollX.value = galleryPitch;
+                  galleryRef.current?.scrollTo({ x: galleryPitch, animated: false });
+                } else setActiveGalleryImage(position - 1);
+              }}
+            >
+              {carouselImages.map(({ uri, ratio }, index) => (
+                <PhotoCarouselSlide
+                  key={`${uri.slice(-24)}-${index}`}
+                  uri={uri}
+                  ratio={ratio}
+                  index={index}
+                  labelIndex={
+                    index === 0 ? images.length - 1 : index === images.length + 1 ? 0 : index - 1
+                  }
+                  width={gallerySlideWidth}
+                  height={galleryHeight}
+                  pitch={galleryPitch}
+                  scrollX={galleryScrollX}
+                />
+              ))}
+            </Animated.ScrollView>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {images.map((entry, index) => (
+                  <Pressable
+                    key={`${entry.uri.slice(-20)}-progress-${index}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Show photo ${index + 1}`}
+                    accessibilityState={{ selected: activeGalleryImage === index }}
+                    onPress={() => {
+                      setActiveGalleryImage(index);
+                      galleryScrollX.value = (index + 1) * galleryPitch;
+                      galleryRef.current?.scrollTo({
+                        x: (index + 1) * galleryPitch,
+                        animated: true,
+                      });
+                    }}
+                    style={{
+                      width: activeGalleryImage === index ? 28 : 14,
+                      height: 24,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: '100%',
+                        height: 3,
+                        borderRadius: 3,
+                        backgroundColor: activeGalleryImage === index ? colors.accent : colors.line,
+                      }}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+        ) : !!image ? (
           <AdaptiveImage
             key={image}
             uri={image}
@@ -211,7 +435,7 @@ export default function ItemDetail() {
             priority="high"
             style={{ borderRadius: radius.card, backgroundColor: colors.paper, overflow: 'hidden' }}
           />
-        )}
+        ) : null}
         {(showTitle ||
           (text && text.trim() !== title.trim()) ||
           item.type === 'secret' ||
@@ -237,12 +461,28 @@ export default function ItemDetail() {
                 {title}
               </Text>
             )}
-            {item.type === 'secret' ? (
+            {item.type === 'image' ? (
+              !!text && (
+                <View style={{ gap: 7, paddingTop: 2 }}>
+                  <Text
+                    allowFontScaling={false}
+                    style={{ ...type.caption, color: colors.muted, letterSpacing: 0.8 }}
+                  >
+                    CAPTION
+                  </Text>
+                  {renderLinkedText(text, {
+                    color: colors.ink,
+                    fontSize: 17,
+                    lineHeight: 26,
+                  })}
+                </View>
+              )
+            ) : item.type === 'secret' ? (
               <View
                 style={{
                   padding: 20,
                   borderRadius: radius.group,
-                  backgroundColor: colors.soft,
+                  backgroundColor: colors.paper,
                   gap: 16,
                 }}
               >
@@ -260,7 +500,7 @@ export default function ItemDetail() {
                     padding: 8,
                     paddingLeft: 14,
                     borderRadius: 16,
-                    backgroundColor: colors.paper,
+                    backgroundColor: colors.canvas,
                   }}
                 >
                   <Text
@@ -285,22 +525,16 @@ export default function ItemDetail() {
                     onPress={() => setRevealedId(revealed ? undefined : id)}
                     style={{
                       minHeight: 44,
-                      flexDirection: 'row',
+                      minWidth: 44,
                       alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 10,
-                      borderRadius: 22,
-                      backgroundColor: colors.soft,
+                      justifyContent: 'center',
                     }}
                   >
                     {revealed ? (
-                      <EyeOff size={16} color={colors.muted} strokeWidth={1.7} />
+                      <EyeOff size={16} color={colors.ink} strokeWidth={1.7} />
                     ) : (
-                      <Eye size={16} color={colors.muted} strokeWidth={1.7} />
+                      <Eye size={16} color={colors.ink} strokeWidth={1.7} />
                     )}
-                    <Text allowFontScaling={false} style={{ ...type.caption, color: colors.ink }}>
-                      {revealed ? 'Hide' : 'Reveal'}
-                    </Text>
                   </Pressable>
                 </View>
                 {item.username && (
@@ -338,23 +572,24 @@ export default function ItemDetail() {
               <MarkdownContent text={item.content} />
             ) : (
               !!text &&
-              text.trim() !== title.trim() && (
-                <Text
-                  allowFontScaling={false}
-                  selectable
-                  style={{
-                    color: colors.ink,
-                    fontSize: item.type === 'code' ? 13 : 17,
-                    lineHeight: item.type === 'code' ? 23 : 29,
-                    fontFamily: item.type === 'code' ? fonts.mono : undefined,
-                    backgroundColor: item.type === 'code' ? colors.paper : 'transparent',
-                    padding: item.type === 'code' ? 16 : 0,
-                    borderRadius: 16,
-                  }}
-                >
-                  {text}
-                </Text>
-              )
+              text.trim() !== title.trim() &&
+              renderLinkedText(text, {
+                color: colors.ink,
+                fontSize: item.type === 'code' ? 13 : 17,
+                lineHeight: item.type === 'code' ? 23 : 29,
+                fontFamily: item.type === 'code' ? fonts.mono : undefined,
+                backgroundColor: item.type === 'code' ? colors.paper : 'transparent',
+                padding: item.type === 'code' ? 16 : 0,
+                borderRadius: 16,
+              })
+            )}
+            {item.type === 'reddit_post' && !text.trim() && !image && (
+              <Text
+                allowFontScaling={false}
+                style={{ color: colors.muted, fontSize: 14, lineHeight: 22 }}
+              >
+                Post details are unavailable in the preview. Open Reddit to view the full post.
+              </Text>
             )}
             {item.type === 'note' &&
               item.checklist?.map((check) => (
@@ -485,6 +720,7 @@ export default function ItemDetail() {
                   : 'Edit find'
             }
             secondary={!!url || item.type === 'secret'}
+            backgroundColor={item.type === 'secret' ? colors.paper : undefined}
             icon={url ? ExternalLink : Edit3}
             onPress={() => {
               if (!url) {

@@ -7,23 +7,60 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header><strong>Anything.</strong><span>A little less scattered.</span></header>
-    <button id="save-page" type="button">Save this page <span>↗</span></button>
-    <form id="settings">
-      <label for="app-url">Your Anything address</label
-      ><input
-        id="app-url"
-        type="url"
-        required
-        placeholder="https://your-anything-address/"
-      /><button type="submit">Connect collection</button>
-    </form>
-    <label class="copy-option"><input id="auto-copy" type="checkbox" />Auto-save text I copy</label>
-    <p class="hint">
-      Off by default. When enabled, copied text and links from websites go to your collection.
-      Password fields are excluded. Right-click saving works without this option.
-    </p>
+    <header>
+      <div class="brand">
+        <img src="icons/icon32.png" alt="" />
+        <strong>Anything</strong><span class="eyebrow">QUICK SAVE</span>
+      </div>
+      <h1 id="capture-heading">Where should this go?</h1>
+      <p id="capture-subtitle">Pick a folder. It saves as soon as you tap.</p>
+    </header>
+    <section class="draft" aria-live="polite">
+      <div class="draft-top" id="draft-label">CURRENT PAGE</div>
+      <strong id="draft-title">This page</strong>
+      <p id="draft-url">Choose a folder to save.</p>
+    </section>
+    <section id="manual-target" hidden>
+      <p>Chrome protects browser settings pages. Paste a web link here to save it.</p>
+      <label for="manual-url">Link to save</label>
+      <input id="manual-url" type="url" placeholder="https://example.com" autocomplete="off" />
+    </section>
+    <section class="folder-section" aria-label="Choose a folder">
+      <div class="section-label">
+        <span>YOUR FOLDERS</span>
+        <button id="customize-wheel" type="button" aria-expanded="false">Customize</button>
+      </div>
+      <div id="wheel-customization" hidden>
+        <p>Show up to 7 folders on your wheel.</p>
+        <div id="folder-options"></div>
+      </div>
+      <div class="folder-wheel" role="group" aria-label="Folders">
+        <svg id="folder-wheel" viewBox="0 0 300 300" aria-label="Folder wheel">
+          <circle class="wheel-ring" cx="150" cy="150" r="138" />
+        </svg>
+        <div class="wheel-core"><img src="icons/icon32.png" alt="Anything" /><span>DROP IN A FOLDER</span></div>
+      </div>
+      <div id="empty-folders" hidden>
+        <p>Open Anything to load and manage your folders.</p>
+        <button id="open-anything" type="button">Open Anything</button>
+      </div>
+    </section>
     <p id="status" role="status"></p>
+    <details class="settings">
+      <summary>Connection &amp; copy settings</summary>
+      <form id="settings">
+        <label for="app-url">Your Anything address</label>
+        <input id="app-url" type="url" required placeholder="https://your-anything-address/" />
+        <button type="submit">Connect collection</button>
+      </form>
+      <label class="copy-option">
+        <input id="auto-copy" type="checkbox" />Keep copied links ready to file
+      </label>
+      <p class="hint">
+        Off by default. Copied links wait here; other copied text saves automatically. Password
+        fields are excluded.
+      </p>
+    </details>
     <script type="module" src="popup.js"></script>
   </body>
 </html>

@@ -314,24 +314,24 @@ export const Header: React.FC<HeaderProps> = ({
                   <Download aria-hidden="true" />
                   Download browser extension
                 </a>
-                <ol>
-                  <li>Extract the ZIP into a folder you can keep.</li>
-                  <li>
-                    Open your browser’s Extensions page, enable Developer mode, and choose Load
-                    unpacked.
-                  </li>
-                  <li>
-                    Select the extracted folder, then open the extension and connect it to the
-                    address below.
-                  </li>
-                </ol>
-                <label htmlFor={`${menuId}-address`}>Your Anything address</label>
-                <input
-                  id={`${menuId}-address`}
-                  aria-label="Your Anything address"
-                  readOnly
-                  value={`${location.origin}${import.meta.env.BASE_URL}`}
-                />
+                <details className="extension-howto">
+                  <summary>Install and connect</summary>
+                  <ol>
+                    <li>Extract the ZIP into a folder you can keep.</li>
+                    <li>
+                      In your browser’s Extensions page, enable Developer mode and choose Load
+                      unpacked.
+                    </li>
+                    <li>Choose the extracted folder, then connect the extension below.</li>
+                  </ol>
+                  <label htmlFor={`${menuId}-address`}>Your Anything address</label>
+                  <input
+                    id={`${menuId}-address`}
+                    aria-label="Your Anything address"
+                    readOnly
+                    value={`${location.origin}${import.meta.env.BASE_URL}`}
+                  />
+                </details>
               </div>
             </details>
           </section>

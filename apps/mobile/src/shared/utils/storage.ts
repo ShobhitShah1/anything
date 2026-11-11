@@ -30,13 +30,21 @@ export function parseSocialUrl(url: string): {
   }
 
   // Reddit
-  if (['reddit.com', 'old.reddit.com'].includes(host)) {
-    const subMatch = clean.match(/reddit\.com\/r\/([a-zA-Z0-9_]+)/);
+  if (host === 'redd.it' || host === 'reddit.com' || host.endsWith('.reddit.com')) {
+    const parsed = new URL(/^https?:\/\//i.test(clean) ? clean : `https://${clean}`);
+    const isPost =
+      host === 'redd.it'
+        ? /^\/[a-z\d]+\/?$/i.test(parsed.pathname)
+        : /\/comments\/[a-z\d]+(?:\/|$)/i.test(parsed.pathname);
+
+    if (!isPost) return { detectedType: 'link', extractedInfo: { title: 'Link' } };
+
+    const subMatch = parsed.pathname.match(/\/r\/([a-zA-Z0-9_]+)/i);
     const sub = subMatch ? `r/${subMatch[1]}` : 'r/reddit';
 
     return {
       detectedType: 'reddit_post',
-      extractedInfo: { subreddit: sub, title: sub },
+      extractedInfo: { subreddit: sub, title: 'Reddit post' },
     };
   }
 

@@ -18,17 +18,20 @@ import {
   Pin,
   ChevronDown,
   ChevronUp,
-  Folder,
+  Eye,
+  Pencil,
   Tags,
 } from 'lucide-react-native';
 import { useCollection } from '../state/collection';
 import { Chip, Field, IconButton } from './ui';
+import { AdaptiveImage } from './adaptive-image';
 import { draftItem, type DraftKind } from '../utils/draft';
 import { itemText, itemUrl } from '../utils/item';
 import { createQuickCaptures } from '../shared/utils/quickCapture';
 import type { SavedItem } from '../shared/types';
 import { FeedbackHost } from './feedback';
-import { ChoiceMenu } from './choice-menu';
+import { FolderDestination } from './folder-destination';
+import { MarkdownContent } from './markdown-content';
 import { fonts, space, type } from '../theme';
 
 const saveKinds: DraftKind[] = [
@@ -43,7 +46,15 @@ const saveKinds: DraftKind[] = [
 ];
 
 export function CaptureEditor() {
-  const { id, folder } = useLocalSearchParams<{ id?: string; folder?: string }>();
+  const {
+    id,
+    folder,
+    kind: requestedKind,
+  } = useLocalSearchParams<{
+    id?: string;
+    folder?: string;
+    kind?: string;
+  }>();
   const close = () => router.back();
   const state = useCollection();
   const { data, colors, dark } = state;
@@ -54,23 +65,40 @@ export function CaptureEditor() {
     onScroll,
     options: headerOptions,
   } = useScrollHeader(existing ? 'Edit find' : 'Keep something');
-  const initialKind: DraftKind =
-    existing?.type === 'note' && existing.checklist?.length
+  const initialKind: DraftKind = existing
+    ? existing.type === 'note' && existing.checklist?.length
       ? 'checklist'
-      : existing && ['note', 'image', 'markdown', 'code', 'secret', 'link'].includes(existing.type)
+      : ['note', 'image', 'markdown', 'code', 'secret', 'link'].includes(existing.type)
         ? (existing.type as DraftKind)
-        : 'auto';
+        : 'auto'
+    : saveKinds.includes(requestedKind as DraftKind)
+      ? (requestedKind as DraftKind)
+      : 'auto';
   const [kind, setKind] = useState<DraftKind>(initialKind);
   const [text, setText] = useState(
     existing?.type === 'note' && existing.checklist?.length
       ? existing.checklist.map((check) => check.text).join('\n')
       : existing
         ? existing.type === 'image'
-          ? existing.imageUrl
+          ? ''
           : itemUrl(existing) || itemText(existing)
         : '',
   );
+  const [images, setImages] = useState<{ uri: string; ratio?: number }[]>(
+    existing?.type === 'image'
+      ? [
+          { uri: existing.imageUrl, ratio: existing.mediaAspectRatio },
+          ...(existing.additionalImages || []).map(({ url, aspectRatio }) => ({
+            uri: url,
+            ratio: aspectRatio,
+          })),
+        ]
+      : [],
+  );
   const [title, setTitle] = useState(existing?.title || '');
+  const [imageCaption, setImageCaption] = useState(
+    existing?.type === 'image' ? existing.caption || '' : '',
+  );
   const [tags, setTags] = useState(existing?.tags.join(', ') || '');
   const [folderId, setFolderId] = useState<string | undefined>(
     existing?.folderId || (data.folders.some((value) => value.id === folder) ? folder : undefined),
@@ -84,6 +112,7 @@ export function CaptureEditor() {
   const [notes, setNotes] = useState(existing?.type === 'secret' ? existing.notes || '' : '');
   const [details, setDetails] = useState(Boolean(existing?.tags.length));
   const [busy, setBusy] = useState(false);
+  const [markdownPreview, setMarkdownPreview] = useState(false);
   const { setError } = state;
   const insets = useSafeAreaInsets();
   const chipScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -104,25 +133,35 @@ export function CaptureEditor() {
   );
 
   useEffect(() => centerKind(kind), [centerKind, kind]);
+  const wordCount = text.trim() ? text.trim().split(/\s+/u).length : 0;
 
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
+        allowsMultipleSelection: true,
         base64: true,
         quality: 0.8,
       });
 
       if (result.canceled) return;
 
-      const image = result.assets[0];
-
-      if (!image.base64 || image.base64.length > 12_000_000)
-        throw new Error('Choose an image smaller than 9 MB, or use an image link.');
-      setText(`data:${image.mimeType || 'image/jpeg'};base64,${image.base64}`);
+      const picked = result.assets.map((image) => {
+        if (!image.base64 || image.base64.length > 12_000_000)
+          throw new Error('Choose images smaller than 9 MB each, or use an image link.');
+        return {
+          uri: `data:${image.mimeType || 'image/jpeg'};base64,${image.base64}`,
+          ratio: image.width > 0 && image.height > 0 ? image.width / image.height : undefined,
+          image,
+        };
+      });
+      setImages((current) => [...current, ...picked.map(({ uri, ratio }) => ({ uri, ratio }))]);
+      setText('');
       setKind('image');
-      if (image.width > 0 && image.height > 0) setMediaRatio(image.width / image.height);
-      if (!title) setTitle(image.fileName?.replace(/\.[^.]+$/, '') || 'Image');
+      const image = picked[0].image;
+      if (picked.length === 1 && picked[0].ratio) setMediaRatio(picked[0].ratio);
+      if (!title && picked.length === 1)
+        setTitle(image.fileName?.replace(/\.[^.]+$/, '') || 'Image');
     } catch (error) {
       setError((error as Error).message);
     }
@@ -148,6 +187,20 @@ export function CaptureEditor() {
                 ? existing
                 : { ...item, id: existing.id, createdAt: existing.createdAt },
             );
+      } else if (kind === 'image' && images.length) {
+        const [cover, ...additionalImages] = images;
+        const imageItem = draftItem('image', cover.uri, title, existing, randomUUID);
+        if (imageItem.type !== 'image') throw new Error('Could not prepare these images.');
+        items = [
+          {
+            ...imageItem,
+            caption: imageCaption.trim() || undefined,
+            mediaAspectRatio: cover.ratio,
+            additionalImages: additionalImages.length
+              ? additionalImages.map(({ uri, ratio }) => ({ url: uri, aspectRatio: ratio }))
+              : undefined,
+          },
+        ];
       } else items = [draftItem(kind, text, title, existing, randomUUID)];
 
       const cleanTags = [
@@ -166,7 +219,7 @@ export function CaptureEditor() {
           tags: cleanTags,
           folderId,
           isPinned: pinned,
-          mediaAspectRatio: mediaRatio,
+          mediaAspectRatio: entry.type === 'image' ? entry.mediaAspectRatio : mediaRatio,
         };
 
         if (item.type === 'code') item = { ...item, language };
@@ -263,12 +316,65 @@ export function CaptureEditor() {
             overflow: 'hidden',
           }}
         >
-          {kind === 'image' && /^data:image\//.test(text) ? (
-            <Image
-              source={{ uri: text }}
-              objectFit="contain"
-              style={{ width: '100%', height: 280, backgroundColor: colors.paper }}
-            />
+          {kind === 'image' ? (
+            <View style={{ padding: 12, gap: 12 }}>
+              {images.map(({ uri, ratio }, index) => (
+                <View
+                  key={`${uri.slice(-24)}-${index}`}
+                  style={{
+                    borderRadius: 18,
+                    overflow: 'hidden',
+                    backgroundColor: colors.canvas,
+                  }}
+                >
+                  <AdaptiveImage
+                    uri={uri}
+                    ratio={ratio}
+                    style={{ backgroundColor: colors.canvas }}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove image ${index + 1}`}
+                    onPress={() => {
+                      setImages((current) => current.filter((_, i) => i !== index));
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      width: 36,
+                      height: 36,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 18,
+                      backgroundColor: colors.overlay,
+                    }}
+                  >
+                    <Text allowFontScaling={false} style={{ color: colors.ink, fontSize: 19 }}>
+                      ×
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+              {!images.length && (
+                <Text
+                  allowFontScaling={false}
+                  style={{ ...type.small, color: colors.muted, padding: 10 }}
+                >
+                  Choose one or more images to keep.
+                </Text>
+              )}
+            </View>
+          ) : kind === 'markdown' && markdownPreview ? (
+            <View style={{ minHeight: 190, padding: 18 }}>
+              {text.trim() ? (
+                <MarkdownContent text={text} />
+              ) : (
+                <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
+                  Your Markdown preview will appear here.
+                </Text>
+              )}
+            </View>
           ) : (
             <Field
               accessibilityLabel="Content"
@@ -277,11 +383,15 @@ export function CaptureEditor() {
                   ? 'One thing per line...'
                   : kind === 'secret'
                     ? 'Enter your secret'
-                    : kind === 'link' || kind === 'image'
+                    : kind === 'link'
                       ? 'Paste a link here...'
                       : kind === 'code'
                         ? 'Keep a useful snippet...'
-                        : 'Paste a link or write a thought...'
+                        : kind === 'note'
+                          ? 'Write a thought worth keeping...'
+                          : kind === 'markdown'
+                            ? 'Paste or write Markdown...'
+                            : 'Paste a link, note, or idea...'
               }
               value={text}
               onChangeText={setText}
@@ -313,22 +423,49 @@ export function CaptureEditor() {
               borderTopColor: colors.line,
             }}
           >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Paste clipboard"
-              disabled={busy}
-              onPress={() => {
-                void Clipboard.getStringAsync()
-                  .then(setText)
-                  .catch((error) => setError(error.message));
-              }}
-              style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 }}
-            >
-              <ClipboardIcon size={16} color={colors.muted} strokeWidth={1.6} />
-              <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
-                Paste
+            {(kind === 'auto' || ['note', 'checklist', 'markdown'].includes(kind)) && (
+              <Text
+                allowFontScaling={false}
+                style={{ ...type.caption, color: colors.muted, marginRight: 'auto' }}
+              >
+                {wordCount} {wordCount === 1 ? 'word' : 'words'}
               </Text>
-            </Pressable>
+            )}
+            {kind === 'markdown' && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={markdownPreview ? 'Edit Markdown' : 'Preview Markdown'}
+                onPress={() => setMarkdownPreview((value) => !value)}
+                style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 }}
+              >
+                {markdownPreview ? (
+                  <Pencil size={15} color={colors.muted} strokeWidth={1.6} />
+                ) : (
+                  <Eye size={16} color={colors.muted} strokeWidth={1.6} />
+                )}
+                <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
+                  {markdownPreview ? 'Edit' : 'Preview'}
+                </Text>
+              </Pressable>
+            )}
+            {kind !== 'image' && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Paste clipboard"
+                disabled={busy}
+                onPress={() => {
+                  void Clipboard.getStringAsync()
+                    .then(setText)
+                    .catch((error) => setError(error.message));
+                }}
+                style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 }}
+              >
+                <ClipboardIcon size={16} color={colors.muted} strokeWidth={1.6} />
+                <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
+                  Paste
+                </Text>
+              </Pressable>
+            )}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Choose a photo"
@@ -338,7 +475,7 @@ export function CaptureEditor() {
             >
               <ImagePlus size={17} color={colors.muted} strokeWidth={1.6} />
               <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
-                {kind === 'image' && text.startsWith('data:') ? 'Change photo' : 'Photo'}
+                {kind === 'image' && images.length ? 'Add photos' : 'Photo'}
               </Text>
             </Pressable>
           </View>
@@ -365,6 +502,22 @@ export function CaptureEditor() {
             }}
           />
         </View>
+        {kind === 'image' && images.length > 0 && (
+          <View style={{ gap: 6 }}>
+            <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
+              CAPTION · OPTIONAL
+            </Text>
+            <Field
+              accessibilityLabel="Photo note"
+              placeholder="Add a caption for these photos..."
+              value={imageCaption}
+              onChangeText={setImageCaption}
+              editable={!busy}
+              multiline
+              style={{ minHeight: 76, textAlignVertical: 'top' }}
+            />
+          </View>
+        )}
         {kind === 'code' && (
           <Field
             accessibilityLabel="Code language"
@@ -395,27 +548,16 @@ export function CaptureEditor() {
             />
           </View>
         )}
-        <View style={{ borderTopWidth: 0.5, borderTopColor: colors.line, paddingTop: 12, gap: 12 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <ChoiceMenu
-                label="Folder"
-                icon={Folder}
-                value={folderId || ''}
-                options={[
-                  { value: '', label: 'No folder' },
-                  ...data.folders.map((folder) => ({ value: folder.id, label: folder.name })),
-                ]}
-                onSelect={(value) => setFolderId(value || undefined)}
-              />
-            </View>
+        <View style={{ borderTopWidth: 0.5, borderTopColor: colors.line, paddingTop: 16, gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <FolderDestination
+              folders={data.folders}
+              items={data.items}
+              selectedId={folderId}
+              onSelect={setFolderId}
+              onCreate={state.addFolder}
+            />
+            <View style={{ width: 1, height: 24, backgroundColor: colors.line }} />
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Edit tags"
@@ -444,15 +586,6 @@ export function CaptureEditor() {
               editable={!busy}
             />
           )}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/folders')}
-            style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }}
-          >
-            <Text allowFontScaling={false} style={{ ...type.small, color: colors.accent }}>
-              Create a folder
-            </Text>
-          </Pressable>
         </View>
       </KeyboardAwareScrollView>
       <KeyboardStickyView
@@ -471,8 +604,11 @@ export function CaptureEditor() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={existing ? 'Save changes' : 'Save to Anything'}
-          accessibilityState={{ disabled: !text.trim() || busy, busy }}
-          disabled={!text.trim() || busy}
+          accessibilityState={{
+            disabled: !(kind === 'image' ? images.length : text.trim()) || busy,
+            busy,
+          }}
+          disabled={!(kind === 'image' ? images.length : text.trim()) || busy}
           onPress={() => void submit()}
           style={{
             minHeight: 58 + insets.bottom,

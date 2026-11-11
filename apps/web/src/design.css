@@ -1971,8 +1971,8 @@ dialog.capture-screen:not([open]) {
   appearance: none;
   position: relative;
   flex-shrink: 0;
-  width: 26px;
-  height: 16px;
+  width: 34px;
+  height: 20px;
   border-radius: 20px;
   background: var(--line);
   border: 1px solid var(--line);
@@ -1981,10 +1981,10 @@ dialog.capture-screen:not([open]) {
 .settings-clipboard input::after {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--paper);
   transition: transform 120ms var(--ease-out);
@@ -1994,7 +1994,7 @@ dialog.capture-screen:not([open]) {
   border-color: var(--accent);
 }
 .settings-clipboard input:checked::after {
-  transform: translateX(10px);
+  transform: translateX(14px);
 }
 .settings-clipboard input:disabled {
   opacity: 0.5;
@@ -2078,7 +2078,7 @@ dialog.capture-screen:not([open]) {
 }
 .settings-delete p {
   padding: 4px 10px 10px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
   color: var(--muted);
 }
@@ -2262,7 +2262,7 @@ dialog.capture-screen:not([open]) {
 }
 .mind-options {
   inset: auto auto 24px 80px;
-  width: min(380px, calc(100vw - 92px));
+  width: min(460px, calc(100vw - 104px));
   max-height: calc(100dvh - 48px);
   margin: 0;
   padding: 18px;
@@ -2280,14 +2280,14 @@ dialog.capture-screen:not([open]) {
   padding: 2px 2px 16px;
 }
 .settings-heading h2 {
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 23px;
+  font-weight: 600;
   letter-spacing: -0.035em;
 }
 .settings-heading p {
   margin-top: 3px;
-  color: var(--muted);
-  font-size: 12px;
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
+  font-size: 13px;
 }
 .mind-options .settings-heading button {
   width: 30px;
@@ -2297,7 +2297,7 @@ dialog.capture-screen:not([open]) {
   justify-content: center;
 }
 .settings-section {
-  padding: 14px 0;
+  padding: 12px 0;
   border-top: 1px solid var(--line);
 }
 .settings-section h3,
@@ -2306,20 +2306,20 @@ dialog.capture-screen:not([open]) {
   justify-content: space-between;
   align-items: center;
   margin: 0 8px 8px;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 500;
+  color: color-mix(in srgb, var(--muted) 82%, var(--ink));
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.04em;
 }
 .settings-section h3 span {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0;
 }
 .mind-options .settings-row {
   padding: 10px 8px;
   gap: 11px;
   border-radius: 10px;
-  min-height: 56px;
+  min-height: 62px;
   text-align: left;
 }
 .settings-row > svg {
@@ -2336,18 +2336,18 @@ dialog.capture-screen:not([open]) {
 }
 .settings-copy strong {
   color: var(--ink);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
 }
 .settings-copy small {
-  color: var(--muted);
-  font-size: 10px;
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
+  font-size: 11px;
   line-height: 1.5;
 }
 .settings-value {
   flex-shrink: 0;
-  font-size: 10px;
-  color: var(--muted);
+  font-size: 11px;
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
 }
 .mind-options button:disabled {
   opacity: 0.4;
@@ -2355,9 +2355,9 @@ dialog.capture-screen:not([open]) {
 }
 .settings-local-note {
   margin: 10px 8px 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
 }
 .extension-setup {
   margin-top: 8px;
@@ -2372,8 +2372,8 @@ dialog.capture-screen:not([open]) {
   gap: 10px;
   padding: 12px;
   list-style: none;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 .extension-setup summary::-webkit-details-marker {
@@ -2382,8 +2382,8 @@ dialog.capture-screen:not([open]) {
 .extension-setup summary small {
   display: block;
   margin-top: 4px;
-  color: var(--muted);
-  font-size: 10px;
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
+  font-size: 11px;
   line-height: 1.5;
   font-weight: 400;
 }
@@ -2402,12 +2402,12 @@ dialog.capture-screen:not([open]) {
 }
 .extension-instructions {
   padding: 0 12px 12px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .extension-instructions p,
 .extension-instructions ol {
   line-height: 1.7;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
 }
 .extension-instructions a {
   display: flex;
@@ -2419,7 +2419,21 @@ dialog.capture-screen:not([open]) {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
+}
+.extension-howto {
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.extension-howto summary {
+  padding: 10px 0 2px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.extension-howto ol {
+  padding-left: 20px;
 }
 .extension-instructions a:hover {
   background: var(--canvas);
@@ -2546,6 +2560,16 @@ dialog.capture-screen:not([open]) {
   color: var(--ink);
   background: var(--paper);
   box-shadow: 0 12px 48px #11182718;
+}
+.mind-options::backdrop,
+.account-panel::backdrop {
+  background: rgb(24 27 35 / 22%);
+  backdrop-filter: blur(2px);
+}
+.dark .mind-options::backdrop,
+.dark .account-panel::backdrop {
+  background: rgb(0 0 0 / 54%);
+  backdrop-filter: blur(2px);
 }
 .account-panel-heading {
   display: flex;

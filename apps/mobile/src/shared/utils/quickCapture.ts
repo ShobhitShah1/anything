@@ -88,7 +88,10 @@ export function createQuickCaptures(
         items.push({
           ...base,
           type: 'reddit_post',
-          title: social.extractedInfo?.title || 'Reddit post',
+          title:
+            preview.publisher === 'Reddit'
+              ? preview.title
+              : social.extractedInfo?.title || 'Reddit post',
           postUrl: content,
           subreddit: social.extractedInfo?.subreddit || 'r/reddit',
           author: '',

@@ -59,6 +59,7 @@ export function Action({
   title,
   onPress,
   secondary,
+  backgroundColor,
   disabled,
   icon: Icon,
   leading,
@@ -66,6 +67,7 @@ export function Action({
   title: string;
   onPress: () => void;
   secondary?: boolean;
+  backgroundColor?: string;
   disabled?: boolean;
   icon?: LucideIcon;
   leading?: ReactNode;
@@ -89,7 +91,7 @@ export function Action({
         gap: 9,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: secondary ? colors.soft : colors.ink,
+        backgroundColor: backgroundColor || (secondary ? colors.soft : colors.ink),
         opacity: disabled ? 0.4 : 1,
       }}
     >
@@ -114,12 +116,14 @@ export function IconButton({
   onPress,
   active,
   disabled,
+  width = 44,
 }: {
   label: string;
   icon: LucideIcon;
   onPress: () => void;
   active?: boolean;
   disabled?: boolean;
+  width?: number;
 }) {
   const { colors } = useCollection();
 
@@ -131,7 +135,7 @@ export function IconButton({
       disabled={disabled}
       onPress={onPress}
       style={{
-        width: 44,
+        width,
         minHeight: 44,
         borderRadius: radius.pill,
         alignItems: 'center',

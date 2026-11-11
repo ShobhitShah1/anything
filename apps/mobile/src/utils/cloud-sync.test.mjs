@@ -233,6 +233,24 @@ test('folders sync and empty folder collections stay empty; malformed remote dat
     false,
   );
   assert.equal(isCloudEntry(record({ ...note('bad'), createdAt: 1e30 })), false);
+  assert.equal(
+    isCloudEntry({
+      kind: 'folder',
+      id: 'child',
+      deleted: false,
+      data: { id: 'child', name: 'Child', parentId: 'parent', createdAt: 1 },
+    }),
+    true,
+  );
+  assert.equal(
+    isCloudEntry({
+      kind: 'folder',
+      id: 'same',
+      deleted: false,
+      data: { id: 'same', name: 'Invalid', parentId: 'same', createdAt: 1 },
+    }),
+    false,
+  );
   h.sync.stop();
 });
 

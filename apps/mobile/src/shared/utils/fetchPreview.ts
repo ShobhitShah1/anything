@@ -88,6 +88,24 @@ export function getImmediateLinkPreview(rawUrl: string): LinkPreviewData {
   const domain = parsed.hostname.replace(/^www\./, '');
   const fallbackFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 
+  if (
+    (domain === 'reddit.com' || domain.endsWith('.reddit.com') || domain === 'redd.it') &&
+    /\/comments\//i.test(parsed.pathname)
+  ) {
+    const slug = parsed.pathname.match(/\/comments\/[^/]+\/([^/]+)/i)?.[1];
+    const title = slug
+      ? decodeURIComponent(slug.replace(/\+/g, ' ')).replace(/[-_]+/g, ' ').trim()
+      : '';
+
+    return {
+      title: title ? title[0].toLocaleUpperCase() + title.slice(1) : 'Reddit post',
+      publisher: 'Reddit',
+      domain,
+      url,
+      favicon: fallbackFavicon,
+    };
+  }
+
   // 1. Direct Image URL (Unsplash, imgur, png, jpg, etc.)
   if (isDirectImageUrl(url)) {
     const filename = url.split('/').pop()?.split('?')[0] || domain;
@@ -195,30 +213,101 @@ async function fetchMetadata(
   signal: AbortSignal,
   forceFresh: boolean,
 ) {
+  let workerPreview: LinkPreviewData | undefined;
+  let workerError: unknown;
+  let workerChecked = false;
+  try {
+    const endpoint = process.env.EXPO_PUBLIC_AI_URL?.trim();
+    if (endpoint) {
+      const workerUrl = new URL(endpoint);
+      if (
+        workerUrl.protocol === 'https:' &&
+        workerUrl.pathname === '/ai' &&
+        !workerUrl.search &&
+        !workerUrl.hash
+      ) {
+        const { auth } = await import('../../services/auth');
+        const token = await auth?.currentUser?.getIdToken();
+        if (token) {
+          workerChecked = true;
+          const response = await fetch(workerUrl.origin + '/preview', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+            signal: AbortSignal.any([signal, AbortSignal.timeout(1800)]),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const title =
+              typeof data.title === 'string' && data.title.trim() ? data.title : fallback.title;
+            workerPreview = {
+              ...fallback,
+              title,
+              description: typeof data.description === 'string' ? data.description : undefined,
+              imageUrl: safeWebUrl(data.imageUrl),
+              publisher: typeof data.publisher === 'string' ? data.publisher : fallback.domain,
+              author: typeof data.author === 'string' ? data.author : undefined,
+              favicon: safeWebUrl(data.favicon) || fallback.favicon,
+            };
+            if (title === fallback.title && !workerPreview.description && !workerPreview.imageUrl)
+              workerPreview = undefined;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    if (signal.aborted) throw error;
+    workerError = error;
+  }
+  if (workerPreview?.description || workerPreview?.imageUrl) return workerPreview;
+
   const params = new URLSearchParams({
     url,
     retry: '0',
-    timeout: '4500',
+    timeout: workerChecked ? '2500' : '4500',
     prerender: 'auto',
     force: String(forceFresh),
   });
-  const json = await fetchJson(`https://api.microlink.io?${params}`, signal);
+  let json;
+  try {
+    json = await fetchJson(`https://api.microlink.io?${params}`, signal);
+  } catch (error) {
+    if (workerPreview) return workerPreview;
+    if (workerError)
+      throw new AggregateError([workerError, error], 'Preview providers unavailable.');
+    throw error;
+  }
 
-  if (json.status !== 'success' || !json.data) throw new Error('This page could not be previewed.');
+  if (json.status !== 'success' || !json.data) {
+    if (workerPreview) return workerPreview;
+    throw new Error('This page could not be previewed.');
+  }
 
   const data = json.data;
 
   return {
     ...fallback,
-    title: typeof data.title === 'string' && data.title.trim() ? data.title : fallback.title,
-    description: typeof data.description === 'string' ? data.description : undefined,
+    title:
+      workerPreview && workerPreview.title !== fallback.title
+        ? workerPreview?.title
+        : typeof data.title === 'string' && data.title.trim()
+          ? data.title
+          : fallback.title,
+    description:
+      workerPreview?.description ||
+      (typeof data.description === 'string' ? data.description : undefined),
     imageUrl:
+      workerPreview?.imageUrl ||
       safeWebUrl(typeof data.image === 'string' ? data.image : data.image?.url) ||
       fallback.imageUrl,
-    publisher: typeof data.publisher === 'string' ? data.publisher : fallback.domain,
-    author: typeof data.author === 'string' ? data.author : undefined,
+    publisher:
+      workerPreview?.publisher ||
+      (typeof data.publisher === 'string' ? data.publisher : fallback.domain),
+    author: workerPreview?.author || (typeof data.author === 'string' ? data.author : undefined),
     favicon:
-      safeWebUrl(typeof data.logo === 'string' ? data.logo : data.logo?.url) || fallback.favicon,
+      workerPreview?.favicon ||
+      safeWebUrl(typeof data.logo === 'string' ? data.logo : data.logo?.url) ||
+      fallback.favicon,
   };
 }
 
@@ -254,10 +343,47 @@ async function fetchXPreview(url: string, fallback: LinkPreviewData, signal: Abo
   };
 }
 
-async function fetchVideoPreview(url: string, fallback: LinkPreviewData, signal: AbortSignal) {
-  const data = await fetchJson(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, signal);
+async function fetchRedditPreview(
+  url: string,
+  fallback: LinkPreviewData,
+  signal: AbortSignal,
+  forceFresh: boolean,
+) {
+  try {
+    const data = await fetchJson(
+      `https://www.reddit.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+      signal,
+    );
 
-  if (data.error || typeof data.title !== 'string') throw new Error('Video metadata unavailable.');
+    if (typeof data.title !== 'string' || !data.title.trim())
+      throw new Error('Reddit post metadata unavailable.');
+
+    return {
+      ...fallback,
+      title: data.title,
+      description: typeof data.description === 'string' ? data.description : undefined,
+      author: typeof data.author_name === 'string' ? data.author_name : undefined,
+      imageUrl: safeWebUrl(data.thumbnail_url),
+      publisher: 'Reddit',
+    };
+  } catch (error) {
+    if (signal.aborted) throw error;
+
+    return fetchMetadata(url, fallback, signal, forceFresh);
+  }
+}
+
+async function fetchVideoPreview(url: string, fallback: LinkPreviewData, signal: AbortSignal) {
+  let data;
+  try {
+    data = await fetchJson(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return fetchMetadata(url, fallback, signal, false);
+  }
+
+  if (data.error || typeof data.title !== 'string')
+    return fetchMetadata(url, fallback, signal, false);
 
   return {
     ...fallback,
@@ -291,6 +417,12 @@ export function fetchLinkPreview(rawUrl: string, forceFresh = false): Promise<Li
 
       if (['x.com', 'twitter.com', 'mobile.twitter.com'].includes(fallback.domain)) {
         data = await fetchXPreview(url, fallback, controller.signal);
+      } else if (
+        fallback.domain === 'reddit.com' ||
+        fallback.domain.endsWith('.reddit.com') ||
+        fallback.domain === 'redd.it'
+      ) {
+        data = await fetchRedditPreview(url, fallback, controller.signal, forceFresh);
       } else if (
         ['youtube.com', 'm.youtube.com', 'youtu.be', 'vimeo.com'].includes(fallback.domain)
       ) {
@@ -357,7 +489,9 @@ export function applyLinkPreview(item: SavedItem, preview: LinkPreviewData): Sav
     return {
       ...item,
       title:
-        !item.title || item.title === item.subreddit || item.title === 'Reddit post'
+        !item.title ||
+        item.title === item.subreddit ||
+        ['Reddit', 'reddit.com', 'Reddit post'].includes(item.title)
           ? preview.title
           : item.title,
       author: preview.author || item.author,

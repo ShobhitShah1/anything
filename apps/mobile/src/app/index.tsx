@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
   viewButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: -6,
   },
   viewButton: {
     width: 40,
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
 export default function Home() {
   const router = useRouter();
   const state = useCollection();
-  const { targetRef, topInset, onScroll, options: headerOptions } = useScrollHeader();
+  const { targetRef, topInset, onScroll, scrolled, options: headerOptions } = useScrollHeader();
   const { colors, data } = state;
   const { folder } = useLocalSearchParams<{ folder?: string }>();
   const { width, height } = useWindowDimensions();
@@ -138,6 +139,15 @@ export default function Home() {
   const scrollState = useRef({ offset: 0, travel: 0, hidden: false });
 
   const liftedId = useSharedValue<string | null>(null);
+  const brandScrollProgress = useSharedValue(0);
+  useEffect(() => {
+    brandScrollProgress.set(
+      withTiming(scrolled ? 1 : 0, {
+        duration: reducedMotion ? 0 : 260,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+      }),
+    );
+  }, [brandScrollProgress, reducedMotion, scrolled]);
   const motionEnabled = useSharedValue(false);
   const expanded = useSharedValue(false);
   const captureHidden = useSharedValue(false);
@@ -206,7 +216,10 @@ export default function Home() {
   const contextItem = data.items.find((item) => item.id === context?.id);
   const openCapture = () => {
     Keyboard.dismiss();
-    router.push({ pathname: '/capture', params: folder ? { folder } : {} });
+    router.push({
+      pathname: '/capture',
+      params: { ...(folder ? { folder } : {}), kind: filter },
+    });
   };
   const prepareTransition = () => {
     if (!reducedMotion) listRef.current?.prepareForLayoutAnimationRender();
@@ -277,6 +290,18 @@ export default function Home() {
     return {
       opacity: interpolate(p, [0, 0.45], [1, 0]),
       transform: [{ translateY: interpolate(p, [0, 0.45], [0, -5]) }],
+    };
+  });
+  const brandNameStyle = useAnimatedStyle(() => {
+    const scroll = brandScrollProgress.get();
+    const expand = expandProgress.get();
+
+    return {
+      opacity: interpolate(scroll, [0, 1], [1, 0]) * interpolate(expand, [0, 0.45], [1, 0]),
+      transform: [
+        { translateX: interpolate(scroll, [0, 1], [0, -38]) },
+        { translateY: interpolate(expand, [0, 0.45], [0, -5]) },
+      ],
     };
   });
   const captureHeaderStyle = useAnimatedStyle(() => {
@@ -358,6 +383,12 @@ export default function Home() {
         ),
     [data.items, folder, filter, query, sort],
   );
+  useEffect(() => {
+    if (!motionEnabled.get()) return;
+    const timer = setTimeout(() => motionEnabled.set(false), 340);
+
+    return () => clearTimeout(timer);
+  }, [items, layout, motionEnabled]);
   // Keep the ad setup intact, but hide its collection placement for now.
   const showCollectionAd = false;
   const quickSave = async (draft?: string) => {
@@ -417,16 +448,26 @@ export default function Home() {
           value={query}
           onChangeText={setQuery}
           trailing={
-            <View style={{ flexDirection: 'row' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 0,
+                marginRight: -6,
+              }}
+            >
               <IconButton
                 label={selecting ? 'Cancel selection' : 'Select multiple finds'}
                 icon={selecting ? X : CheckSquare}
+                width={40}
                 active={selecting}
                 onPress={() => (selecting ? setSelectedIds(null) : startSelection())}
               />
               <IconButton
                 label="Browse folders"
                 icon={Folder}
+                width={40}
                 active={!!folder}
                 onPress={() => router.push('/folders')}
               />
@@ -497,7 +538,7 @@ export default function Home() {
     () => ({
       ...headerOptions,
       title: 'anything.',
-      headerTitle: () => null,
+      headerTitle: () => <View />,
       headerBackground:
         !data.items.length && !captureOpen ? () => null : headerOptions.headerBackground,
       headerStyle: {
@@ -512,23 +553,29 @@ export default function Home() {
           <Animated.View
             pointerEvents={captureOpen ? 'none' : 'auto'}
             style={[
-              { flexDirection: 'row', alignItems: 'center', gap: 8, position: 'absolute', left: 0 },
+              { flexDirection: 'row', alignItems: 'center', position: 'absolute', left: 0 },
               homeHeaderStyle,
             ]}
           >
             <BrandMark size={30} />
-            <Text
-              allowFontScaling={false}
-              style={{
+          </Animated.View>
+          <Animated.Text
+            allowFontScaling={false}
+            accessible={false}
+            style={[
+              {
+                position: 'absolute',
+                left: 38,
                 color: colors.ink,
                 fontSize: 20,
                 fontWeight: '600',
                 letterSpacing: -0.8,
-              }}
-            >
-              anything.
-            </Text>
-          </Animated.View>
+              },
+              brandNameStyle,
+            ]}
+          >
+            anything.
+          </Animated.Text>
 
           {/* Quick Add Header Title */}
           <Animated.View
@@ -663,6 +710,7 @@ export default function Home() {
       data.items.length,
       router,
       homeHeaderStyle,
+      brandNameStyle,
       captureHeaderStyle,
       dismissCapture,
       state.user,
@@ -695,10 +743,9 @@ export default function Home() {
               data={items}
               masonry={layout === 'grid'}
               numColumns={columns}
-              optimizeItemArrangement
+              maxItemsInRecyclePool={18}
               keyExtractor={(item) => item.id}
               getItemType={(item) => item.type}
-              maintainVisibleContentPosition={{ disabled: true }}
               contentInsetAdjustmentBehavior="never"
               onScroll={handleScroll}
               scrollEventThrottle={16}
@@ -802,7 +849,6 @@ export default function Home() {
                   {!query && filter !== 'pinned' && (
                     <Action
                       title={filter === 'note' ? 'Write a note' : 'Save something'}
-                      icon={Plus}
                       onPress={openCapture}
                     />
                   )}

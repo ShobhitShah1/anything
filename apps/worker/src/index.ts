@@ -8,6 +8,7 @@ import {
 } from './access.ts';
 import { createGroq, parseKeys, validateMessages, type AiMessage } from './groq.ts';
 import { firebase, type FirebaseEnv } from './firebase.ts';
+import { handlePreview } from './preview.ts';
 
 export type Env = FirebaseEnv & {
   GROQ_API_KEYS: string;
@@ -94,7 +95,12 @@ export default {
       return originAllowed
         ? new Response(null, { status: 204, headers: corsHeaders })
         : new Response(null, { status: 403 });
-    if (new URL(request.url).pathname !== '/ai') return reply({ error: 'not_found' }, 404);
+    const path = new URL(request.url).pathname;
+    if (path === '/preview') {
+      if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
+      return withCors(await handlePreview(request, env));
+    }
+    if (path !== '/ai') return reply({ error: 'not_found' }, 404);
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
     let uid = '';
     let stage = 'authentication';

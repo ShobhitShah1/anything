@@ -20,11 +20,11 @@ export function isAppPage(pageUrl, appUrl) {
   }
 }
 
-export function appendCapture(queue, text) {
+export function appendCapture(queue, text, folderId) {
   if (typeof text !== 'string' || !text.trim() || text.length > 50_000)
     throw new Error('Save between 1 and 50,000 characters at a time.');
   if (queue.some((entry) => entry.text === text.trim())) return queue;
   if (queue.length >= 100)
     throw new Error('100 captures are waiting. Open Anything to finish saving them first.');
-  return [...queue, { id: crypto.randomUUID(), text: text.trim() }];
+  return [...queue, { id: crypto.randomUUID(), text: text.trim(), folderId }];
 }

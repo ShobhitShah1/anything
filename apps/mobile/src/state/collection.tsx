@@ -400,11 +400,21 @@ function useCollectionState() {
           item.id === id ? { ...item, isPinned: !item.isPinned } : item,
         ),
       })),
-    addFolder: (name: string) =>
-      commit((value) => ({
-        ...value,
-        folders: [...value.folders, { id: randomUUID(), name: name.trim(), createdAt: Date.now() }],
-      })),
+    addFolder: async (name: string, parentId?: string) => {
+      const id = randomUUID();
+
+      await commit((value) => {
+        if (parentId !== undefined && !value.folders.some((folder) => folder.id === parentId))
+          throw new Error('That parent folder no longer exists.');
+
+        return {
+          ...value,
+          folders: [...value.folders, { id, name: name.trim(), parentId, createdAt: Date.now() }],
+        };
+      });
+
+      return id;
+    },
   };
 }
 

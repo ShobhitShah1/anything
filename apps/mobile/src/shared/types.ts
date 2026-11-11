@@ -12,6 +12,7 @@ export type ItemType =
 export interface Folder {
   id: string;
   name: string;
+  parentId?: string;
   icon?: string;
   color?: string;
   createdAt: number;
@@ -93,6 +94,7 @@ export interface SecretItem extends BaseItem {
 export interface ImageItem extends BaseItem {
   type: 'image';
   imageUrl: string;
+  additionalImages?: { url: string; aspectRatio?: number }[];
   caption?: string;
   dimensions?: string;
   aspectRatio?: 'square' | 'portrait' | 'landscape';

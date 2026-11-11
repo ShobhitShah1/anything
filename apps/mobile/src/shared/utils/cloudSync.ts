@@ -62,7 +62,17 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
     !Number.isFinite(new Date(entry.data.createdAt).getTime())
   )
     return false;
-  if (entry.kind === 'folder') return typeof (entry.data as Folder).name === 'string';
+  if (entry.kind === 'folder') {
+    const folder = entry.data as Folder;
+
+    return (
+      typeof folder.name === 'string' &&
+      (folder.parentId === undefined ||
+        (typeof folder.parentId === 'string' &&
+          folder.parentId.length > 0 &&
+          folder.parentId !== folder.id))
+    );
+  }
 
   const item = entry.data as SavedItem;
 
@@ -95,7 +105,20 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
     case 'secret':
       return typeof item.secretValue === 'string' && typeof item.category === 'string';
     case 'image':
-      return typeof item.imageUrl === 'string';
+      return (
+        typeof item.imageUrl === 'string' &&
+        (!item.additionalImages ||
+          (Array.isArray(item.additionalImages) &&
+            item.additionalImages.every(
+              (image) =>
+                image &&
+                typeof image.url === 'string' &&
+                (image.aspectRatio === undefined ||
+                  (typeof image.aspectRatio === 'number' &&
+                    Number.isFinite(image.aspectRatio) &&
+                    image.aspectRatio > 0)),
+            )))
+      );
     case 'link':
       return webUrl(item.url) && typeof item.domain === 'string';
     case 'x_post':
