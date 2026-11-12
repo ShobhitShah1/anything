@@ -134,6 +134,12 @@ export function CaptureEditor() {
 
   useEffect(() => centerKind(kind), [centerKind, kind]);
   const wordCount = text.trim() ? text.trim().split(/\s+/u).length : 0;
+  const tagCount = new Set(
+    tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean),
+  ).size;
 
   const pickImage = async () => {
     try {
@@ -530,23 +536,52 @@ export function CaptureEditor() {
               onSelect={setFolderId}
               onCreate={state.addFolder}
             />
-            <View style={{ width: 1, height: 24, backgroundColor: colors.line }} />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Edit tags"
+              accessibilityLabel={
+                tagCount ? `Edit ${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}` : 'Add tags'
+              }
+              accessibilityHint="Show or hide the tags field"
               accessibilityState={{ expanded: details }}
               onPress={() => setDetails((value) => !value)}
-              style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7 }}
+              style={({ pressed }) => ({
+                minHeight: 50,
+                width: 108,
+                justifyContent: 'center',
+                gap: 3,
+                opacity: pressed ? 0.64 : 1,
+              })}
             >
-              <Tags size={16} color={colors.muted} strokeWidth={1.6} />
-              <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
-                Tags
+              <Text
+                allowFontScaling={false}
+                style={{ ...type.caption, color: colors.accent, fontSize: 10, letterSpacing: 1.1 }}
+              >
+                TAGS
               </Text>
-              {details ? (
-                <ChevronUp size={14} color={colors.muted} />
-              ) : (
-                <ChevronDown size={14} color={colors.muted} />
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Tags
+                  size={15}
+                  color={tagCount || details ? colors.accent : colors.muted}
+                  strokeWidth={1.6}
+                />
+                <Text
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                  style={{
+                    flexShrink: 1,
+                    ...type.small,
+                    color: tagCount || details ? colors.ink : colors.muted,
+                    fontWeight: tagCount ? '600' : '400',
+                  }}
+                >
+                  {tagCount ? `${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}` : 'Add tags'}
+                </Text>
+                {details ? (
+                  <ChevronUp size={14} color={colors.accent} />
+                ) : (
+                  <ChevronDown size={14} color={colors.muted} />
+                )}
+              </View>
             </Pressable>
           </View>
           {details && (

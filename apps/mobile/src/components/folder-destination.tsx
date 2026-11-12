@@ -34,6 +34,7 @@ export function FolderDestination({
   const sheetRef = useRef<BottomSheetModal>(null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState<'folder' | 'subfolder' | null>(null);
+  const [selectingParent, setSelectingParent] = useState(false);
   const [createParentId, setCreateParentId] = useState<string>();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -83,6 +84,7 @@ export function FolderDestination({
   const finishDismiss = useCallback(() => {
     setOpen(false);
     setCreating(null);
+    setSelectingParent(false);
     setCreateParentId(undefined);
     setError('');
   }, []);
@@ -98,12 +100,19 @@ export function FolderDestination({
     return () => subscription.remove();
   }, [closeSheet, open]);
   const choose = (id?: string) => {
+    if (selectingParent) {
+      setCreateParentId(id);
+      setCreating(id ? 'subfolder' : 'folder');
+      setSelectingParent(false);
+      return;
+    }
     onSelect(id);
     sheetRef.current?.dismiss();
   };
   const beginCreate = (mode: 'folder' | 'subfolder', parentId?: string) => {
     setName('');
     setError('');
+    setSelectingParent(false);
     setCreateParentId(parentId);
     setCreating(mode);
   };
@@ -115,7 +124,7 @@ export function FolderDestination({
     setBusy(true);
     setError('');
     try {
-      const id = await onCreate(cleanName, creating === 'subfolder' ? createParentId : undefined);
+      const id = await onCreate(cleanName, createParentId);
 
       onSelect(id);
       sheetRef.current?.dismiss();
@@ -140,7 +149,7 @@ export function FolderDestination({
           setOpen(true);
         }}
         style={({ pressed }) => ({
-          minHeight: 48,
+          minHeight: 50,
           flex: 1,
           minWidth: 0,
           flexDirection: 'row',
@@ -148,19 +157,24 @@ export function FolderDestination({
           opacity: pressed ? 0.64 : 1,
         })}
       >
-        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
           <Text
             allowFontScaling={false}
-            style={{ ...type.caption, color: colors.muted, letterSpacing: 0.8 }}
+            style={{ ...type.caption, color: colors.accent, fontSize: 10, letterSpacing: 1.1 }}
           >
             SAVE TO
           </Text>
           <Text
             allowFontScaling={false}
             numberOfLines={1}
-            style={{ color: colors.ink, fontSize: 14, lineHeight: 18, fontWeight: '600' }}
+            style={{ color: colors.ink, fontSize: 15, lineHeight: 19, fontWeight: '600' }}
           >
-            {selected?.path || 'Main collection'}
+            {selected?.parentPath ? (
+              <Text allowFontScaling={false} style={{ color: colors.muted, fontWeight: '400' }}>
+                {selected.parentPath} /{' '}
+              </Text>
+            ) : null}
+            {selected?.folder.name || 'Main collection'}
           </Text>
         </View>
         <ChevronDown size={16} color={colors.muted} />
@@ -183,13 +197,16 @@ export function FolderDestination({
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {creating && (
+            {(creating || selectingParent) && (
               <FolderSheetBackButton
-                label="Back to folders"
+                label={selectingParent ? 'Back to new folder' : 'Back to folders'}
                 disabled={busy}
                 onPress={() => {
-                  setCreating(null);
-                  setCreateParentId(undefined);
+                  if (selectingParent) setSelectingParent(false);
+                  else {
+                    setCreating(null);
+                    setCreateParentId(undefined);
+                  }
                 }}
                 colors={colors}
               />
@@ -207,36 +224,50 @@ export function FolderDestination({
                   fontWeight: '600',
                 }}
               >
-                {creating
-                  ? creating === 'subfolder'
-                    ? 'New subfolder'
-                    : 'New folder'
-                  : 'Choose a destination'}
+                {selectingParent
+                  ? 'Choose parent folder'
+                  : creating
+                    ? creating === 'subfolder'
+                      ? 'New subfolder'
+                      : 'New folder'
+                    : 'Choose a destination'}
               </Text>
             </View>
             <IconButton label="Close folder picker" icon={X} disabled={busy} onPress={closeSheet} />
           </View>
-          {creating ? (
-            <View style={{ gap: 12 }}>
-              <View
-                style={{
+          {creating && !selectingParent ? (
+            <View style={{ gap: 16 }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Parent folder, ${createParent?.path || 'Main collection'}`}
+                accessibilityHint="Choose where this folder will be created"
+                accessibilityState={{ disabled: busy }}
+                disabled={busy}
+                onPress={() => setSelectingParent(true)}
+                style={({ pressed }) => ({
+                  minHeight: 50,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 10,
-                  padding: 14,
-                  borderRadius: radius.card,
-                  backgroundColor: colors.canvas,
-                }}
+                  opacity: pressed ? 0.64 : 1,
+                })}
               >
-                <FolderPlus size={21} color={colors.accent} strokeWidth={1.6} />
-                <Text
-                  allowFontScaling={false}
-                  numberOfLines={1}
-                  style={{ color: colors.ink, flex: 1 }}
-                >
-                  {creating === 'subfolder' && createParent ? createParent.path : 'Main collection'}
-                </Text>
-              </View>
+                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                  <Text
+                    allowFontScaling={false}
+                    style={{ ...type.caption, color: colors.accent, letterSpacing: 1.1 }}
+                  >
+                    PARENT FOLDER
+                  </Text>
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    style={{ color: colors.ink, fontSize: 15, lineHeight: 19, fontWeight: '500' }}
+                  >
+                    {createParent?.path || 'Main collection'}
+                  </Text>
+                </View>
+                <ChevronDown size={17} color={colors.muted} />
+              </Pressable>
               <Field
                 autoFocus
                 accessibilityLabel={creating === 'subfolder' ? 'Subfolder name' : 'Folder name'}
@@ -247,7 +278,7 @@ export function FolderDestination({
                 editable={!busy}
                 returnKeyType="done"
                 onSubmitEditing={() => void create()}
-                style={{ backgroundColor: colors.canvas, borderRadius: radius.card }}
+                style={{ backgroundColor: colors.canvas, borderRadius: 16 }}
               />
               {!!error && <Feedback message={error} error />}
               <Action
@@ -276,7 +307,7 @@ export function FolderDestination({
                   <FolderBrowserRow
                     label="Main collection"
                     detail={`${mainCount} ${mainCount === 1 ? 'unfiled find' : 'unfiled finds'}`}
-                    selected={!selectedId}
+                    selected={selectingParent ? !createParentId : !selectedId}
                     colors={colors}
                     icon={Archive}
                     onPress={() => choose(undefined)}
@@ -292,29 +323,45 @@ export function FolderDestination({
                     ]
                       .filter(Boolean)
                       .join(' · ')}
-                    selected={item.folder.id === selectedId}
+                    selected={
+                      selectingParent
+                        ? item.folder.id === createParentId
+                        : item.folder.id === selectedId
+                    }
                     depth={item.depth}
                     colors={colors}
-                    icon={item.folder.id === selectedId ? FolderOpen : Folder}
+                    icon={
+                      (
+                        selectingParent
+                          ? item.folder.id === createParentId
+                          : item.folder.id === selectedId
+                      )
+                        ? FolderOpen
+                        : Folder
+                    }
                     onPress={() => choose(item.folder.id)}
-                    onCreateSubfolder={() => beginCreate('subfolder', item.folder.id)}
+                    onCreateSubfolder={
+                      selectingParent ? undefined : () => beginCreate('subfolder', item.folder.id)
+                    }
                   />
                 )}
               />
-              <View
-                style={{
-                  paddingTop: 10,
-                  borderTopWidth: 0.5,
-                  borderTopColor: colors.line,
-                }}
-              >
-                <PickerAction
-                  title="New folder"
-                  fill
-                  colors={colors}
-                  onPress={() => beginCreate('folder')}
-                />
-              </View>
+              {!selectingParent && (
+                <View
+                  style={{
+                    paddingTop: 10,
+                    borderTopWidth: 0.5,
+                    borderTopColor: colors.line,
+                  }}
+                >
+                  <PickerAction
+                    title="New folder"
+                    fill
+                    colors={colors}
+                    onPress={() => beginCreate('folder')}
+                  />
+                </View>
+              )}
             </>
           )}
         </View>
