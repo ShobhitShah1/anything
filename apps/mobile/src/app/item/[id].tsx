@@ -6,24 +6,19 @@ import {
   useRef,
   useState,
   type ComponentProps,
-  type ComponentRef,
 } from 'react';
 import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
-  Extrapolation,
-  interpolate,
-  useAnimatedScrollHandler,
   useAnimatedStyle,
   useReducedMotion,
-  useSharedValue,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 import Image from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DeleteSheet } from '../../components/delete-sheet';
 import { AdaptiveImage } from '../../components/adaptive-image';
+import { ImageCarousel } from '../../components/image-carousel';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { MarkdownContent } from '../../components/markdown-content';
@@ -50,57 +45,6 @@ import { downloadImage } from '../../utils/download-image';
 import { captureScroll } from '../../utils/capture-scroll';
 import { fonts, radius, space, type } from '../../theme';
 
-function PhotoCarouselSlide({
-  uri,
-  ratio,
-  index,
-  labelIndex,
-  width,
-  height,
-  pitch,
-  scrollX,
-}: {
-  uri: string;
-  ratio?: number;
-  index: number;
-  labelIndex: number;
-  width: number;
-  height: number;
-  pitch: number;
-  scrollX: SharedValue<number>;
-}) {
-  const motion = useAnimatedStyle(() => {
-    const range = [(index - 1) * pitch, index * pitch, (index + 1) * pitch];
-
-    return {
-      opacity: interpolate(scrollX.value, range, [0.82, 1, 0.82], Extrapolation.CLAMP),
-      transform: [
-        { perspective: 900 },
-        {
-          rotateY: `${interpolate(scrollX.value, range, [8, 0, -8], Extrapolation.CLAMP)}deg`,
-        },
-        { translateY: interpolate(scrollX.value, range, [6, 0, 6], Extrapolation.CLAMP) },
-        { scale: interpolate(scrollX.value, range, [0.92, 1, 0.92], Extrapolation.CLAMP) },
-      ],
-    };
-  });
-
-  return (
-    <Animated.View
-      style={[{ width, height, justifyContent: 'center' }, motion]}
-      accessibilityLabel={`Photo ${labelIndex + 1}`}
-    >
-      <AdaptiveImage
-        uri={uri}
-        ratio={ratio}
-        width={width}
-        priority="high"
-        style={{ borderRadius: radius.card, backgroundColor: 'transparent', overflow: 'hidden' }}
-      />
-    </Animated.View>
-  );
-}
-
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const state = useCollection();
@@ -117,22 +61,9 @@ export default function ItemDetail() {
   const [downloading, setDownloading] = useState(false);
   const [revealedId, setRevealedId] = useState<string>();
   const [actionsHidden, setActionsHidden] = useState(false);
-  const [galleryIndex, setGalleryIndex] = useState({ id, index: 0 });
-  const activeGalleryImage = galleryIndex.id === id ? galleryIndex.index : 0;
-  const setActiveGalleryImage = (index: number) => setGalleryIndex({ id, index });
-  const galleryRef = useRef<ComponentRef<typeof Animated.ScrollView>>(null);
-  const galleryScrollX = useSharedValue(0);
   const { width: windowWidth } = useWindowDimensions();
   const galleryWidth = Math.min(windowWidth, 720) - space.lg * 2;
-  const gallerySlideWidth = galleryWidth * 0.88;
-  const galleryGap = 4;
-  const galleryPitch = gallerySlideWidth + galleryGap;
   const hasGallery = item?.type === 'image' && !!item.additionalImages?.length;
-  const onGalleryScroll = useAnimatedScrollHandler({
-    onScroll: ({ contentOffset }) => {
-      galleryScrollX.value = contentOffset.x;
-    },
-  });
   const scrollState = useRef({ offset: 0, travel: 0, hidden: false });
   const requestedRedditPreview = useRef<string | null>(null);
   const reducedMotion = useReducedMotion();
@@ -151,15 +82,6 @@ export default function ItemDetail() {
     requestedRedditPreview.current = item.id;
     void enrich([item]);
   }, [item, enrich]);
-  useEffect(() => {
-    if (!hasGallery) return;
-    galleryScrollX.set(galleryPitch);
-    const frame = requestAnimationFrame(() =>
-      galleryRef.current?.scrollTo({ x: galleryPitch, animated: false }),
-    );
-
-    return () => cancelAnimationFrame(frame);
-  }, [galleryPitch, galleryScrollX, hasGallery, id]);
   const handleScroll = useCallback(
     (event: Parameters<typeof onScroll>[0]) => {
       onScroll(event);
@@ -203,12 +125,6 @@ export default function ItemDetail() {
 
   const image = itemImage(item);
   const images = imageSet(item);
-  const galleryHeight = Math.max(
-    0,
-    ...images.map(({ ratio }) => gallerySlideWidth / (ratio || 4 / 3)),
-  );
-  const carouselImages =
-    images.length > 1 ? [images[images.length - 1], ...images, images[0]] : images;
   const url = itemUrl(item);
   const platform = url ? linkPlatform(url) : undefined;
   const title = getItemTitle(item);
@@ -348,91 +264,7 @@ export default function ItemDetail() {
           </View>
         </View>
         {!!image && images.length > 1 ? (
-          <View style={{ gap: 6 }}>
-            <Animated.ScrollView
-              ref={galleryRef}
-              horizontal
-              snapToInterval={galleryPitch}
-              decelerationRate="fast"
-              disableIntervalMomentum
-              showsHorizontalScrollIndicator={false}
-              onScroll={onGalleryScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={{
-                paddingHorizontal: (galleryWidth - gallerySlideWidth) / 2,
-                gap: galleryGap,
-                alignItems: 'center',
-              }}
-              style={{ width: galleryWidth, height: galleryHeight, overflow: 'visible' }}
-              onMomentumScrollEnd={({ nativeEvent }) => {
-                const position = Math.round(nativeEvent.contentOffset.x / galleryPitch);
-
-                if (position === 0) {
-                  setActiveGalleryImage(images.length - 1);
-                  galleryScrollX.set(images.length * galleryPitch);
-                  galleryRef.current?.scrollTo({
-                    x: images.length * galleryPitch,
-                    animated: false,
-                  });
-                } else if (position === images.length + 1) {
-                  setActiveGalleryImage(0);
-                  galleryScrollX.set(galleryPitch);
-                  galleryRef.current?.scrollTo({ x: galleryPitch, animated: false });
-                } else setActiveGalleryImage(position - 1);
-              }}
-            >
-              {carouselImages.map(({ uri, ratio }, index) => (
-                <PhotoCarouselSlide
-                  key={`${uri.slice(-24)}-${index}`}
-                  uri={uri}
-                  ratio={ratio}
-                  index={index}
-                  labelIndex={
-                    index === 0 ? images.length - 1 : index === images.length + 1 ? 0 : index - 1
-                  }
-                  width={gallerySlideWidth}
-                  height={galleryHeight}
-                  pitch={galleryPitch}
-                  scrollX={galleryScrollX}
-                />
-              ))}
-            </Animated.ScrollView>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {images.map((entry, index) => (
-                  <Pressable
-                    key={`${entry.uri.slice(-20)}-progress-${index}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Show photo ${index + 1}`}
-                    accessibilityState={{ selected: activeGalleryImage === index }}
-                    onPress={() => {
-                      setActiveGalleryImage(index);
-                      galleryScrollX.set((index + 1) * galleryPitch);
-                      galleryRef.current?.scrollTo({
-                        x: (index + 1) * galleryPitch,
-                        animated: true,
-                      });
-                    }}
-                    style={{
-                      width: activeGalleryImage === index ? 28 : 14,
-                      height: 24,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: '100%',
-                        height: 3,
-                        borderRadius: 3,
-                        backgroundColor: activeGalleryImage === index ? colors.accent : colors.line,
-                      }}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          </View>
+          <ImageCarousel key={id} photos={images} width={galleryWidth} />
         ) : !!image ? (
           <AdaptiveImage
             key={image}

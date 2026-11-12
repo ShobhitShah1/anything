@@ -214,11 +214,11 @@ export default function Home() {
     [layout, hiddenId, selectedIds],
   );
   const contextItem = data.items.find((item) => item.id === context?.id);
-  const openCapture = () => {
+  const openCapture = (kind = filter) => {
     Keyboard.dismiss();
     router.push({
       pathname: '/capture',
-      params: { ...(folder ? { folder } : {}), kind: filter },
+      params: { ...(folder ? { folder } : {}), kind },
     });
   };
   const prepareTransition = () => {
@@ -877,7 +877,7 @@ export default function Home() {
           importantForAccessibility={captureOpen ? 'no-hide-descendants' : 'auto'}
         >
           <WelcomeScene
-            onOpenCapture={openCapture}
+            onOpenCapture={() => openCapture('auto')}
             topInset={topInset}
             captureInset={captureInset}
             onScroll={handleScroll}

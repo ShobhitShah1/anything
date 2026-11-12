@@ -10,7 +10,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { ArrowUpRight, Plus } from 'lucide-react-native';
+import { ArrowUpRight } from 'lucide-react-native';
 import { useCollection } from '../state/collection';
 import { Action, GoogleMark } from './ui';
 import { fonts } from '../theme';
@@ -111,7 +111,7 @@ export const WelcomeScene = memo(function WelcomeScene({
           ) : (
             <>
               {/* Signed-in user with empty collection */}
-              <Action title="Save your first find" icon={Plus} onPress={onOpenCapture} />
+              <Action title="Save your first find" onPress={onOpenCapture} />
               <Pressable
                 accessibilityRole="button"
                 onPress={onOpenCapture}

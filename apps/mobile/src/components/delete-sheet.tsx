@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { BottomSheet, Host, RNHostView } from '@expo/ui';
-import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../state/collection';
 import { Action } from './ui';
@@ -59,7 +58,6 @@ export function DeleteSheet({
       >
         <RNHostView matchContents={{ vertical: true }}>
           <View style={{ gap: 18, paddingBottom: 8 }}>
-            <Trash2 size={25} strokeWidth={1.5} color={colors.danger} />
             <Text
               allowFontScaling={false}
               accessibilityRole="header"

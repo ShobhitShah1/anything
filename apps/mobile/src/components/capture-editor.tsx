@@ -23,7 +23,7 @@ import {
 } from 'lucide-react-native';
 import { useCollection } from '../state/collection';
 import { Chip, Field, IconButton } from './ui';
-import { AdaptiveImage } from './adaptive-image';
+import { ImageCarousel } from './image-carousel';
 import { draftItem, type DraftKind } from '../utils/draft';
 import { itemText, itemUrl } from '../utils/item';
 import { createQuickCaptures } from '../shared/utils/quickCapture';
@@ -117,6 +117,7 @@ export function CaptureEditor() {
   const chipScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const chipRects = useRef<Partial<Record<DraftKind, { x: number; width: number }>>>({});
   const [chipViewportWidth, setChipViewportWidth] = useState(0);
+  const [imageViewportWidth, setImageViewportWidth] = useState(0);
   const reducedMotion = useReducedMotion();
   const centerKind = useCallback(
     (value: DraftKind, animated = true) => {
@@ -317,45 +318,17 @@ export function CaptureEditor() {
           }}
         >
           {kind === 'image' ? (
-            <View style={{ padding: 12, gap: 12 }}>
-              {images.map(({ uri, ratio }, index) => (
-                <View
-                  key={`${uri.slice(-24)}-${index}`}
-                  style={{
-                    borderRadius: 18,
-                    overflow: 'hidden',
-                    backgroundColor: colors.canvas,
-                  }}
-                >
-                  <AdaptiveImage
-                    uri={uri}
-                    ratio={ratio}
-                    style={{ backgroundColor: colors.canvas }}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove image ${index + 1}`}
-                    onPress={() => {
-                      setImages((current) => current.filter((_, i) => i !== index));
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      width: 36,
-                      height: 36,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 18,
-                      backgroundColor: colors.overlay,
-                    }}
-                  >
-                    <Text allowFontScaling={false} style={{ color: colors.ink, fontSize: 19 }}>
-                      ×
-                    </Text>
-                  </Pressable>
-                </View>
-              ))}
+            <View
+              onLayout={({ nativeEvent }) => setImageViewportWidth(nativeEvent.layout.width)}
+              style={{ paddingVertical: 12 }}
+            >
+              {images.length > 0 && (
+                <ImageCarousel
+                  photos={images}
+                  width={imageViewportWidth}
+                  onRemove={(index) => setImages((current) => current.filter((_, i) => i !== index))}
+                />
+              )}
               {!images.length && (
                 <Text
                   allowFontScaling={false}

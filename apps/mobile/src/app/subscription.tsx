@@ -375,7 +375,7 @@ function Membership() {
             experimental_backgroundImage:
               state.dark
                 ? 'linear-gradient(to right, rgba(13,13,15,0.8) 0%, rgba(13,13,15,0.7) 55%, rgba(13,13,15,0) 100%), linear-gradient(to bottom, rgba(13,13,15,0) 75%, #0d0d0f 100%)'
-                : 'linear-gradient(to right, rgba(244,245,247,0.8) 0%, rgba(244,245,247,0.7) 55%, rgba(244,245,247,0) 100%), linear-gradient(to bottom, rgba(244,245,247,0) 75%, #f4f5f7 100%)',
+                : 'linear-gradient(to right, rgba(244,245,247,0.42) 0%, rgba(244,245,247,0.24) 55%, rgba(244,245,247,0) 100%), linear-gradient(to bottom, rgba(244,245,247,0) 75%, #f4f5f7 100%)',
           }}
         />
       </View>
