@@ -1,7 +1,7 @@
 import type { SavedItem } from '../shared/types';
 import { normalizeUrl } from '../shared/utils/fetchPreview.ts';
 export type DraftKind =
-  'auto' | 'note' | 'checklist' | 'link' | 'image' | 'markdown' | 'code' | 'secret';
+  'auto' | 'note' | 'checklist' | 'link' | 'image' | 'markdown' | 'code' | 'secret' | 'credential';
 export function draftItem(
   kind: Exclude<DraftKind, 'auto'>,
   text: string,
@@ -27,9 +27,11 @@ export function draftItem(
       title.trim() ||
       (kind === 'secret'
         ? 'Secret'
-        : kind === 'image'
-          ? 'Image'
-          : content.split('\n')[0].slice(0, 90)),
+        : kind === 'credential'
+          ? content
+          : kind === 'image'
+            ? 'Image'
+            : content.split('\n')[0].slice(0, 90)),
   };
 
   if (kind === 'link') {
@@ -70,6 +72,7 @@ export function draftItem(
       username: existing?.type === 'secret' ? existing.username : undefined,
       notes: existing?.type === 'secret' ? existing.notes : undefined,
     };
+  if (kind === 'credential') return { ...base, type: 'credential' };
   if (kind === 'code')
     return {
       ...base,

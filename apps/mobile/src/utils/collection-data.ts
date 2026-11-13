@@ -1,4 +1,15 @@
 import { isCloudEntry, type CloudCollection, type CloudEntry } from '../shared/utils/cloudSync.ts';
+const credentialMetadataKeys = new Set([
+  'id',
+  'type',
+  'title',
+  'createdAt',
+  'isPinned',
+  'tags',
+  'folderId',
+  'colorTint',
+  'mediaAspectRatio',
+]);
 export interface CollectionData extends CloudCollection {
   theme: 'system' | 'light' | 'dark';
   syncUid: string;
@@ -20,7 +31,15 @@ function validRecords(data: CloudCollection) {
     Array.isArray(data.items) &&
     Array.isArray(data.folders) &&
     data.items.every((item) =>
-      isCloudEntry({ kind: 'item', id: item?.id, data: item, deleted: false }),
+      item?.type === 'credential'
+        ? typeof item.id === 'string' &&
+          typeof item.title === 'string' &&
+          Number.isFinite(item.createdAt) &&
+          typeof item.isPinned === 'boolean' &&
+          Array.isArray(item.tags) &&
+          item.tags.every((tag) => typeof tag === 'string') &&
+          Object.keys(item).every((key) => credentialMetadataKeys.has(key))
+        : isCloudEntry({ kind: 'item', id: item?.id, data: item, deleted: false }),
     ) &&
     data.folders.every((folder) =>
       isCloudEntry({ kind: 'folder', id: folder?.id, data: folder, deleted: false }),

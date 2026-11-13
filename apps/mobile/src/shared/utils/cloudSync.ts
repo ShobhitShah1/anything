@@ -85,6 +85,8 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
   )
     return false;
   switch (item.type) {
+    case 'credential':
+      return false;
     case 'note':
       return (
         typeof item.content === 'string' &&
@@ -101,7 +103,19 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
     case 'markdown':
       return typeof item.content === 'string';
     case 'code':
-      return typeof item.code === 'string' && typeof item.language === 'string';
+      return (
+        typeof item.code === 'string' &&
+        typeof item.language === 'string' &&
+        (!item.files ||
+          (Array.isArray(item.files) &&
+            item.files.every(
+              (file) =>
+                file &&
+                typeof file.path === 'string' &&
+                typeof file.code === 'string' &&
+                typeof file.language === 'string',
+            )))
+      );
     case 'secret':
       return typeof item.secretValue === 'string' && typeof item.category === 'string';
     case 'image':
@@ -170,7 +184,9 @@ function sameEntries(a: Map<string, CloudEntry>, b: Map<string, CloudEntry>) {
 function entriesOf(value: CloudCollection): Map<string, CloudEntry> {
   return new Map(
     [
-      ...value.items.map((data) => ({ kind: 'item' as const, id: data.id, deleted: false, data })),
+      ...value.items
+        .filter((data) => data.type !== 'credential')
+        .map((data) => ({ kind: 'item' as const, id: data.id, deleted: false, data })),
       ...value.folders.map((data) => ({
         kind: 'folder' as const,
         id: data.id,
@@ -192,6 +208,7 @@ export function startCollectionSync(options: {
   apply: (collection: CloudCollection) => void;
   status: (status: 'connecting' | 'syncing' | 'synced' | 'error', error?: unknown) => void;
 }) {
+  let localOnlyItems = options.initial.items.filter((item) => item.type === 'credential');
   let current = entriesOf(options.initial);
 
   if (!options.pending.every(isCloudEntry))
@@ -227,7 +244,8 @@ export function startCollectionSync(options: {
     return {
       items: active
         .filter((entry) => entry.kind === 'item')
-        .map((entry) => entry.data as SavedItem),
+        .map((entry) => entry.data as SavedItem)
+        .concat(localOnlyItems),
       folders: active
         .filter((entry) => entry.kind === 'folder')
         .map((entry) => entry.data as Folder),
@@ -306,6 +324,7 @@ export function startCollectionSync(options: {
     update(value: CloudCollection) {
       if (stopped) return;
 
+      localOnlyItems = value.items.filter((item) => item.type === 'credential');
       const next = entriesOf(value);
 
       for (const [key, entry] of next) {

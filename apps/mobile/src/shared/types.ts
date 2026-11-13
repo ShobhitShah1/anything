@@ -4,6 +4,7 @@ export type ItemType =
   | 'instagram_post'
   | 'note'
   | 'secret'
+  | 'credential'
   | 'image'
   | 'link'
   | 'code'
@@ -91,6 +92,10 @@ export interface SecretItem extends BaseItem {
   notes?: string;
 }
 
+export interface CredentialItem extends BaseItem {
+  type: 'credential';
+}
+
 export interface ImageItem extends BaseItem {
   type: 'image';
   imageUrl: string;
@@ -114,6 +119,7 @@ export interface CodeItem extends BaseItem {
   code: string;
   language: string;
   description?: string;
+  files?: { path: string; code: string; language: string }[];
 }
 
 export type SavedItem =
@@ -123,6 +129,7 @@ export type SavedItem =
   | NoteItem
   | MarkdownItem
   | SecretItem
+  | CredentialItem
   | ImageItem
   | LinkItem
   | CodeItem;

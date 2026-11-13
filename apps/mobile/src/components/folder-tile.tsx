@@ -36,7 +36,7 @@ export function FolderTile({
     .filter((uri): uri is string => !!uri)
     .slice(0, 3);
 
-  const thought = saves.find((item) => item.type !== 'secret');
+  const thought = saves.find((item) => item.type !== 'secret' && item.type !== 'credential');
 
   return (
     <View style={{ width, marginBottom: 18 }}>

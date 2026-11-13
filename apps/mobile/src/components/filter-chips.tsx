@@ -51,6 +51,7 @@ export function FilterChips({
           ['markdown', 'Markdown'],
           ['code', 'Code'],
           ['secret', 'Secrets'],
+          ['credential', 'Credentials'],
         ] as const
       ).map(([id, title]) => (
         <View

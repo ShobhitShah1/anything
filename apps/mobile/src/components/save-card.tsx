@@ -18,6 +18,7 @@ import type { SavedItem } from '../shared/types';
 import { getItemTitle } from '../shared/utils/itemTitle';
 import { imageSet, itemImage, itemText, typeLabel } from '../utils/item';
 import { cardWidths } from '../utils/card-widths';
+import { codePreviewMarkdown, languageFromPath } from '../utils/code-format';
 import { useCollection } from '../state/collection';
 import { fonts, radius, type } from '../theme';
 
@@ -66,10 +67,20 @@ export const SaveCard = memo(function SaveCard({
         : [gallery.slice(0, 2), gallery.slice(2, 4)];
   const { width: cardWidth, contentWidth } = cardWidths(width, list, !!image);
   const title = getItemTitle(item) || typeLabel(item);
+  const codeFile =
+    item.type === 'code'
+      ? item.files?.find((file) => file.code.trim()) ||
+        item.files?.[0] || { path: item.title, code: item.code, language: item.language }
+      : undefined;
+  const generatedCodeTitle =
+    item.type === 'code' &&
+    (title === codeFile?.path.split(/[\\/]/).pop() ||
+      title === codeFile?.code.split('\n')[0].slice(0, 90));
   const showTitle =
     (item.type !== 'markdown' ||
       (!!item.title.trim() && !/^#{1,6}\s/.test(item.content.trimStart()))) &&
-    !(item.type === 'secret' && title.trim().toLowerCase() === typeLabel(item).toLowerCase());
+    !(item.type === 'secret' && title.trim().toLowerCase() === typeLabel(item).toLowerCase()) &&
+    !generatedCodeTitle;
   const note = item.type === 'note';
   const social =
     item.type === 'x_post' || item.type === 'instagram_post' || item.type === 'reddit_post';
@@ -79,7 +90,13 @@ export const SaveCard = memo(function SaveCard({
       ? item.domain
       : item.type === 'x_post'
         ? `@${item.authorHandle.replace(/^@+/, '')}`
-        : typeLabel(item);
+        : item.type === 'code'
+          ? item.files?.length && item.files.length > 1
+            ? `Code · ${item.files.length} files`
+            : 'Code'
+          : item.type === 'note' && item.checklist?.length
+            ? `${item.checklist.filter((check) => check.completed).length}/${item.checklist.length} done`
+            : typeLabel(item);
   const date = new Date(item.createdAt).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -159,7 +176,39 @@ export const SaveCard = memo(function SaveCard({
             </Text>
           </View>
         )}
-        {item.type === 'secret' ? (
+        {item.type === 'code' ? (
+          <View style={{ gap: 8 }}>
+            {item.description && (
+              <Text
+                allowFontScaling={false}
+                style={{ color: colors.muted, fontSize: 12, lineHeight: 18 }}
+              >
+                {item.description}
+              </Text>
+            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text
+                allowFontScaling={false}
+                numberOfLines={1}
+                style={{ ...type.caption, color: colors.ink, fontFamily: fonts.mono, flex: 1 }}
+              >
+                {codeFile?.path || 'snippet'}
+              </Text>
+              {!!item.files && item.files.length > 1 && (
+                <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
+                  {item.files.length} files
+                </Text>
+              )}
+            </View>
+            <MarkdownContent
+              text={codePreviewMarkdown(
+                item.files?.length ? languageFromPath(codeFile?.path || '') : item.language,
+                codeFile?.code || item.code,
+              )}
+              previewLines={list ? 4 : 6}
+            />
+          </View>
+        ) : item.type === 'secret' || item.type === 'credential' ? (
           <View
             style={{
               flexDirection: 'row',
@@ -187,9 +236,8 @@ export const SaveCard = memo(function SaveCard({
               numberOfLines={list ? 1 : image ? 3 : 5}
               style={{
                 color: colors.muted,
-                fontSize: item.type === 'code' ? 11 : 13,
-                lineHeight: list || item.type === 'code' ? 19 : 21,
-                fontFamily: item.type === 'code' ? fonts.mono : undefined,
+                fontSize: 13,
+                lineHeight: list ? 19 : 21,
               }}
             >
               {text}

@@ -158,8 +158,10 @@ export function CardContextMenu({
   };
   const url = itemUrl(item);
   const image = itemImage(item);
-  const copy = item.type === 'secret' ? '' : url || itemText(item);
-  const editable = ['note', 'image', 'markdown', 'code', 'secret', 'link'].includes(item.type);
+  const copy = item.type === 'secret' || item.type === 'credential' ? '' : url || itemText(item);
+  const editable = ['note', 'image', 'markdown', 'code', 'secret', 'credential', 'link'].includes(
+    item.type,
+  );
   const actionCount = 4 + Number(!!onSelect) + Number(!!copy) + Number(editable) + Number(!!image);
   const target = contextGeometry(
     anchor.rect,

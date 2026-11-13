@@ -5,6 +5,8 @@ export function itemText(item: SavedItem) {
       return item.code;
     case 'secret':
       return item.secretValue;
+    case 'credential':
+      return '';
     case 'image':
       return item.caption || '';
     case 'link':
@@ -80,5 +82,6 @@ export function typeLabel(item: SavedItem) {
     code: 'Code',
     markdown: 'Markdown',
     secret: 'Secret',
+    credential: 'Credential',
   }[item.type];
 }

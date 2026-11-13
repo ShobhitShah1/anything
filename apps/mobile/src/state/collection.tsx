@@ -22,6 +22,7 @@ import { palettes } from '../theme';
 import { itemUrl } from '../utils/item';
 import { loadText, saveText } from '../utils/device-storage';
 import { guestLimitReached, GuestLimitError } from '../utils/guest-limit';
+import { deleteLocalCredential } from '../utils/local-credentials';
 
 import {
   emptyCollection as empty,
@@ -388,11 +389,14 @@ function useCollectionState() {
       setError('');
       setAttempt((value) => value + 1);
     },
-    remove: (ids: string | readonly string[], beforePublish?: () => void) =>
-      commit(
-        (value) => removeCollectionItems(value, typeof ids === 'string' ? [ids] : ids),
-        beforePublish,
-      ),
+    remove: async (ids: string | readonly string[], beforePublish?: () => void) => {
+      const removed = new Set(typeof ids === 'string' ? [ids] : ids);
+      const credentialIds = current.current.items
+        .filter((item) => item.type === 'credential' && removed.has(item.id))
+        .map((item) => item.id);
+      await commit((value) => removeCollectionItems(value, [...removed]), beforePublish);
+      await Promise.all(credentialIds.map(deleteLocalCredential));
+    },
     pin: (id: string) =>
       commit((value) => ({
         ...value,

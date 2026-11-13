@@ -1,12 +1,6 @@
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from '../../components/use-scroll-header';
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-} from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
@@ -44,6 +38,8 @@ import { linkifyText } from '../../utils/linkify-text';
 import { downloadImage } from '../../utils/download-image';
 import { captureScroll } from '../../utils/capture-scroll';
 import { fonts, radius, space, type } from '../../theme';
+import { codePreviewMarkdown, languageFromPath } from '../../utils/code-format';
+import { readLocalCredential, type LocalCredential } from '../../utils/local-credentials';
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -61,6 +57,8 @@ export default function ItemDetail() {
   const [downloading, setDownloading] = useState(false);
   const [revealedId, setRevealedId] = useState<string>();
   const [actionsHidden, setActionsHidden] = useState(false);
+  const [activeCodePath, setActiveCodePath] = useState('');
+  const [credentialDetails, setCredentialDetails] = useState<LocalCredential | null>(null);
   const { width: windowWidth } = useWindowDimensions();
   const galleryWidth = Math.min(windowWidth, 720) - space.lg * 2;
   const hasGallery = item?.type === 'image' && !!item.additionalImages?.length;
@@ -70,6 +68,32 @@ export default function ItemDetail() {
   const revealed = revealedId === id;
   const insets = useSafeAreaInsets();
 
+  useEffect(() => {
+    if (item?.type === 'code')
+      setActiveCodePath(
+        item.files?.find((file) => file.code.trim())?.path || item.files?.[0]?.path || '',
+      );
+  }, [item?.id]);
+  useEffect(() => {
+    if (item?.type !== 'credential') {
+      setCredentialDetails(null);
+      return;
+    }
+    let active = true;
+    void readLocalCredential(item.id)
+      .then((record) => {
+        if (!active) return;
+        setCredentialDetails(record);
+        if (!record) state.setError('This on-device credential could not be found.');
+      })
+      .catch((error: unknown) => {
+        if (active)
+          state.setError(error instanceof Error ? error.message : 'Could not open credential.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [item?.id, item?.type, state.setError]);
   useEffect(() => {
     if (
       item?.type !== 'reddit_post' ||
@@ -129,6 +153,13 @@ export default function ItemDetail() {
   const platform = url ? linkPlatform(url) : undefined;
   const title = getItemTitle(item);
   const text = item.type === 'secret' ? '' : itemText(item);
+  const codeFiles =
+    item.type === 'code'
+      ? item.files?.length
+        ? item.files.map((file) => ({ ...file, language: languageFromPath(file.path) }))
+        : [{ path: 'snippet', code: item.code, language: item.language }]
+      : [];
+  const activeCodeFile = codeFiles.find((file) => file.path === activeCodePath) || codeFiles[0];
   const social =
     item.type === 'x_post' || item.type === 'instagram_post' || item.type === 'reddit_post';
   const heading =
@@ -149,7 +180,13 @@ export default function ItemDetail() {
     !(item.type === 'secret' && title.trim().toLowerCase() === typeLabel(item).toLowerCase());
   const copy = async () => {
     try {
-      await Clipboard.setStringAsync(url || itemText(item) || item.title);
+      if (item.type === 'credential' && !credentialDetails?.password)
+        throw new Error('This credential is unavailable on this device.');
+      await Clipboard.setStringAsync(
+        item.type === 'credential'
+          ? credentialDetails!.password
+          : url || (item.type === 'code' ? activeCodeFile?.code : itemText(item)) || item.title,
+      );
       state.setNotice('Copied');
     } catch (error) {
       state.setError((error as Error).message);
@@ -316,6 +353,110 @@ export default function ItemDetail() {
                   })}
                 </View>
               )
+            ) : item.type === 'credential' ? (
+              <View style={{ gap: 20 }}>
+                <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
+                  STORED ONLY ON THIS DEVICE · NEVER SYNCED OR SENT TO AI
+                </Text>
+                {credentialDetails ? (
+                  <>
+                    <View style={{ gap: 6 }}>
+                      <Text
+                        allowFontScaling={false}
+                        style={{ ...type.caption, color: colors.muted }}
+                      >
+                        WEBSITE
+                      </Text>
+                      <Text
+                        allowFontScaling={false}
+                        accessibilityRole="link"
+                        onPress={() =>
+                          void openLink(credentialDetails.website).catch((error) =>
+                            state.setError(error.message),
+                          )
+                        }
+                        style={{ color: colors.ink, textDecorationLine: 'underline' }}
+                      >
+                        {credentialDetails.website}
+                      </Text>
+                    </View>
+                    {!!credentialDetails.username && (
+                      <View style={{ gap: 6 }}>
+                        <Text
+                          allowFontScaling={false}
+                          style={{ ...type.caption, color: colors.muted }}
+                        >
+                          USERNAME
+                        </Text>
+                        <Text allowFontScaling={false} selectable style={{ color: colors.ink }}>
+                          {credentialDetails.username}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={{ gap: 6 }}>
+                      <Text
+                        allowFontScaling={false}
+                        style={{ ...type.caption, color: colors.muted }}
+                      >
+                        PASSWORD
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Text
+                          allowFontScaling={false}
+                          selectable={revealed}
+                          accessibilityLabel={
+                            revealed ? credentialDetails.password : 'Hidden password'
+                          }
+                          style={{
+                            flex: 1,
+                            color: colors.ink,
+                            fontFamily: fonts.mono,
+                            fontSize: 17,
+                            letterSpacing: revealed ? 0 : 2.5,
+                          }}
+                        >
+                          {revealed ? credentialDetails.password : '••••••••••••'}
+                        </Text>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={revealed ? 'Hide password' : 'Reveal password'}
+                          accessibilityState={{ expanded: revealed }}
+                          onPress={() => setRevealedId(revealed ? undefined : id)}
+                          style={{
+                            minHeight: 44,
+                            minWidth: 44,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {revealed ? (
+                            <EyeOff size={16} color={colors.ink} />
+                          ) : (
+                            <Eye size={16} color={colors.ink} />
+                          )}
+                        </Pressable>
+                      </View>
+                    </View>
+                    {!!credentialDetails.notes && (
+                      <View style={{ gap: 6 }}>
+                        <Text
+                          allowFontScaling={false}
+                          style={{ ...type.caption, color: colors.muted }}
+                        >
+                          NOTE
+                        </Text>
+                        <Text allowFontScaling={false} selectable style={{ color: colors.ink }}>
+                          {credentialDetails.notes}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <Text allowFontScaling={false} style={{ color: colors.muted }}>
+                    Loading this device’s credential…
+                  </Text>
+                )}
+              </View>
             ) : item.type === 'secret' ? (
               <View
                 style={{
@@ -407,6 +548,51 @@ export default function ItemDetail() {
                   </View>
                 )}
               </View>
+            ) : item.type === 'code' ? (
+              <View style={{ gap: 12 }}>
+                {codeFiles.length > 1 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{
+                      gap: 4,
+                      borderBottomWidth: 0.5,
+                      borderBottomColor: colors.line,
+                    }}
+                  >
+                    {codeFiles.map((file) => (
+                      <Pressable
+                        key={file.path}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: file.path === activeCodeFile.path }}
+                        onPress={() => setActiveCodePath(file.path)}
+                        style={{
+                          minHeight: 42,
+                          justifyContent: 'center',
+                          paddingHorizontal: 10,
+                          borderBottomWidth: file.path === activeCodeFile.path ? 2 : 0,
+                          borderBottomColor: colors.accent,
+                        }}
+                      >
+                        <Text
+                          allowFontScaling={false}
+                          numberOfLines={1}
+                          style={{
+                            color: file.path === activeCodeFile.path ? colors.ink : colors.muted,
+                            fontFamily: fonts.mono,
+                            fontSize: 11,
+                          }}
+                        >
+                          {file.path}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+                <MarkdownContent
+                  text={codePreviewMarkdown(activeCodeFile.language, activeCodeFile.code)}
+                />
+              </View>
             ) : item.type === 'markdown' ? (
               <MarkdownContent text={item.content} />
             ) : (
@@ -414,12 +600,8 @@ export default function ItemDetail() {
               text.trim() !== title.trim() &&
               renderLinkedText(text, {
                 color: colors.ink,
-                fontSize: item.type === 'code' ? 13 : 17,
-                lineHeight: item.type === 'code' ? 23 : 29,
-                fontFamily: item.type === 'code' ? fonts.mono : undefined,
-                backgroundColor: item.type === 'code' ? colors.paper : 'transparent',
-                padding: item.type === 'code' ? 16 : 0,
-                borderRadius: 16,
+                fontSize: 17,
+                lineHeight: 29,
               })
             )}
             {item.type === 'reddit_post' && !text.trim() && !image && (
@@ -516,7 +698,13 @@ export default function ItemDetail() {
         ]}
       >
         <IconButton
-          label={item.type === 'secret' ? 'Copy secret' : 'Copy'}
+          label={
+            item.type === 'credential'
+              ? 'Copy password'
+              : item.type === 'secret'
+                ? 'Copy secret'
+                : 'Copy'
+          }
           icon={Copy}
           onPress={() => void copy()}
         />
@@ -536,7 +724,7 @@ export default function ItemDetail() {
             }}
           />
         )}
-        {item.type !== 'secret' && (
+        {item.type !== 'secret' && item.type !== 'credential' && (
           <IconButton
             label="Share"
             icon={Share2}
@@ -554,9 +742,11 @@ export default function ItemDetail() {
                 ? platform
                   ? `Open in ${platform}`
                   : 'Open link'
-                : item.type === 'secret'
-                  ? 'Edit secret'
-                  : 'Edit find'
+                : item.type === 'credential'
+                  ? 'Edit credential'
+                  : item.type === 'secret'
+                    ? 'Edit secret'
+                    : 'Edit find'
             }
             secondary
             icon={url ? ExternalLink : Edit3}

@@ -95,12 +95,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: -6,
+    height: 44,
   },
   viewButton: {
-    width: 40,
+    width: 44,
     height: 44,
-    borderRadius: 10,
-    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -368,7 +367,7 @@ export default function Home() {
           )
             return false;
 
-          return `${item.title} ${item.tags.join(' ')} ${item.type === 'secret' ? '' : itemText(item)}`
+          return `${item.title} ${item.tags.join(' ')} ${item.type === 'secret' || item.type === 'credential' ? '' : itemText(item)}`
             .toLowerCase()
             .includes(query.toLowerCase());
         })
@@ -528,6 +527,19 @@ export default function Home() {
                 color={layout === value ? colors.ink : colors.muted}
                 strokeWidth={layout === value ? 2 : 1.5}
               />
+              {layout === value && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 2,
+                    borderRadius: 1,
+                    backgroundColor: colors.accent,
+                  }}
+                />
+              )}
             </Pressable>
           ))}
         </View>
@@ -926,7 +938,7 @@ export default function Home() {
                 accessibilityRole="button"
                 accessibilityLabel="Open full capture screen"
                 disabled={saving}
-                onPress={openCapture}
+                onPress={() => openCapture()}
                 style={{
                   display: captureOpen ? 'none' : 'flex',
                   width: 54,
