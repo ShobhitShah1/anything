@@ -95,11 +95,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: -6,
-    height: 44,
   },
   viewButton: {
-    width: 44,
+    width: 40,
     height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -151,6 +152,11 @@ export default function Home() {
   const expanded = useSharedValue(false);
   const captureHidden = useSharedValue(false);
   const capturePinned = useSharedValue(false);
+  const captureVisibility = useDerivedValue(() =>
+    withTiming(captureHidden.get() && !capturePinned.get() ? 0 : 1, {
+      duration: reducedMotion ? 0 : 150,
+    }),
+  );
 
   const ai = useQuickAi(captureOpen, quickText, setQuickText);
   const hasText = Boolean(quickText.trim());
@@ -181,6 +187,23 @@ export default function Home() {
     [dismissCapture],
   );
   const selecting = selectedIds !== null;
+  const selectionMorph = useSharedValue(0);
+  useEffect(() => {
+    selectionMorph.set(
+      withTiming(selecting ? 1 : 0, {
+        duration: reducedMotion ? 0 : 240,
+        easing: Easing.bezier(0.23, 1, 0.32, 1),
+      }),
+    );
+  }, [reducedMotion, selecting, selectionMorph]);
+  const captureContentStyle = useAnimatedStyle(() => {
+    const progress = selectionMorph.get();
+
+    return {
+      opacity: interpolate(progress, [0, 0.6], [1, 0]),
+      transform: [{ translateY: 20 * progress }],
+    };
+  });
   const selectedSet = useMemo(() => new Set(selectedIds || []), [selectedIds]);
   const toggleCard = useCallback((id: string) => {
     setSelectedIds((current) => (current === null ? current : toggleSelection(current, id)));
@@ -332,7 +355,7 @@ export default function Home() {
 
     return {
       height: frame.height,
-      opacity: withTiming(hidden ? 0 : 1, { duration: reducedMotion ? 0 : 150 }),
+      opacity: captureVisibility.get(),
       transform: [
         {
           translateY: frame.translateY,
@@ -340,11 +363,51 @@ export default function Home() {
       ],
     };
   });
-  const selectionBarStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: keyboard.height.get() + insets.bottom * keyboard.progress.get() }],
-  }));
+  const selectionShapeStyle = useAnimatedStyle(() => {
+    const progress = selectionMorph.get();
+    const frame = captureFrame(
+      panelHeight.get(),
+      keyboard.height.get(),
+      insets.bottom,
+      keyboard.progress.get(),
+      expanded.get(),
+      scrollOffset.get(),
+    );
+    const targetWidth = Math.min(520, width - 32);
+    const targetHeight = 56;
+    const targetY = captureHeight / 2 - insets.bottom - 12 - targetHeight / 2;
+    return {
+      opacity: interpolate(progress, [0, 1], [captureVisibility.get(), 1]),
+      borderRadius: interpolate(progress, [0, 1], [0, 32]),
+      borderTopWidth: interpolate(progress, [0, 1], [0.5, 0]),
+      transform: [
+        {
+          translateY:
+            frame.translateY * (1 - progress) +
+            (targetY + keyboard.height.get() + insets.bottom * keyboard.progress.get()) * progress,
+        },
+        { scaleX: interpolate(progress, [0, 1], [1, targetWidth / width]) },
+        { scaleY: interpolate(progress, [0, 1], [1, targetHeight / captureHeight]) },
+      ],
+    };
+  });
+  const selectionBarStyle = useAnimatedStyle(() => {
+    const progress = selectionMorph.get();
+    const targetY = captureHeight / 2 - insets.bottom - 12 - 28;
+
+    return {
+      opacity: interpolate(progress, [0, 0.2], [0, 1]),
+      transform: [
+        {
+          translateY:
+            -targetY * (1 - progress) +
+            (keyboard.height.get() + insets.bottom * keyboard.progress.get()) * progress,
+        },
+      ],
+    };
+  });
   const captureProps = useAnimatedProps<ViewProps>(() => {
-    const hidden = captureHidden.get() && !capturePinned.get();
+    const hidden = selecting || (captureHidden.get() && !capturePinned.get());
 
     return {
       pointerEvents: hidden ? 'none' : 'auto',
@@ -459,14 +522,12 @@ export default function Home() {
               <IconButton
                 label={selecting ? 'Cancel selection' : 'Select multiple finds'}
                 icon={selecting ? X : CheckSquare}
-                width={40}
                 active={selecting}
                 onPress={() => (selecting ? setSelectedIds(null) : startSelection())}
               />
               <IconButton
                 label="Browse folders"
                 icon={Folder}
-                width={40}
                 active={!!folder}
                 onPress={() => router.push('/folders')}
               />
@@ -525,21 +586,8 @@ export default function Home() {
               <Icon
                 size={20}
                 color={layout === value ? colors.ink : colors.muted}
-                strokeWidth={layout === value ? 2 : 1.5}
+                strokeWidth={2}
               />
-              {layout === value && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: 2,
-                    borderRadius: 1,
-                    backgroundColor: colors.accent,
-                  }}
-                />
-              )}
             </Pressable>
           ))}
         </View>
@@ -896,27 +944,50 @@ export default function Home() {
           />
         </View>
       )}
-      {!selecting && (
-        <Animated.View
-          collapsable={false}
-          animatedProps={captureProps}
-          accessibilityViewIsModal={captureOpen}
-          style={[
-            {
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: captureOpen ? colors.canvas : colors.paper,
-              borderTopWidth: captureOpen ? 0 : 0.5,
-              borderTopColor: colors.line,
-              overflow: 'hidden',
-            },
-            captureStyle,
-          ]}
-        >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: captureOpen ? fullPanelHeight : captureHeight,
+            zIndex: 5,
+            backgroundColor: colors.paper,
+            borderTopColor: colors.line,
+            borderTopWidth: captureOpen ? 0 : 0.5,
+            opacity: captureOpen ? 0 : 1,
+          },
+          selectionShapeStyle,
+        ]}
+      />
+      <Animated.View
+        pointerEvents={selecting ? 'none' : 'auto'}
+        collapsable={false}
+        animatedProps={captureProps}
+        accessibilityViewIsModal={captureOpen}
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: captureOpen ? colors.canvas : 'transparent',
+            borderTopWidth: captureOpen ? 0 : 0.5,
+            borderTopColor: colors.line,
+            overflow: 'hidden',
+            zIndex: 6,
+          },
+          captureStyle,
+        ]}
+      >
           <Animated.View
-            style={[{ position: 'absolute', left: 0, right: 0, bottom: 0 }, captureBodyStyle]}
+            style={[
+              { position: 'absolute', left: 0, right: 0, bottom: 0 },
+              captureBodyStyle,
+              captureContentStyle,
+            ]}
           >
             {captureOpen && (
               <AiEditorLight
@@ -1045,23 +1116,25 @@ export default function Home() {
               />
             )}
           </Animated.View>
-        </Animated.View>
-      )}
-      {selecting && (
-        <Animated.View
-          pointerEvents="box-none"
-          style={[
-            {
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: insets.bottom + 12,
-              alignItems: 'center',
-              paddingHorizontal: 16,
-            },
-            selectionBarStyle,
-          ]}
-        >
+      </Animated.View>
+      <Animated.View
+        pointerEvents={selecting ? 'box-none' : 'none'}
+        accessibilityElementsHidden={!selecting}
+        importantForAccessibility={selecting ? 'auto' : 'no-hide-descendants'}
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: insets.bottom + 12,
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            zIndex: 10,
+          },
+          selectionBarStyle,
+        ]}
+      >
+        {selectedIds !== null && (
           <View
             style={{
               width: '100%',
@@ -1071,10 +1144,7 @@ export default function Home() {
               gap: 8,
               padding: 6,
               borderRadius: 32,
-              backgroundColor: colors.paper,
-              borderWidth: 0.5,
-              borderColor: colors.line,
-              boxShadow: colors.editorShadow,
+              backgroundColor: 'transparent',
             }}
           >
             <IconButton label="Cancel selection" icon={X} onPress={() => setSelectedIds(null)} />
@@ -1129,8 +1199,8 @@ export default function Home() {
               />
             </Pressable>
           </View>
-        </Animated.View>
-      )}
+        )}
+      </Animated.View>
       {deleteIds && (
         <DeleteSheet
           open

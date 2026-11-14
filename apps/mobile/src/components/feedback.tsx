@@ -72,7 +72,7 @@ export function Feedback({
   );
 }
 
-export function FeedbackHost() {
+export function FeedbackHost({ placement = 'top' }: { placement?: 'top' | 'bottom' } = {}) {
   const { error, notice, setError, setNotice } = useCollection();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -111,7 +111,7 @@ export function FeedbackHost() {
       }
       style={{
         position: 'absolute',
-        top: insets.top + 8,
+        ...(placement === 'bottom' ? { bottom: insets.bottom + 72 } : { top: insets.top + 8 }),
         left: Math.max(16, (width - 400) / 2),
         right: Math.max(16, (width - 400) / 2),
         zIndex: 1000,

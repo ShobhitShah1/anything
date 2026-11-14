@@ -1,4 +1,4 @@
-import { getItemTitle } from '../utils/itemTitle';
+import { getItemTitle, noteBodyAfterTitle } from '../utils/itemTitle';
 import React, { useState } from 'react';
 import {
   Pin,
@@ -99,15 +99,19 @@ export const CardItem = React.memo(function CardItem({
   const displayTitle = getItemTitle(item);
   const formattedDate = dateFormatter.format(new Date(item.createdAt));
   const media =
-    item.type === 'link' ? item.previewImage : 'imageUrl' in item ? item.imageUrl : undefined;
+    item.attachments?.[0]?.url ||
+    (item.type === 'link' ? item.previewImage : 'imageUrl' in item ? item.imageUrl : undefined);
   const mediaAspectRatio =
     decodedMedia && decodedMedia.source === media
       ? decodedMedia.ratio
-      : Number.isFinite(item.mediaAspectRatio) && item.mediaAspectRatio! > 0
-        ? item.mediaAspectRatio
-        : item.type === 'link'
-          ? 16 / 10
-          : 4 / 3;
+      : Number.isFinite(item.attachments?.[0]?.aspectRatio) &&
+          item.attachments?.[0]?.aspectRatio! > 0
+        ? item.attachments?.[0]?.aspectRatio!
+        : Number.isFinite(item.mediaAspectRatio) && item.mediaAspectRatio! > 0
+          ? item.mediaAspectRatio
+          : item.type === 'link'
+            ? 16 / 10
+            : 4 / 3;
   const labels = {
     note: 'Note',
     markdown: 'Markdown',
@@ -255,14 +259,14 @@ export const CardItem = React.memo(function CardItem({
             <span>{item.type === 'code' ? item.language : labels[item.type]}</span>
           </div>
         )}
-        {item.title &&
+        {displayTitle &&
           item.type !== 'x_post' &&
-          !(item.type === 'note' && item.title === 'Note') && <h2>{displayTitle}</h2>}
+          !(item.type === 'note' && displayTitle === 'Note') && <h2>{displayTitle}</h2>}
         {item.type === 'note' && (
           <>
-            {item.content && (
+            {noteBodyAfterTitle(item.content, displayTitle) && (
               <p className={`memory-note-text ${item.typography === 'mono' ? 'font-mono' : ''}`}>
-                {item.content}
+                {noteBodyAfterTitle(item.content, displayTitle)}
               </p>
             )}
             {item.checklist && item.checklist.length > 0 && (

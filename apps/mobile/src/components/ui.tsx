@@ -244,17 +244,22 @@ export function Chip({
   title,
   selected,
   onPress,
+  compact = false,
+  disabled = false,
 }: {
   title: string;
   selected?: boolean;
   onPress: () => void;
+  compact?: boolean;
+  disabled?: boolean;
 }) {
   const { colors } = useCollection();
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={{
         paddingHorizontal: 0,
@@ -269,28 +274,19 @@ export function Chip({
         collapsable={false}
         style={{
           paddingVertical: 8,
-          paddingHorizontal: 13,
+          paddingHorizontal: compact ? 9 : 13,
           borderRadius: radius.pill,
           overflow: 'hidden',
-          backgroundColor: selected ? colors.ink : 'transparent',
+          backgroundColor: 'transparent',
         }}
       >
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: radius.pill,
-            backgroundColor: colors.ink,
-            opacity: selected ? 1 : 0,
-          }}
-        />
         <Text
           allowFontScaling={false}
           style={{
             color: selected ? colors.canvas : colors.muted,
             fontSize: 13,
-            fontWeight: selected ? '600' : '400',
+            fontWeight: '500',
+            opacity: disabled && !selected ? 0.55 : 1,
           }}
         >
           {title}

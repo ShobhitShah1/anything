@@ -7,6 +7,8 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  cubicBezier,
+  useReducedMotion,
   type SharedValue,
 } from 'react-native-reanimated';
 import { AdaptiveImage } from './adaptive-image';
@@ -98,6 +100,7 @@ export function ImageCarousel({
   onRemove?: (index: number) => void;
 }) {
   const { colors } = useCollection();
+  const reducedMotion = useReducedMotion();
   const ref = useRef<ComponentRef<typeof Animated.ScrollView>>(null);
   const scrollX = useSharedValue(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -162,32 +165,55 @@ export function ImageCarousel({
       {multiple && (
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
           {photos.map((photo, index) => (
-            <Pressable
+            <Animated.View
               key={`${photo.uri.slice(-20)}-progress-${index}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Show photo ${index + 1}`}
-              accessibilityState={{ selected: activeIndex === index }}
-              onPress={() => {
-                setActiveIndex(index);
-                scrollX.set(index * pitch);
-                ref.current?.scrollTo({ x: index * pitch, animated: true });
-              }}
-              style={{
-                width: activeIndex === index ? 28 : 14,
-                height: 24,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
+              style={[
+                {
+                  width: activeIndex === index ? 28 : 14,
+                  height: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                !reducedMotion && {
+                  transitionProperty: 'width',
+                  transitionDuration: '220ms',
+                  transitionTimingFunction: cubicBezier(0.22, 1, 0.36, 1),
+                },
+              ]}
             >
-              <View
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Show photo ${index + 1}`}
+                accessibilityState={{ selected: activeIndex === index }}
+                onPress={() => {
+                  setActiveIndex(index);
+                  scrollX.set(index * pitch);
+                  ref.current?.scrollTo({ x: index * pitch, animated: true });
+                }}
                 style={{
                   width: '100%',
-                  height: 3,
-                  borderRadius: 3,
-                  backgroundColor: activeIndex === index ? colors.accent : colors.line,
+                  height: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                 }}
-              />
-            </Pressable>
+              >
+                <Animated.View
+                  style={[
+                    {
+                      width: '100%',
+                      height: 3,
+                      borderRadius: 3,
+                      backgroundColor: activeIndex === index ? colors.accent : colors.line,
+                    },
+                    !reducedMotion && {
+                      transitionProperty: 'backgroundColor',
+                      transitionDuration: '220ms',
+                      transitionTimingFunction: cubicBezier(0.22, 1, 0.36, 1),
+                    },
+                  ]}
+                />
+              </Pressable>
+            </Animated.View>
           ))}
         </View>
       )}

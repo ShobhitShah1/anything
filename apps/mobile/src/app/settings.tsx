@@ -1,11 +1,8 @@
-import { BlurTargetView } from 'expo-blur';
-import { useScrollHeader } from '../components/use-scroll-header';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Stack } from 'expo-router';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Switch } from '@expo/ui';
-import { semantics } from '@expo/ui/jetpack-compose/modifiers';
-import { accessibilityLabel } from '@expo/ui/swift-ui/modifiers';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
+import { BlurTargetView } from 'expo-blur';
 import Image from 'react-native-fast-image';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -13,15 +10,132 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useCollection } from '../state/collection';
 import { parseBackup } from '../utils/backup';
 import { DeleteSheet } from '../components/delete-sheet';
-import { Action, Section, NativeGroup, SettingRow, GoogleMark } from '../components/ui';
+import { Action, Section, GoogleMark } from '../components/ui';
 import { BrandMark } from '../components/brand-mark';
 import { PlusCard } from '../components/plus-card';
 import { WebShowcaseCard } from '../components/web-showcase-card';
+import { useScrollHeader } from '../components/use-scroll-header';
 import { radius, space, type } from '../theme';
 import { Crown, LogOut, Trash2 } from 'lucide-react-native';
 
+function SettingsSwitch({
+  label,
+  value,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  const { colors } = useCollection();
+  const reduced = useReducedMotion();
+
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
+      onPress={() => onChange(!value)}
+      style={{ width: 52, height: 48, alignItems: 'flex-end', justifyContent: 'center' }}
+    >
+      <Animated.View
+        style={[
+          {
+            width: 48,
+            height: 28,
+            padding: 3,
+            borderRadius: 14,
+            justifyContent: 'center',
+            backgroundColor: value ? colors.accent : colors.soft,
+            opacity: disabled ? 0.45 : 1,
+          },
+          !reduced && {
+            transitionProperty: 'backgroundColor',
+            transitionDuration: '180ms',
+            transitionTimingFunction: cubicBezier(0.22, 1, 0.36, 1),
+          },
+        ]}
+      >
+        <Animated.View
+          style={[
+            {
+              width: 22,
+              height: 22,
+              borderRadius: 11,
+              backgroundColor: colors.paper,
+              transform: [{ translateX: value ? 20 : 0 }],
+            },
+            !reduced && {
+              transitionProperty: 'transform',
+              transitionDuration: '180ms',
+              transitionTimingFunction: cubicBezier(0.22, 1, 0.36, 1),
+            },
+          ]}
+        />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function SettingsRow({
+  title,
+  supportingText,
+  trailing,
+  onPress,
+  divided = false,
+}: {
+  title: string;
+  supportingText?: string;
+  trailing?: ReactNode;
+  onPress?: () => void;
+  divided?: boolean;
+}) {
+  const { colors } = useCollection();
+  const content = (
+    <View
+      style={{
+        minHeight: 76,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        borderTopWidth: divided ? 1 : 0,
+        borderTopColor: colors.line,
+      }}
+    >
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text allowFontScaling={false} style={{ color: colors.ink, fontSize: 15, lineHeight: 21 }}>
+          {title}
+        </Text>
+        {!!supportingText && (
+          <Text
+            allowFontScaling={false}
+            style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}
+          >
+            {supportingText}
+          </Text>
+        )}
+      </View>
+      {trailing}
+    </View>
+  );
+
+  return onPress ? (
+    <Pressable accessibilityRole="button" onPress={onPress}>
+      {content}
+    </Pressable>
+  ) : (
+    content
+  );
+}
+
 export default function Settings() {
   const { targetRef, topInset, onScroll, options: headerOptions } = useScrollHeader('Settings');
+  const reducedMotion = useReducedMotion();
   const state = useCollection();
   const { data, user, colors } = state;
   const [deleting, setDeleting] = useState(false);
@@ -87,7 +201,6 @@ export default function Settings() {
       <ScrollView
         contentInsetAdjustmentBehavior="never"
         onScroll={onScroll}
-
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ top: topInset }}
         showsVerticalScrollIndicator={false}
@@ -231,10 +344,25 @@ export default function Settings() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: 9,
-                    backgroundColor: data.theme === theme ? colors.paper : 'transparent',
+                    position: 'relative',
                   }}
                 >
-                  <Text
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      StyleSheet.absoluteFill,
+                      {
+                        borderRadius: 9,
+                        backgroundColor: data.theme === theme ? colors.paper : 'transparent',
+                      },
+                      !reducedMotion && {
+                        transitionProperty: 'backgroundColor',
+                        transitionDuration: '180ms',
+                        transitionTimingFunction: cubicBezier(0.22, 1, 0.36, 1),
+                      },
+                    ]}
+                  />
+                  <Animated.Text
                     allowFontScaling={false}
                     style={{
                       color: data.theme === theme ? colors.ink : colors.muted,
@@ -243,74 +371,66 @@ export default function Settings() {
                     }}
                   >
                     {label}
-                  </Text>
+                  </Animated.Text>
                 </Pressable>
               ))}
             </View>
           </View>
-          <NativeGroup>
-            <SettingRow
-              supportingText="Only while Anything is open"
-              trailing={
-                <Switch
-                  value={data.autoClipboard}
-                  modifiers={
-                    Platform.OS === 'ios'
-                      ? [accessibilityLabel('Clipboard capture')]
-                      : [semantics({ contentDescription: 'Clipboard capture' })]
-                  }
-                  onValueChange={(value) =>
-                    void run(() =>
-                      state.commit((current) => ({ ...current, autoClipboard: value })),
-                    )
-                  }
-                />
-              }
-            >
-              Clipboard capture
-            </SettingRow>
-          </NativeGroup>
+          <SettingsRow
+            title="Clipboard capture"
+            supportingText="Only while Anything is open"
+            trailing={
+              <SettingsSwitch
+                label="Clipboard capture"
+                value={data.autoClipboard}
+                onChange={(value) =>
+                  void run(() => state.commit((current) => ({ ...current, autoClipboard: value })))
+                }
+              />
+            }
+          />
         </View>
         <Section title="Your collection">
-          <NativeGroup>
-            <SettingRow
+          <View
+            style={{
+              backgroundColor: colors.paper,
+              borderRadius: radius.group,
+              overflow: 'hidden',
+            }}
+          >
+            <SettingsRow
+              title="Cloud sync"
               supportingText={status}
               trailing={
-                <Switch
-                  modifiers={
-                    Platform.OS === 'ios'
-                      ? [accessibilityLabel('Cloud sync')]
-                      : [semantics({ contentDescription: 'Cloud sync' })]
-                  }
+                <SettingsSwitch
+                  label="Cloud sync"
                   disabled={!user || state.busy}
                   value={state.enabled}
-                  onValueChange={() => void run(state.toggleSync)}
+                  onChange={() => void run(state.toggleSync)}
                 />
               }
-            >
-              Cloud sync
-            </SettingRow>
+            />
             {state.status === 'error' && (
-              <SettingRow
-                onPress={state.retrySync}
+              <SettingsRow
+                divided
+                title="Try connecting again"
                 supportingText="Check your connection and Firebase setup"
-              >
-                Try connecting again
-              </SettingRow>
+                onPress={state.retrySync}
+              />
             )}
-            <SettingRow
-              onPress={() => void run(exportSaves)}
+            <SettingsRow
+              divided
+              title="Export collection"
               supportingText={`${data.items.length} saves · JSON backup`}
-            >
-              Export collection
-            </SettingRow>
-            <SettingRow
-              onPress={() => void run(importSaves)}
+              onPress={() => void run(exportSaves)}
+            />
+            <SettingsRow
+              divided
+              title="Import saves"
               supportingText="Bring in an existing backup"
-            >
-              Import saves
-            </SettingRow>
-          </NativeGroup>
+              onPress={() => void run(importSaves)}
+            />
+          </View>
         </Section>
         <WebShowcaseCard />
         <View style={{ paddingHorizontal: 6, paddingTop: 4 }}>

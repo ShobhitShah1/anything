@@ -1,5 +1,6 @@
 import type { SavedItem } from '../shared/types';
 import { normalizeUrl } from '../shared/utils/fetchPreview.ts';
+import { noteTitleFromContent } from '../shared/utils/itemTitle';
 export type DraftKind =
   'auto' | 'note' | 'checklist' | 'link' | 'image' | 'markdown' | 'code' | 'secret' | 'credential';
 export function draftItem(
@@ -31,7 +32,9 @@ export function draftItem(
           ? content
           : kind === 'image'
             ? 'Image'
-            : content.split('\n')[0].slice(0, 90)),
+            : kind === 'note'
+              ? noteTitleFromContent(content)
+              : content.split('\n')[0].slice(0, 90)),
   };
 
   if (kind === 'link') {

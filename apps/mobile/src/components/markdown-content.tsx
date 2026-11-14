@@ -133,11 +133,16 @@ export const MarkdownContent = memo(function MarkdownContent({
     />
   );
 
+  // Code blocks include a language header and padding beyond their source lines.
+  const previewHeight = previewLines
+    ? previewLines * body.lineHeight + (text.startsWith('```') ? 32 : 0)
+    : undefined;
+
   // GitHub-flavored native Markdown ignores numberOfLines, so clip previews at the container.
   return previewLines ? (
     <View
       pointerEvents="none"
-      style={{ maxHeight: previewLines * body.lineHeight, overflow: 'hidden' }}
+      style={{ maxHeight: previewHeight, overflow: 'hidden' }}
     >
       {content}
     </View>

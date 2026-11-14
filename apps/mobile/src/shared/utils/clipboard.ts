@@ -127,6 +127,48 @@ export function autoDetectClipboardContent(text: string): DetectedClipboardInfo 
   };
 }
 
+export function suggestClipboardTags(text: string): string[] {
+  const detected = autoDetectClipboardContent(text);
+  if (detected.type === 'secret') return [];
+
+  const tags = [...text.matchAll(/(?:^|\s)#([a-z0-9][a-z0-9_-]{1,29})/gi)].map((match) =>
+    match[1].toLowerCase(),
+  );
+  const sourceTags: Record<string, string> = {
+    'instagram.com': 'instagram',
+    'reddit.com': 'reddit',
+    'x.com': 'x',
+    'twitter.com': 'x',
+    'youtube.com': 'youtube',
+    'youtu.be': 'youtube',
+    'tiktok.com': 'tiktok',
+    'github.com': 'github',
+    'pinterest.com': 'pinterest',
+    'linkedin.com': 'linkedin',
+    'medium.com': 'medium',
+    'substack.com': 'substack',
+  };
+
+  const urls = [
+    ...(detected.url ? [detected.url] : []),
+    ...(text.match(/(?:https?:\/\/|www\.)[^\s<>"'`]+/gi) || []),
+  ];
+  for (const candidate of new Set(urls)) {
+    try {
+      const url = candidate.replace(/[.,;]+$/, '');
+      const host = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`)
+        .hostname.toLowerCase()
+        .replace(/^www\./, '');
+      const source = Object.keys(sourceTags).find((domain) => host === domain || host.endsWith(`.${domain}`));
+      if (source) tags.push(sourceTags[source]);
+    } catch {
+      // Ignore malformed URL candidates; suggestions are optional.
+    }
+  }
+
+  return [...new Set(tags)].slice(0, 5);
+}
+
 export function findDuplicateItem(queryUrlOrContent: string, items: SavedItem[]): SavedItem | null {
   const clean = queryUrlOrContent.trim();
 

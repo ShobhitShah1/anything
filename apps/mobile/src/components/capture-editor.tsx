@@ -1,12 +1,11 @@
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from './use-scroll-header';
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { NavigationBar } from 'expo-navigation-bar';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useReducedMotion } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -24,14 +23,18 @@ import {
   Hash,
   Plus,
   X,
+  Sparkles,
 } from 'lucide-react-native';
 import { useCollection } from '../state/collection';
-import { Chip, Field, IconButton } from './ui';
+import { Field, IconButton } from './ui';
+import { FilterChips } from './filter-chips';
 import { ImageCarousel } from './image-carousel';
 import { draftItem, type DraftKind } from '../utils/draft';
+import { autoDetectClipboardContent, suggestClipboardTags } from '../shared/utils/clipboard';
 import { itemText, itemUrl } from '../utils/item';
 import { createQuickCaptures } from '../shared/utils/quickCapture';
 import type { SavedItem } from '../shared/types';
+import { getItemTitle } from '../shared/utils/itemTitle';
 import { FeedbackHost } from './feedback';
 import { FolderDestination } from './folder-destination';
 import { MarkdownContent } from './markdown-content';
@@ -92,13 +95,15 @@ export function CaptureEditor() {
     options: headerOptions,
   } = useScrollHeader(existing ? 'Edit find' : 'Keep something');
   const initialKind: DraftKind = existing
-    ? existing.type === 'note' && existing.checklist?.length
-      ? 'checklist'
-      : ['note', 'image', 'markdown', 'code', 'secret', 'credential', 'link'].includes(
-            existing.type,
-          )
-        ? (existing.type as DraftKind)
-        : 'auto'
+    ? existing.attachments?.length
+      ? 'auto'
+      : existing.type === 'note' && existing.checklist?.length
+        ? 'checklist'
+        : ['note', 'image', 'markdown', 'code', 'secret', 'credential', 'link'].includes(
+              existing.type,
+            )
+          ? (existing.type as DraftKind)
+          : 'auto'
     : saveKinds.includes(requestedKind as DraftKind)
       ? (requestedKind as DraftKind)
       : 'auto';
@@ -118,17 +123,21 @@ export function CaptureEditor() {
         : '',
   );
   const [images, setImages] = useState<{ uri: string; ratio?: number }[]>(
-    existing?.type === 'image'
-      ? [
-          { uri: existing.imageUrl, ratio: existing.mediaAspectRatio },
-          ...(existing.additionalImages || []).map(({ url, aspectRatio }) => ({
-            uri: url,
-            ratio: aspectRatio,
-          })),
-        ]
-      : [],
+    existing?.attachments?.length
+      ? existing.attachments.map(({ url, aspectRatio }) => ({ uri: url, ratio: aspectRatio }))
+      : existing?.type === 'image'
+        ? [
+            { uri: existing.imageUrl, ratio: existing.mediaAspectRatio },
+            ...(existing.additionalImages || []).map(({ url, aspectRatio }) => ({
+              uri: url,
+              ratio: aspectRatio,
+            })),
+          ]
+        : [],
   );
-  const [title, setTitle] = useState(existing?.title || '');
+  const [title, setTitle] = useState(
+    existing?.type === 'note' ? getItemTitle(existing) : existing?.title || '',
+  );
   const [codeDescription, setCodeDescription] = useState(
     existing?.type === 'code' ? existing.description || '' : '',
   );
@@ -204,38 +213,59 @@ export function CaptureEditor() {
     };
   }, [existing?.id, existing?.type, setError]);
   const insets = useSafeAreaInsets();
-  const chipScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const chipRects = useRef<Partial<Record<DraftKind, { x: number; width: number }>>>({});
-  const [chipViewportWidth, setChipViewportWidth] = useState(0);
   const [imageViewportWidth, setImageViewportWidth] = useState(0);
-  const reducedMotion = useReducedMotion();
-  const centerKind = useCallback(
-    (value: DraftKind, animated = true) => {
-      const rect = chipRects.current[value];
-
-      if (!rect || !chipViewportWidth) return;
-      chipScrollRef.current?.scrollTo({
-        x: Math.max(0, rect.x + (rect.width - chipViewportWidth) / 2),
-        animated: animated && !reducedMotion,
-      });
-    },
-    [chipViewportWidth, reducedMotion],
-  );
-
-  useEffect(() => centerKind(kind), [centerKind, kind]);
   const wordCount = text.trim() ? text.trim().split(/\s+/u).length : 0;
   const hasInput =
     kind === 'credential'
       ? credentialReady && !!credentialWebsite.trim() && !!credentialPassword
       : kind === 'image'
         ? images.length > 0
-        : !!text.trim();
+        : kind === 'auto'
+          ? !!text.trim() || images.length > 0
+          : !!text.trim();
   const tagCount = tags.length;
+  const detectedInfo = kind === 'auto' && text.trim() ? autoDetectClipboardContent(text) : null;
+  const detectedLabel = detectedInfo
+    ? detectedInfo.type === 'x_post'
+      ? 'X post'
+      : detectedInfo.type
+          .split('_')
+          .map((part) => part[0].toUpperCase() + part.slice(1))
+          .join(' ')
+    : '';
+  const renderKind: DraftKind =
+    kind !== 'auto'
+      ? kind
+      : detectedInfo?.type === 'code'
+        ? 'code'
+        : detectedInfo?.type === 'markdown'
+          ? 'markdown'
+          : detectedInfo?.type === 'secret'
+            ? 'secret'
+            : detectedInfo?.type === 'link' ||
+                ['x_post', 'reddit_post', 'instagram_post'].includes(detectedInfo?.type || '')
+              ? 'link'
+              : 'auto';
+  const suggestedTags = detectedInfo
+    ? suggestClipboardTags(text).filter((tag) => !tags.includes(tag) && tag !== tagDraft.trim())
+    : [];
+  const tagActionLabel = tagCount
+    ? `Edit ${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}`
+    : kind === 'auto' && suggestedTags.length
+      ? `Review ${suggestedTags.length} suggestions`
+      : 'Add tags';
+  const tagActionText = tagCount
+    ? `${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}`
+    : kind === 'auto' && suggestedTags.length
+      ? `${suggestedTags.length} to add`
+      : 'Add tags';
   const updateTagDraft = (value: string) => {
     const parts = value.split(',');
-    const added = parts.slice(0, -1).map((tag) => tag.trim()).filter(Boolean);
-    if (added.length)
-      setTags((current) => [...new Set([...current, ...added])].slice(0, 30));
+    const added = parts
+      .slice(0, -1)
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    if (added.length) setTags((current) => [...new Set([...current, ...added])].slice(0, 30));
     setTagDraft(parts[parts.length - 1] || '');
   };
   const commitTagDraft = () => {
@@ -301,8 +331,10 @@ export function CaptureEditor() {
         };
       });
       setImages((current) => [...current, ...picked.map(({ uri, ratio }) => ({ uri, ratio }))]);
-      setText('');
-      setKind('image');
+      if (kind !== 'auto') {
+        setText('');
+        setKind('image');
+      }
       const image = picked[0].image;
       if (picked.length === 1 && picked[0].ratio) setMediaRatio(picked[0].ratio);
       if (!title && picked.length === 1)
@@ -310,6 +342,19 @@ export function CaptureEditor() {
     } catch (error) {
       setError((error as Error).message);
     }
+  };
+  const createImageEntry = (target?: SavedItem): SavedItem => {
+    const [cover, ...additionalImages] = images;
+    const imageItem = draftItem('image', cover.uri, title, target, randomUUID);
+    if (imageItem.type !== 'image') throw new Error('Could not prepare these images.');
+    return {
+      ...imageItem,
+      caption: imageCaption.trim() || undefined,
+      mediaAspectRatio: cover.ratio,
+      additionalImages: additionalImages.length
+        ? additionalImages.map(({ uri, ratio }) => ({ url: uri, aspectRatio: ratio }))
+        : undefined,
+    };
   };
   const submit = async () => {
     if (busy) return;
@@ -319,11 +364,14 @@ export function CaptureEditor() {
       let items: SavedItem[];
 
       if (kind === 'auto') {
-        items = createQuickCaptures(
-          text,
-          existing ? data.items.filter((item) => item.id !== id) : data.items,
-        ).items;
-        if (!items.length) throw new Error('This is already in your collection.');
+        items = text.trim()
+          ? createQuickCaptures(
+              text,
+              existing ? data.items.filter((item) => item.id !== id) : data.items,
+            ).items
+          : existing && images.length
+            ? [existing]
+            : [];
         if (existing)
           items = items
             .slice(0, 1)
@@ -332,20 +380,17 @@ export function CaptureEditor() {
                 ? existing
                 : { ...item, id: existing.id, createdAt: existing.createdAt },
             );
+        if (images.length && items.length === 1) {
+          items = [
+            {
+              ...items[0],
+              attachments: images.map(({ uri, ratio }) => ({ url: uri, aspectRatio: ratio })),
+            },
+          ];
+        } else if (images.length) items.push(createImageEntry());
+        if (!items.length) throw new Error('This is already in your collection.');
       } else if (kind === 'image' && images.length) {
-        const [cover, ...additionalImages] = images;
-        const imageItem = draftItem('image', cover.uri, title, existing, randomUUID);
-        if (imageItem.type !== 'image') throw new Error('Could not prepare these images.');
-        items = [
-          {
-            ...imageItem,
-            caption: imageCaption.trim() || undefined,
-            mediaAspectRatio: cover.ratio,
-            additionalImages: additionalImages.length
-              ? additionalImages.map(({ uri, ratio }) => ({ url: uri, aspectRatio: ratio }))
-              : undefined,
-          },
-        ];
+        items = [createImageEntry(existing)];
       } else if (kind === 'credential') {
         if (!credentialReady) throw new Error('Wait for this on-device credential to load.');
         if (!credentialWebsite.trim()) throw new Error('Enter the website for this credential.');
@@ -363,8 +408,9 @@ export function CaptureEditor() {
         items = [draftItem(kind, code, title, existing, randomUUID)];
       }
 
-      const cleanTags = [...new Set([...tags, tagDraft].map((tag) => tag.trim()).filter(Boolean))]
-        .slice(0, 30);
+      const cleanTags = [
+        ...new Set([...tags, tagDraft].map((tag) => tag.trim()).filter(Boolean)),
+      ].slice(0, 30);
 
       for (const entry of items) {
         let item = {
@@ -463,33 +509,17 @@ export function CaptureEditor() {
           alignSelf: 'center',
         }}
       >
-        <ScrollView
-          ref={chipScrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          onLayout={({ nativeEvent }) => setChipViewportWidth(nativeEvent.layout.width)}
-          style={{ marginHorizontal: -space.lg }}
-          contentContainerStyle={{ gap: 2, paddingHorizontal: space.md + 6 }}
-        >
-          {saveKinds.map((value) => (
-            <View
-              key={value}
-              onLayout={({ nativeEvent: { layout } }) => {
-                chipRects.current[value] = { x: layout.x, width: layout.width };
-                if (value === kind) centerKind(value, false);
-              }}
-            >
-              <Chip
-                title={value === 'auto' ? 'Anything' : value[0].toUpperCase() + value.slice(1)}
-                selected={kind === value}
-                onPress={() => {
-                  centerKind(value);
-                  setKind(value);
-                }}
-              />
-            </View>
-          ))}
-        </ScrollView>
+        {!existing && (
+          <FilterChips
+            edgeInset={space.lg}
+            value={kind}
+            onSelect={setKind}
+            options={saveKinds.map((value) => ({
+              value,
+              label: value === 'auto' ? 'Anything' : value[0].toUpperCase() + value.slice(1),
+            }))}
+          />
+        )}
         <View
           style={{
             borderRadius: 24,
@@ -499,7 +529,70 @@ export function CaptureEditor() {
             overflow: 'hidden',
           }}
         >
-          {kind === 'image' ? (
+          {detectedInfo && !existing && (
+            <View
+              style={{
+                minHeight: 42,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                paddingHorizontal: 18,
+                borderBottomWidth: 0.5,
+                borderBottomColor: colors.line,
+              }}
+            >
+              <Sparkles size={14} color={colors.accent} strokeWidth={1.7} />
+              <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
+                DETECTED AS
+              </Text>
+              <Text
+                allowFontScaling={false}
+                style={{ ...type.small, color: colors.ink, fontWeight: '600' }}
+              >
+                {detectedLabel}
+              </Text>
+            </View>
+          )}
+          {kind === 'auto' && images.length > 0 && (
+            <View
+              onLayout={({ nativeEvent }) => setImageViewportWidth(nativeEvent.layout.width)}
+              style={{ paddingTop: 10 }}
+            >
+              <ImageCarousel
+                photos={images}
+                width={imageViewportWidth}
+                onRemove={(index) => setImages((current) => current.filter((_, i) => i !== index))}
+              />
+            </View>
+          )}
+          {kind === 'auto' && renderKind === 'code' ? (
+            <View style={{ padding: 16, gap: 8 }}>
+              <Field
+                accessibilityLabel="Detected code content"
+                placeholder="Write or paste code…"
+                value={text}
+                onChangeText={setText}
+                editable={!busy}
+                multiline
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  minHeight: 230,
+                  textAlignVertical: 'top',
+                  fontFamily: fonts.mono,
+                  fontSize: 14,
+                  lineHeight: 23,
+                  color: colors.ink,
+                  backgroundColor: colors.canvas,
+                  padding: 14,
+                  borderRadius: 12,
+                }}
+              />
+              <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
+                {text ? `${text.split('\n').length} lines of code` : 'Code detected'}
+              </Text>
+            </View>
+          ) : kind === 'image' ? (
             <View
               onLayout={({ nativeEvent }) => setImageViewportWidth(nativeEvent.layout.width)}
               style={{ paddingVertical: 12 }}
@@ -522,7 +615,7 @@ export function CaptureEditor() {
                 </Text>
               )}
             </View>
-          ) : kind === 'markdown' && markdownPreview ? (
+          ) : renderKind === 'markdown' && markdownPreview ? (
             <View style={{ minHeight: 190, padding: 18 }}>
               {text.trim() ? (
                 <MarkdownContent text={text} />
@@ -851,31 +944,32 @@ export function CaptureEditor() {
             <Field
               accessibilityLabel="Content"
               placeholder={
-                kind === 'secret'
+                renderKind === 'secret'
                   ? 'Enter your secret'
-                  : kind === 'link'
+                  : renderKind === 'link'
                     ? 'Paste a link here...'
-                    : kind === 'note'
+                    : renderKind === 'note'
                       ? 'Write a thought worth keeping...'
-                      : kind === 'markdown'
+                      : renderKind === 'markdown'
                         ? 'Paste or write Markdown...'
                         : 'Paste a link, note, or idea...'
               }
               value={text}
               onChangeText={setText}
               editable={!busy}
-              multiline={kind !== 'secret'}
-              secureTextEntry={kind === 'secret'}
+              multiline={renderKind !== 'secret'}
+              secureTextEntry={renderKind === 'secret'}
               autoCapitalize={
-                ['link', 'image', 'code', 'secret'].includes(kind) ? 'none' : 'sentences'
+                ['link', 'image', 'code', 'secret'].includes(renderKind) ? 'none' : 'sentences'
               }
-              autoCorrect={!['link', 'image', 'code', 'secret'].includes(kind)}
+              autoCorrect={!['link', 'image', 'code', 'secret'].includes(renderKind)}
               style={{
-                minHeight: kind === 'secret' ? 76 : 190,
+                minHeight: renderKind === 'secret' ? 76 : 190,
+                fontFamily: renderKind === 'code' ? fonts.mono : undefined,
+                fontSize: renderKind === 'code' ? 14 : 18,
+                lineHeight: renderKind === 'code' ? 23 : 28,
                 textAlignVertical: 'top',
-                fontSize: 18,
-                lineHeight: 28,
-                backgroundColor: 'transparent',
+                backgroundColor: renderKind === 'code' ? colors.canvas : 'transparent',
                 padding: 18,
               }}
             />
@@ -898,7 +992,7 @@ export function CaptureEditor() {
                 {wordCount} {wordCount === 1 ? 'word' : 'words'}
               </Text>
             )}
-            {kind === 'markdown' && (
+            {renderKind === 'markdown' && (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={markdownPreview ? 'Edit Markdown' : 'Preview Markdown'}
@@ -943,7 +1037,7 @@ export function CaptureEditor() {
               >
                 <ImagePlus size={17} color={colors.muted} strokeWidth={1.6} />
                 <Text allowFontScaling={false} style={{ ...type.small, color: colors.muted }}>
-                  {kind === 'image' && images.length ? 'Add photos' : 'Photo'}
+                  {images.length ? 'Add photos' : 'Photo'}
                 </Text>
               </Pressable>
             )}
@@ -1034,10 +1128,8 @@ export function CaptureEditor() {
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={
-                tagCount ? `Edit ${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}` : 'Add tags'
-              }
-              accessibilityHint="Show or hide the tags field"
+              accessibilityLabel={tagActionLabel}
+              accessibilityHint="Review suggested tags or add your own"
               accessibilityState={{ expanded: details }}
               onPress={() => setDetails((value) => !value)}
               style={({ pressed }) => ({
@@ -1070,7 +1162,7 @@ export function CaptureEditor() {
                     fontWeight: tagCount ? '600' : '400',
                   }}
                 >
-                  {tagCount ? `${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}` : 'Add tags'}
+                  {tagActionText}
                 </Text>
                 {details ? (
                   <ChevronUp size={14} color={colors.accent} />
@@ -1145,6 +1237,51 @@ export function CaptureEditor() {
                   }}
                 />
               </View>
+              {kind === 'auto' && suggestedTags.length > 0 && (
+                <View style={{ width: '100%', gap: 7, paddingTop: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Sparkles size={13} color={colors.accent} strokeWidth={1.7} />
+                    <Text
+                      allowFontScaling={false}
+                      style={{ ...type.caption, color: colors.muted, letterSpacing: 0.8 }}
+                    >
+                      SUGGESTED TAGS
+                    </Text>
+                    <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
+                      · tap to add
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {suggestedTags.map((tag) => (
+                      <Pressable
+                        key={tag}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add suggested tag ${tag}`}
+                        disabled={busy || tags.length >= 30}
+                        onPress={() =>
+                          setTags((current) => [...new Set([...current, tag])].slice(0, 30))
+                        }
+                        style={{
+                          minHeight: 36,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          paddingHorizontal: 11,
+                          borderRadius: radius.pill,
+                          borderWidth: 0.5,
+                          borderColor: colors.line,
+                          opacity: busy || tags.length >= 30 ? 0.5 : 1,
+                        }}
+                      >
+                        <Plus size={13} color={colors.accent} strokeWidth={1.8} />
+                        <Text allowFontScaling={false} style={{ ...type.small, color: colors.ink }}>
+                          {tag}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -1199,7 +1336,7 @@ export function CaptureEditor() {
           </Text>
         </Pressable>
       </KeyboardStickyView>
-      <FeedbackHost />
+      <FeedbackHost placement="bottom" />
     </BlurTargetView>
   );
 }

@@ -1,5 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 import type { SavedItem } from '../types';
+import { noteTitleFromContent } from './itemTitle';
 import { autoDetectClipboardContent, findDuplicateItem } from './clipboard.ts';
 import { getImmediateLinkPreview, isDirectImageUrl, normalizeUrl } from './fetchPreview.ts';
 import { parseSocialUrl } from './storage.ts';
@@ -139,7 +140,14 @@ export function createQuickCaptures(
           category: 'token',
           secretValue: content,
         });
-      else items.push({ ...base, type: 'note', title: 'Note', content, typography: 'sans' });
+      else
+        items.push({
+          ...base,
+          type: 'note',
+          title: noteTitleFromContent(content),
+          content,
+          typography: 'sans',
+        });
     }
   }
 

@@ -1,76 +1,34 @@
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { ScrollView, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
-import { Chip } from './ui';
-import { space } from '../theme';
+import { ChipRow } from './chip-row';
 
-export function FilterChips({
+const homeFilters = [
+  { value: 'all', label: 'All finds' },
+  { value: 'pinned', label: 'Pinned' },
+  { value: 'link', label: 'Links' },
+  { value: 'note', label: 'Notes' },
+  { value: 'image', label: 'Images' },
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'code', label: 'Code' },
+  { value: 'secret', label: 'Secrets' },
+  { value: 'credential', label: 'Credentials' },
+];
+
+export function FilterChips<T extends string>({
   value,
   onSelect,
   edgeInset,
+  options,
 }: {
-  value: string;
-  onSelect: (value: string) => void;
+  value: T;
+  onSelect: (value: T) => void;
   edgeInset: number;
+  options?: readonly { value: T; label: string }[];
 }) {
-  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const rects = useRef<Record<string, { x: number; width: number }>>({});
-  const [viewportWidth, setViewportWidth] = useState(0);
-  const reduced = useReducedMotion();
-  const center = useCallback(
-    (selected: string, animated = true) => {
-      const rect = rects.current[selected];
-
-      if (!rect || !viewportWidth) return;
-      scrollRef.current?.scrollTo({
-        x: Math.max(0, rect.x + (rect.width - viewportWidth) / 2),
-        animated: animated && !reduced,
-      });
-    },
-    [viewportWidth, reduced],
-  );
-
-  useEffect(() => center(value), [center, value]);
-
   return (
-    <ScrollView
-      ref={scrollRef}
-      horizontal
-      style={{ marginHorizontal: -edgeInset }}
-      showsHorizontalScrollIndicator={false}
-      onLayout={({ nativeEvent }) => setViewportWidth(nativeEvent.layout.width)}
-      contentContainerStyle={{ gap: 2, paddingHorizontal: space.md + 6 }}
-    >
-      {(
-        [
-          ['all', 'All finds'],
-          ['pinned', 'Pinned'],
-          ['link', 'Links'],
-          ['note', 'Notes'],
-          ['image', 'Images'],
-          ['markdown', 'Markdown'],
-          ['code', 'Code'],
-          ['secret', 'Secrets'],
-          ['credential', 'Credentials'],
-        ] as const
-      ).map(([id, title]) => (
-        <View
-          key={id}
-          onLayout={({ nativeEvent: { layout } }) => {
-            rects.current[id] = { x: layout.x, width: layout.width };
-            if (id === value) center(id, false);
-          }}
-        >
-          <Chip
-            title={title}
-            selected={value === id}
-            onPress={() => {
-              center(id);
-              onSelect(id);
-            }}
-          />
-        </View>
-      ))}
-    </ScrollView>
+    <ChipRow<T>
+      edgeInset={edgeInset}
+      value={value}
+      onSelect={onSelect}
+      options={options ?? (homeFilters as readonly { value: T; label: string }[])}
+    />
   );
 }

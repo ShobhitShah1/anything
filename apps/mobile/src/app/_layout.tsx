@@ -2,8 +2,8 @@ import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { ActivityIndicator, Appearance, Pressable, Text, View } from 'react-native';
-import { useEffect } from 'react';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
 import * as SystemUI from 'expo-system-ui';
 import { NavigationBar } from 'expo-navigation-bar';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -22,6 +22,7 @@ function Routes() {
   const segments = useSegments();
   const reduced = useReducedMotion();
   const { colors, dark, ready, error } = state;
+  const systemBackgroundSet = useRef(false);
   const uid = state.user?.uid;
   const { setMembership } = state;
 
@@ -61,9 +62,12 @@ function Routes() {
     };
   }, [uid, setMembership]);
   useEffect(() => {
-    Appearance.setColorScheme(state.data.theme === 'system' ? 'unspecified' : state.data.theme);
+    if (!ready || systemBackgroundSet.current) return;
+    systemBackgroundSet.current = true;
     void SystemUI.setBackgroundColorAsync(colors.canvas).catch(() => {});
-  }, [state.data.theme, colors.canvas]);
+    // The native window color is only a startup fallback; screen surfaces follow collection state.
+    // Updating both during a theme toggle repaints the window separately from the React views.
+  }, [ready, colors.canvas]);
   if (!ready)
     return (
       <View

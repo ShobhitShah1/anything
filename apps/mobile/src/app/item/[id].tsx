@@ -33,6 +33,7 @@ import { useCollection } from '../../state/collection';
 import { Action, IconButton } from '../../components/ui';
 import { imageSet, itemImage, itemText, itemUrl, linkPlatform, typeLabel } from '../../utils/item';
 import { getItemTitle } from '../../shared/utils/itemTitle';
+import { noteBodyAfterTitle } from '../../shared/utils/itemTitle';
 import { openLink } from '../../utils/open-link';
 import { linkifyText } from '../../utils/linkify-text';
 import { downloadImage } from '../../utils/download-image';
@@ -47,12 +48,10 @@ export default function ItemDetail() {
   const { colors, data } = state;
   const enrich = state.enrich;
   const item = data.items.find((item) => item.id === id);
-  const {
-    targetRef,
-    topInset,
-    onScroll,
-    options: headerOptions,
-  } = useScrollHeader(item ? typeLabel(item) : 'Your find');
+  const screenTitle = item?.type === 'note' ? 'Thought' : item ? typeLabel(item) : 'Your find';
+  const noteWordCount =
+    item?.type === 'note' ? item.content.trim().split(/\s+/u).filter(Boolean).length : 0;
+  const { targetRef, topInset, onScroll, options: headerOptions } = useScrollHeader(screenTitle);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [revealedId, setRevealedId] = useState<string>();
@@ -152,7 +151,12 @@ export default function ItemDetail() {
   const url = itemUrl(item);
   const platform = url ? linkPlatform(url) : undefined;
   const title = getItemTitle(item);
-  const text = item.type === 'secret' ? '' : itemText(item);
+  const text =
+    item.type === 'secret'
+      ? ''
+      : item.type === 'note'
+        ? noteBodyAfterTitle(item.content, title)
+        : itemText(item);
   const codeFiles =
     item.type === 'code'
       ? item.files?.length
@@ -177,6 +181,7 @@ export default function ItemDetail() {
         item.title.trim().toLowerCase() !== 'image' &&
         item.title.trim() !== item.caption?.trim())) &&
     (item.type !== 'markdown' || !heading || heading.trim() !== markdownTitle) &&
+    !(item.type === 'code' && title.trim().toLowerCase() === typeLabel(item).toLowerCase()) &&
     !(item.type === 'secret' && title.trim().toLowerCase() === typeLabel(item).toLowerCase());
   const copy = async () => {
     try {
@@ -219,7 +224,7 @@ export default function ItemDetail() {
       <Stack.Screen
         options={{
           ...headerOptions,
-          title: typeLabel(item),
+          title: screenTitle,
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Pressable
@@ -265,19 +270,34 @@ export default function ItemDetail() {
               <Text
                 allowFontScaling={false}
                 numberOfLines={1}
-                style={{ color: colors.ink, fontSize: 14, fontWeight: '500' }}
+                style={
+                  item.type === 'code'
+                    ? {
+                        color: colors.ink,
+                        fontSize: 14,
+                        fontFamily: fonts.mono,
+                        fontWeight: '500',
+                      }
+                    : { color: colors.ink, fontSize: 14, fontWeight: '500' }
+                }
               >
-                {item.type === 'x_post'
-                  ? item.authorName || `@${item.authorHandle}`
-                  : item.type === 'reddit_post'
-                    ? `${item.subreddit}${item.author ? ` · u/${item.author.replace(/^u\//, '')}` : ''}`
-                    : item.type === 'link'
-                      ? item.domain
-                      : item.type === 'secret'
-                        ? 'Protected value'
-                        : item.type === 'image'
-                          ? `${images.length} ${images.length === 1 ? 'photo' : 'photos'}`
-                          : typeLabel(item)}
+                {item.type === 'code'
+                  ? activeCodeFile?.path || title
+                  : item.type === 'x_post'
+                    ? item.authorName || `@${item.authorHandle}`
+                    : item.type === 'reddit_post'
+                      ? `${item.subreddit}${item.author ? ` · u/${item.author.replace(/^u\//, '')}` : ''}`
+                      : item.type === 'link'
+                        ? item.domain
+                        : item.type === 'secret'
+                          ? 'Protected value'
+                          : item.type === 'image'
+                            ? `${images.length} ${images.length === 1 ? 'photo' : 'photos'}`
+                            : item.type === 'note'
+                              ? item.checklist?.length
+                                ? `${item.checklist.length} ${item.checklist.length === 1 ? 'task' : 'tasks'}`
+                                : `${noteWordCount} ${noteWordCount === 1 ? 'word' : 'words'}`
+                              : typeLabel(item)}
               </Text>
               <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
                 Saved{' '}
@@ -306,7 +326,7 @@ export default function ItemDetail() {
           <AdaptiveImage
             key={image}
             uri={image}
-            ratio={item.mediaAspectRatio}
+            ratio={images[0]?.ratio || item.mediaAspectRatio}
 
             priority="high"
             style={{ borderRadius: radius.card, backgroundColor: colors.paper, overflow: 'hidden' }}

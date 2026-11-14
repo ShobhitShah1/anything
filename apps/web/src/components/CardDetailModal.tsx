@@ -1,4 +1,5 @@
 import { getItemTitle } from '../utils/itemTitle';
+import { noteBodyAfterTitle } from '../utils/itemTitle';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useCardExpansion } from '../hooks/useCardExpansion';
@@ -328,6 +329,28 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
             </h2>
           )}
 
+          {item.type !== 'image' && !!item.attachments?.length && (
+            <div className={`grid gap-2 ${item.attachments.length > 1 ? 'grid-cols-2' : ''}`}>
+              {item.attachments.map((image, index) => (
+                <button
+                  key={`${image.url.slice(-24)}-${index}`}
+                  type="button"
+                  data-image-id={item.id}
+                  onClick={() => onOpenImage?.(image.url, item.title, item.id)}
+                  className="overflow-hidden rounded-xl cursor-zoom-in bg-zinc-900"
+                  style={{ aspectRatio: image.aspectRatio || 1.5 }}
+                  aria-label={`View attached image ${index + 1}`}
+                >
+                  <img
+                    src={image.url}
+                    alt={`${item.title} attachment ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* 1. X Post Full View */}
           {item.type === 'x_post' && (
             <div className="space-y-4">
@@ -377,7 +400,7 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
               {/* Tweet text in larger font */}
               <p className="text-base sm:text-lg leading-relaxed whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
-                {item.content}
+                {noteBodyAfterTitle(item.content, getItemTitle(item))}
               </p>
 
               {item.imageUrl && (

@@ -58,18 +58,23 @@ export function linkPlatform(value: string) {
 }
 
 export function itemImage(item: SavedItem) {
-  return 'imageUrl' in item ? item.imageUrl : item.type === 'link' ? item.previewImage : undefined;
+  return (
+    item.attachments?.[0]?.url ||
+    ('imageUrl' in item ? item.imageUrl : item.type === 'link' ? item.previewImage : undefined)
+  );
 }
 export function imageSet(item: SavedItem) {
-  return item.type === 'image'
-    ? [
-        { uri: item.imageUrl, ratio: item.mediaAspectRatio },
-        ...(item.additionalImages || []).map(({ url, aspectRatio }) => ({
-          uri: url,
-          ratio: aspectRatio,
-        })),
-      ]
-    : [];
+  return item.attachments?.length
+    ? item.attachments.map(({ url, aspectRatio }) => ({ uri: url, ratio: aspectRatio }))
+    : item.type === 'image'
+      ? [
+          { uri: item.imageUrl, ratio: item.mediaAspectRatio },
+          ...(item.additionalImages || []).map(({ url, aspectRatio }) => ({
+            uri: url,
+            ratio: aspectRatio,
+          })),
+        ]
+      : [];
 }
 export function typeLabel(item: SavedItem) {
   return {

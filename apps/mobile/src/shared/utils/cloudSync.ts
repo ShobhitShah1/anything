@@ -84,6 +84,21 @@ export function isCloudEntry(value: unknown): value is CloudEntry {
     !item.tags.every((tag) => typeof tag === 'string')
   )
     return false;
+  if (
+    item.attachments !== undefined &&
+    (!Array.isArray(item.attachments) ||
+      !item.attachments.every(
+        (image) =>
+          image &&
+          typeof image.url === 'string' &&
+          image.url.length > 0 &&
+          (image.aspectRatio === undefined ||
+            (typeof image.aspectRatio === 'number' &&
+              Number.isFinite(image.aspectRatio) &&
+              image.aspectRatio > 0)),
+      ))
+  )
+    return false;
   switch (item.type) {
     case 'credential':
       return false;

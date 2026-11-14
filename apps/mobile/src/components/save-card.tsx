@@ -15,7 +15,7 @@ import {
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import type { SavedItem } from '../shared/types';
-import { getItemTitle } from '../shared/utils/itemTitle';
+import { getItemTitle, noteBodyAfterTitle } from '../shared/utils/itemTitle';
 import { imageSet, itemImage, itemText, typeLabel } from '../utils/item';
 import { cardWidths } from '../utils/card-widths';
 import { codePreviewMarkdown, languageFromPath } from '../utils/code-format';
@@ -27,6 +27,14 @@ export type CardAnchor = {
   rect: { x: number; y: number; width: number; height: number };
   list: boolean;
 };
+
+function fitCodePreview(code: string, maxChars: number) {
+  return code
+    .split('\n')
+    .slice(0, 8)
+    .map((line) => (line.length > maxChars ? `${line.slice(0, maxChars - 1)}…` : line))
+    .join('\n');
+}
 
 export const SaveCard = memo(function SaveCard({
   item,
@@ -58,20 +66,35 @@ export const SaveCard = memo(function SaveCard({
   const mediaHeight = 124;
   const image = itemImage(item);
   const gallery = imageSet(item);
-  const groupedImages = !list && gallery.length > 1;
+  const cardWidthInfo = cardWidths(width, list, !!image);
+  const { width: cardWidth, contentWidth } = cardWidthInfo;
+  const attachedCodePreview = item.type === 'code' && gallery.length > 0 && !list;
+  const splitCodePreview = attachedCodePreview && cardWidth >= 260;
+  const groupedImages = !list && item.type !== 'code' && gallery.length > 1;
   const listImageColumns =
     gallery.length === 2
       ? gallery.map((entry) => [entry])
       : gallery.length === 3
         ? [gallery.slice(0, 1), gallery.slice(1, 3)]
         : [gallery.slice(0, 2), gallery.slice(2, 4)];
-  const { width: cardWidth, contentWidth } = cardWidths(width, list, !!image);
   const title = getItemTitle(item) || typeLabel(item);
   const codeFile =
     item.type === 'code'
       ? item.files?.find((file) => file.code.trim()) ||
         item.files?.[0] || { path: item.title, code: item.code, language: item.language }
       : undefined;
+  const codePreview =
+    item.type === 'code'
+      ? fitCodePreview(
+          codeFile?.code || item.code,
+          Math.max(
+            14,
+            Math.floor(
+              ((splitCodePreview ? cardWidth * 0.6 : list ? contentWidth : cardWidth) - 48) / 7,
+            ),
+          ),
+        )
+      : '';
   const generatedCodeTitle =
     item.type === 'code' &&
     (title === codeFile?.path.split(/[\\/]/).pop() ||
@@ -84,7 +107,12 @@ export const SaveCard = memo(function SaveCard({
   const note = item.type === 'note';
   const social =
     item.type === 'x_post' || item.type === 'instagram_post' || item.type === 'reddit_post';
-  const text = item.type === 'secret' ? '' : itemText(item);
+  const text =
+    item.type === 'secret'
+      ? ''
+      : item.type === 'note'
+        ? noteBodyAfterTitle(item.content, title)
+        : itemText(item);
   const source =
     item.type === 'link'
       ? item.domain
@@ -203,9 +231,9 @@ export const SaveCard = memo(function SaveCard({
             <MarkdownContent
               text={codePreviewMarkdown(
                 item.files?.length ? languageFromPath(codeFile?.path || '') : item.language,
-                codeFile?.code || item.code,
+                codePreview,
               )}
-              previewLines={list ? 4 : 6}
+              previewLines={attachedCodePreview ? (splitCodePreview ? 4 : 3) : list ? 4 : 6}
             />
           </View>
         ) : item.type === 'secret' || item.type === 'credential' ? (
@@ -347,130 +375,268 @@ export const SaveCard = memo(function SaveCard({
             : {}),
         }}
       >
-        {!!image && (
-          <MotionPosition
-            identity={item.id}
-            style={
-              list
-                ? {
-                    width: 104,
-                    height: mediaHeight,
-                    backgroundColor: colors.paper,
-                  }
-                : undefined
-            }
-          >
-            {list && item.type === 'image' && gallery.length > 1 ? (
-              <View
-                style={{
-                  width: 104,
-                  height: mediaHeight,
-                  flexDirection: 'row',
-                  gap: 2,
-                  overflow: 'hidden',
-                  backgroundColor: colors.paper,
-                }}
-              >
-                {listImageColumns.map((column, columnIndex) => (
-                  <View key={columnIndex} style={{ flex: 1, gap: 2 }}>
-                    {column.map(({ uri }, imageIndex) => (
-                      <View
-                        key={`${uri.slice(-24)}-${imageIndex}`}
-                        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
-                      >
-                        <Image
-                          source={{ uri }}
-                          objectFit="cover"
-                          transition={0}
-                          style={{ width: '100%', height: '100%' }}
-                        />
-                        {gallery.length > 4 && columnIndex === 1 && imageIndex === 1 && (
-                          <View
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              backgroundColor: '#00000066',
-                            }}
-                          >
-                            <Text
-                              allowFontScaling={false}
-                              style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}
-                            >
-                              +{gallery.length - 4}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                ))}
-              </View>
-            ) : groupedImages ? (
-              <View
-                style={{
-                  width: cardWidth,
-                  height: cardWidth * 1.18,
-                  flexDirection: 'row',
-                  gap: 4,
-                  overflow: 'hidden',
-                  borderRadius: radius.card,
-                  backgroundColor: colors.canvas,
-                }}
-              >
+        {splitCodePreview ? (
+          <MotionPosition identity={item.id} style={{ width: cardWidth }}>
+            <View
+              style={{
+                width: cardWidth,
+                height: 166,
+                flexDirection: 'row',
+                overflow: 'hidden',
+                backgroundColor: colors.canvas,
+              }}
+            >
+              <View style={{ width: Math.round(cardWidth * 0.4), height: 166 }}>
                 <Image
                   source={{ uri: gallery[0].uri }}
                   objectFit="cover"
                   transition={0}
-                  style={{ flex: 1.45 }}
+                  style={{ width: '100%', height: '100%' }}
                 />
-                <View style={{ flex: 1, gap: 4 }}>
-                  {gallery.slice(1, 3).map(({ uri }, index) => (
-                    <View key={`${uri.slice(-24)}-${index}`} style={{ flex: 1, minHeight: 0 }}>
-                      <Image
-                        source={{ uri }}
-                        objectFit="cover"
-                        transition={0}
-                        style={{ width: '100%', height: '100%' }}
-                      />
-                    </View>
-                  ))}
-                </View>
+                {gallery.length > 1 && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      left: 9,
+                      bottom: 9,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: radius.pill,
+                      backgroundColor: colors.overlay,
+                    }}
+                  >
+                    <Text allowFontScaling={false} style={{ ...type.caption, color: colors.ink }}>
+                      {gallery.length} photos
+                    </Text>
+                  </View>
+                )}
               </View>
-            ) : (
-              <AdaptiveImage
-                key={image}
-                width={list ? 104 : cardWidth}
-                thumbnailHeight={mediaHeight}
-                onReady={onPreviewReady}
-                uri={image}
-                ratio={item.mediaAspectRatio}
-                objectFit={list ? 'cover' : 'contain'}
-                animateLayout={false}
-                thumbnail={list}
-                style={{
-                  backgroundColor: colors.paper,
-                }}
-              />
-            )}
-            {item.isPinned && !list && (
               <View
                 style={{
-                  position: 'absolute',
-                  top: 10,
-                  left: 10,
-                  backgroundColor: colors.overlay,
-                  borderRadius: radius.pill,
-                  padding: 7,
+                  flex: 1,
+                  minWidth: 0,
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: 12,
                 }}
               >
-                <Pin size={12} color={colors.ink} />
+                <Text
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                  style={{ ...type.caption, color: colors.muted, fontFamily: fonts.mono }}
+                >
+                  {codeFile?.path || title}
+                </Text>
+                <View style={{ maxHeight: 112, overflow: 'hidden' }}>
+                  <MarkdownContent
+                    text={codePreviewMarkdown(
+                      item.files?.length ? languageFromPath(codeFile?.path || '') : item.language,
+                      codePreview,
+                    )}
+                    previewLines={4}
+                  />
+                </View>
               </View>
-            )}
+              {item.isPinned && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 9,
+                    right: 9,
+                    padding: 7,
+                    borderRadius: radius.pill,
+                    backgroundColor: colors.overlay,
+                  }}
+                >
+                  <Pin size={12} color={colors.ink} />
+                </View>
+              )}
+            </View>
           </MotionPosition>
+        ) : (
+          <>
+            {!!image && (
+              <MotionPosition
+                identity={item.id}
+                style={
+                  list
+                    ? {
+                        width: 104,
+                        height: mediaHeight,
+                        backgroundColor: colors.paper,
+                      }
+                    : undefined
+                }
+              >
+                {list && gallery.length > 1 ? (
+                  <View
+                    style={{
+                      width: 104,
+                      height: mediaHeight,
+                      flexDirection: 'row',
+                      gap: 2,
+                      overflow: 'hidden',
+                      backgroundColor: colors.paper,
+                    }}
+                  >
+                    {listImageColumns.map((column, columnIndex) => (
+                      <View key={columnIndex} style={{ flex: 1, gap: 2 }}>
+                        {column.map(({ uri }, imageIndex) => (
+                          <View
+                            key={`${uri.slice(-24)}-${imageIndex}`}
+                            style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+                          >
+                            <Image
+                              source={{ uri }}
+                              objectFit="cover"
+                              transition={0}
+                              style={{ width: '100%', height: '100%' }}
+                            />
+                            {gallery.length > 4 && columnIndex === 1 && imageIndex === 1 && (
+                              <View
+                                style={{
+                                  position: 'absolute',
+                                  inset: 0,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: '#00000066',
+                                }}
+                              >
+                                <Text
+                                  allowFontScaling={false}
+                                  style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}
+                                >
+                                  +{gallery.length - 4}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                ) : attachedCodePreview ? (
+                  <View
+                    style={{
+                      width: cardWidth,
+                      height: 84,
+                      flexDirection: 'row',
+                      gap: 2,
+                      overflow: 'hidden',
+                      backgroundColor: colors.canvas,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: gallery[0].uri }}
+                      objectFit="cover"
+                      transition={0}
+                      style={{ width: gallery.length > 1 ? '58%' : '100%', height: '100%' }}
+                    />
+                    {gallery.length > 1 && (
+                      <View style={{ flex: 1, gap: 2 }}>
+                        {gallery.slice(1, 3).map(({ uri }, index) => (
+                          <View
+                            key={`${uri.slice(-24)}-${index}`}
+                            style={{ flex: 1, minHeight: 0 }}
+                          >
+                            <Image
+                              source={{ uri }}
+                              objectFit="cover"
+                              transition={0}
+                              style={{ width: '100%', height: '100%' }}
+                            />
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                ) : groupedImages ? (
+                  <View
+                    style={{
+                      width: cardWidth,
+                      height: cardWidth * 1.18,
+                      flexDirection: 'row',
+                      gap: 4,
+                      overflow: 'hidden',
+                      borderRadius: radius.card,
+                      backgroundColor: colors.canvas,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: gallery[0].uri }}
+                      objectFit="cover"
+                      transition={0}
+                      style={{ flex: 1.45 }}
+                    />
+                    <View style={{ flex: 1, gap: 4 }}>
+                      {gallery.slice(1, 3).map(({ uri }, index) => (
+                        <View
+                          key={`${uri.slice(-24)}-${index}`}
+                          style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+                        >
+                          <Image
+                            source={{ uri }}
+                            objectFit="cover"
+                            transition={0}
+                            style={{ width: '100%', height: '100%' }}
+                          />
+                          {index === 1 && gallery.length > 3 && (
+                            <View
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: '#00000066',
+                              }}
+                            >
+                              <Text
+                                allowFontScaling={false}
+                                style={{ ...type.caption, color: '#fff', fontWeight: '600' }}
+                              >
+                                +{gallery.length - 3}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <AdaptiveImage
+                    key={image}
+                    width={list ? 104 : cardWidth}
+                    thumbnailHeight={mediaHeight}
+                    onReady={onPreviewReady}
+                    uri={image}
+                    ratio={gallery[0]?.ratio || item.mediaAspectRatio}
+                    objectFit={list ? 'cover' : 'contain'}
+                    animateLayout={false}
+                    thumbnail={list}
+                    style={{
+                      backgroundColor: colors.paper,
+                    }}
+                  />
+                )}
+                {item.isPinned && !list && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 10,
+                      left: 10,
+                      backgroundColor: colors.overlay,
+                      borderRadius: radius.pill,
+                      padding: 7,
+                    }}
+                  >
+                    <Pin size={12} color={colors.ink} />
+                  </View>
+                )}
+              </MotionPosition>
+            )}
+            {content}
+          </>
         )}
-        {content}
         {selecting && (
           <View
             pointerEvents="none"
