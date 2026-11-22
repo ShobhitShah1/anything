@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Folder as FolderIcon, ChevronDown, Check, Plus } from 'lucide-react';
 import { Folder } from '../types';
 import { sound } from '../utils/sound';
+import { FolderAppIcon } from './FolderAppIcon';
 
 interface FolderDropdownProps {
   folders: Folder[];
@@ -119,7 +120,7 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
             : 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-800'
         }`}
       >
-        <FolderIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+        <FolderAppIcon folder={selectedFolder} className="w-3.5 h-3.5 shrink-0" />
         <span className="truncate max-w-[140px]">
           {selectedFolder ? selectedFolder.name : emptyLabel}
         </span>
@@ -200,7 +201,10 @@ export const FolderDropdown: React.FC<FolderDropdownProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
-                        <FolderIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                        <FolderAppIcon
+                          folder={f}
+                          className="w-3.5 h-3.5 shrink-0"
+                        />
                         <span className="truncate">{f.name}</span>
                         {folderCounts && (
                           <span className="text-zinc-500 tabular-nums">

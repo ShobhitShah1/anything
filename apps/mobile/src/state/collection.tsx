@@ -23,6 +23,7 @@ import { itemUrl } from '../utils/item';
 import { loadText, saveText } from '../utils/device-storage';
 import { guestLimitReached, GuestLimitError } from '../utils/guest-limit';
 import { deleteLocalCredential } from '../utils/local-credentials';
+import { DEFAULT_FOLDERS, getFolderMeta } from '../shared/utils/storage';
 
 import {
   emptyCollection as empty,
@@ -104,7 +105,13 @@ function useCollectionState() {
 
       setError('');
 
-      const next = raw ? validateCollection(JSON.parse(raw)) : { ...empty };
+      const parsed = raw
+        ? validateCollection(JSON.parse(raw))
+        : { ...empty, folders: DEFAULT_FOLDERS };
+      const next =
+        !parsed.folders.length && !parsed.items.length
+          ? { ...parsed, folders: DEFAULT_FOLDERS }
+          : parsed;
 
       current.current = next;
       setData(next);
@@ -406,6 +413,8 @@ function useCollectionState() {
       })),
     addFolder: async (name: string, parentId?: string) => {
       const id = randomUUID();
+      const trimmed = name.trim();
+      const meta = getFolderMeta(trimmed);
 
       await commit((value) => {
         if (parentId !== undefined && !value.folders.some((folder) => folder.id === parentId))
@@ -413,7 +422,17 @@ function useCollectionState() {
 
         return {
           ...value,
-          folders: [...value.folders, { id, name: name.trim(), parentId, createdAt: Date.now() }],
+          folders: [
+            ...value.folders,
+            {
+              id,
+              name: trimmed,
+              parentId,
+              icon: meta.icon,
+              color: meta.color,
+              createdAt: Date.now(),
+            },
+          ],
         };
       });
 

@@ -1,5 +1,5 @@
 import type { SavedItem } from '../types';
-import { noteTitleFromContent } from './itemTitle';
+import { noteTitleFromContent } from './itemTitle.ts';
 import { autoDetectClipboardContent, findDuplicateItem } from './clipboard.ts';
 import { getImmediateLinkPreview, isDirectImageUrl, normalizeUrl } from './fetchPreview.ts';
 import { parseSocialUrl } from './storage.ts';

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Folder as FolderIcon, Plus, X, MoreHorizontal, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Folder as FolderIcon, Plus, X } from 'lucide-react';
 import { Folder } from '../types';
 import { sound } from '../utils/sound';
+import { FolderAppIcon } from './FolderAppIcon';
 
 interface FolderBarProps {
   folders: Folder[];
@@ -121,7 +122,7 @@ export const FolderBar: React.FC<FolderBarProps> = ({
                   />
                 )}
                 <span className="relative z-10 flex items-center gap-2">
-                  <FolderIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <FolderAppIcon folder={folder} className="w-3.5 h-3.5 shrink-0" />
                   <span>{folder.name}</span>
                   <span
                     className={`text-[11px] font-mono px-1.5 py-0.2 rounded-full ${

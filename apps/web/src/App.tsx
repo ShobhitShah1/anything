@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SavedItem, ViewMode, ItemType, Folder } from './types';
-import { loadSavedItems, saveItemsToStorage, loadFolders, saveFolders } from './utils/storage';
+import {
+  loadSavedItems,
+  saveItemsToStorage,
+  loadFolders,
+  saveFolders,
+  getFolderMeta,
+} from './utils/storage';
 import { fetchLinkPreview, applyLinkPreview } from './utils/fetchPreview';
 import { sound } from './utils/sound';
 import { Header } from './components/Header';
@@ -436,7 +442,9 @@ export function App() {
           typeof entry.text === 'string' &&
           entry.text.trim() &&
           entry.text.length <= 50_000 &&
-          (entry.folderId === undefined || entry.folderId === null || typeof entry.folderId === 'string'),
+          (entry.folderId === undefined ||
+            entry.folderId === null ||
+            typeof entry.folderId === 'string'),
       );
       const ids = entries
         .filter((entry: { text: string; folderId?: string | null }) =>
@@ -488,9 +496,13 @@ export function App() {
 
   // Folder Operations
   const handleCreateFolder = (name: string): Folder => {
+    const trimmed = name.trim();
+    const meta = getFolderMeta(trimmed);
     const newFolder: Folder = {
       id: `folder-${Date.now()}`,
-      name,
+      name: trimmed,
+      icon: meta.icon,
+      color: meta.color,
       createdAt: Date.now(),
     };
     setFolders((prev) => [...prev, newFolder]);

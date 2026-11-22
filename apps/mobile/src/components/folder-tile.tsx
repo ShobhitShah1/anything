@@ -9,6 +9,7 @@ import { imageSet, itemImage, itemText } from '../utils/item';
 import { useCollection } from '../state/collection';
 import { MarkdownContent } from './markdown-content';
 import { BrandMark } from './brand-mark';
+import { FolderAppIcon } from './folder-app-icon';
 import { fonts, type } from '../theme';
 
 export function FolderTile({
@@ -130,7 +131,7 @@ export function FolderTile({
               </View>
             ) : (
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <BrandMark size={30} />
+                <FolderAppIcon folder={folder} size={32} />
                 <Text allowFontScaling={false} style={{ ...type.caption, color: colors.muted }}>
                   {childCount
                     ? `${childCount} subfolders`

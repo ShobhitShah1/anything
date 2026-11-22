@@ -46,17 +46,20 @@ import { contextMenuPhase } from '../utils/context-menu-state';
 import { contextGeometry } from '../utils/context-geometry';
 import { SaveCard, type CardAnchor } from './save-card';
 import { radius, type } from '../theme';
+import { FolderAppIcon } from './folder-app-icon';
 
 function MenuRow({
   label,
   icon: Icon,
+  renderIcon,
   onPress,
   danger,
   selected,
   disabled,
 }: {
   label: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
+  renderIcon?: (props: { size: number; color: string }) => React.ReactNode;
   onPress: () => void;
   danger?: boolean;
   selected?: boolean;
@@ -81,7 +84,11 @@ function MenuRow({
         opacity: disabled ? 0.45 : 1,
       }}
     >
-      <Icon size={18} color={danger ? colors.danger : colors.muted} strokeWidth={1.6} />
+      {renderIcon ? (
+        renderIcon({ size: 18, color: danger ? colors.danger : colors.muted })
+      ) : Icon ? (
+        <Icon size={18} color={danger ? colors.danger : colors.muted} strokeWidth={1.6} />
+      ) : null}
       <Text
         allowFontScaling={false}
         numberOfLines={2}
@@ -494,7 +501,7 @@ export function CardContextMenu({
                         <MenuRow
                           key={folder.id}
                           label={folder.name}
-                          icon={Folder}
+                          renderIcon={({ size }) => <FolderAppIcon folder={folder} size={size} />}
                           disabled={disabled}
                           selected={item.folderId === folder.id}
                           onPress={() => move(folder.id)}

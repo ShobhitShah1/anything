@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 import { ItemType, SavedItem, Folder, ChecklistItem } from '../types';
 import { sound } from '../utils/sound';
-import { parseSocialUrl } from '../utils/storage';
+import { parseSocialUrl, getFolderAppKey } from '../utils/storage';
+import { FolderAppIcon } from './FolderAppIcon';
 import {
   fetchLinkPreview,
   getImmediateLinkPreview,
@@ -283,6 +284,20 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         (!title || title === parseSocialUrl(content).extractedInfo?.title)
       ) {
         setTitle(social.extractedInfo.title);
+      }
+      if (!selectedFolderId) {
+        const targetKey =
+          social.detectedType === 'instagram_post'
+            ? 'instagram'
+            : social.detectedType === 'x_post'
+              ? 'x'
+              : social.detectedType === 'reddit_post'
+                ? 'reddit'
+                : '';
+        if (targetKey) {
+          const match = folders.find((f) => getFolderAppKey(f) === targetKey);
+          if (match) setSelectedFolderId(match.id);
+        }
       }
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
       setPreviewData(getImmediateLinkPreview(trimmed));
@@ -1735,12 +1750,16 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
 
                       {currentFolder && (
                         <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                          className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border ${
                             isDark
                               ? 'bg-zinc-850 text-zinc-300 border-zinc-750'
                               : 'bg-zinc-100 text-zinc-700 border-zinc-200'
                           }`}
                         >
+                          <FolderAppIcon
+                            folder={currentFolder}
+                            className="w-3 h-3 text-zinc-400 shrink-0"
+                          />
                           <span>{currentFolder.name}</span>
                         </span>
                       )}

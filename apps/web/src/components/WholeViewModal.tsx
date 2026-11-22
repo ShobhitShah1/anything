@@ -9,13 +9,13 @@ import {
   ExternalLink,
   Edit3,
   Eye,
-  Folder as FolderIcon,
   Sparkles,
   Share2,
   Code2,
 } from 'lucide-react';
 import { SavedItem, Folder, MarkdownItem, NoteItem, CodeItem } from '../types';
 import { sound } from '../utils/sound';
+import { FolderAppIcon } from './FolderAppIcon';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SecretReveal } from './SecretReveal';
 import { XIcon } from './Icons';
@@ -162,7 +162,7 @@ export const WholeViewModal: React.FC<WholeViewModalProps> = ({
                 isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-100 text-zinc-700'
               }`}
             >
-              <FolderIcon className="w-3 h-3 text-indigo-400" />
+              <FolderAppIcon folder={currentFolder} className="w-3 h-3 text-indigo-400 shrink-0" />
               <span>{currentFolder.name}</span>
             </span>
           )}

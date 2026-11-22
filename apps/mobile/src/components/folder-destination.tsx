@@ -16,6 +16,7 @@ import { useCollection } from '../state/collection';
 import { radius, type } from '../theme';
 import { Action, Field, IconButton } from './ui';
 import { Feedback } from './feedback';
+import { FolderAppIcon } from './folder-app-icon';
 
 export function FolderDestination({
   folders,
@@ -164,18 +165,27 @@ export function FolderDestination({
           >
             SAVE TO
           </Text>
-          <Text
-            allowFontScaling={false}
-            numberOfLines={1}
-            style={{ color: colors.ink, fontSize: 15, lineHeight: 19, fontWeight: '600' }}
-          >
-            {selected?.parentPath ? (
-              <Text allowFontScaling={false} style={{ color: colors.muted, fontWeight: '400' }}>
-                {selected.parentPath} /{' '}
-              </Text>
-            ) : null}
-            {selected?.folder.name || 'Main collection'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {selected && <FolderAppIcon folder={selected.folder} size={15} />}
+            <Text
+              allowFontScaling={false}
+              numberOfLines={1}
+              style={{
+                color: colors.ink,
+                fontSize: 15,
+                lineHeight: 19,
+                fontWeight: '600',
+                flexShrink: 1,
+              }}
+            >
+              {selected?.parentPath ? (
+                <Text allowFontScaling={false} style={{ color: colors.muted, fontWeight: '400' }}>
+                  {selected.parentPath} /{' '}
+                </Text>
+              ) : null}
+              {selected?.folder.name || 'Main collection'}
+            </Text>
+          </View>
         </View>
         <ChevronDown size={16} color={colors.muted} />
       </Pressable>
@@ -316,6 +326,7 @@ export function FolderDestination({
                 renderItem={({ item }) => (
                   <FolderBrowserRow
                     label={item.folder.name}
+                    folder={item.folder}
                     detail={[
                       item.finds && `${item.finds} ${item.finds === 1 ? 'find' : 'finds'}`,
                       item.children &&
@@ -409,6 +420,7 @@ function FolderBrowserRow({
   selected,
   depth = 0,
   colors,
+  folder,
   icon: Icon = Folder,
   onPress,
   onCreateSubfolder,
@@ -418,6 +430,7 @@ function FolderBrowserRow({
   selected: boolean;
   depth?: number;
   colors: ReturnType<typeof useCollection>['colors'];
+  folder?: FolderRecord;
   icon?: typeof Folder;
   onPress: () => void;
   onCreateSubfolder?: () => void;
@@ -449,7 +462,11 @@ function FolderBrowserRow({
           opacity: pressed ? 0.66 : 1,
         })}
       >
-        <Icon size={20} color={selected ? colors.accent : colors.muted} strokeWidth={1.5} />
+        {folder ? (
+          <FolderAppIcon folder={folder} size={20} strokeWidth={1.5} />
+        ) : (
+          <Icon size={20} color={selected ? colors.accent : colors.muted} strokeWidth={1.5} />
+        )}
         <View style={{ flex: 1, gap: 1 }}>
           <Text
             allowFontScaling={false}

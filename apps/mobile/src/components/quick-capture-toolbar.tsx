@@ -61,11 +61,9 @@ export const QuickCaptureToolbar = memo(function QuickCaptureToolbar({
           : result && ai.generated?.truncated
             ? 'Length limit reached. Edit or undo to continue.'
             : '');
-  const hint = ai.enabled ? 'Describe what you want AI to make' : 'Write, paste, or dictate';
-
   return (
     <View style={styles.toolbar}>
-      {(status || !hasText) && (
+      {!!status && (
         <View style={styles.statusRow}>
           <Text
             allowFontScaling={false}
@@ -73,7 +71,7 @@ export const QuickCaptureToolbar = memo(function QuickCaptureToolbar({
             numberOfLines={1}
             style={{ flex: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }}
           >
-            {status || hint}
+            {status}
           </Text>
         </View>
       )}

@@ -12,12 +12,12 @@ import {
   Link2,
   Code2,
   BookOpen,
-  Folder as FolderIcon,
 } from 'lucide-react';
 import { SavedItem, Folder } from '../types';
 import { getItemTitle } from '../utils/itemTitle';
 import { sound } from '../utils/sound';
 import { InstagramIcon, XIcon } from './Icons';
+import { FolderAppIcon } from './FolderAppIcon';
 import { useCollectionVirtualizer } from '../hooks/useCollectionVirtualizer';
 
 interface ListViewProps {
@@ -117,7 +117,7 @@ const ListRow = React.memo(function ListRow({
             <span
               className={`memory-list-folder inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${isDark ? 'bg-indigo-950/40 text-indigo-300 border border-indigo-900/60' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'}`}
             >
-              <FolderIcon className="w-2.5 h-2.5 text-indigo-400" />
+              <FolderAppIcon folder={folderName} className="w-2.5 h-2.5 text-indigo-400 shrink-0" />
               <span>{folderName}</span>
             </span>
           )}

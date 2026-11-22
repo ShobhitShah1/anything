@@ -18,12 +18,12 @@ import {
   FileText,
   Link2,
   Image as ImageIcon,
-  Folder as FolderIcon,
 } from 'lucide-react';
 import { SavedItem } from '../types';
 import { sound } from '../utils/sound';
 import { SecretReveal } from './SecretReveal';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { FolderAppIcon } from './FolderAppIcon';
 import confetti from 'canvas-confetti';
 
 interface CardItemProps {
@@ -381,7 +381,7 @@ export const CardItem = React.memo(function CardItem({
               <span>
                 {folderName ? (
                   <>
-                    <FolderIcon />
+                    <FolderAppIcon folder={folderName} className="w-3 h-3 inline-block shrink-0" />
                     {folderName}
                   </>
                 ) : item.tags?.[0] ? (
@@ -393,7 +393,7 @@ export const CardItem = React.memo(function CardItem({
             )}
             {item.type === 'link' && folderName ? (
               <span className="memory-folder" title={folderName}>
-                <FolderIcon />
+                <FolderAppIcon folder={folderName} className="w-3 h-3 inline-block shrink-0" />
                 {folderName}
               </span>
             ) : (

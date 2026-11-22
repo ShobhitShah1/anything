@@ -41,6 +41,7 @@ import { MarkdownContent } from './markdown-content';
 import { fonts, radius, space, type } from '../theme';
 import { hasSupportedCodeExtension, languageFromPath } from '../utils/code-format';
 import { normalizeUrl } from '../shared/utils/fetchPreview';
+import { getFolderAppKey } from '../shared/utils/storage';
 import {
   readLocalCredential,
   saveLocalCredential,
@@ -250,6 +251,23 @@ export function CaptureEditor() {
   const suggestedTags = detectedInfo
     ? suggestClipboardTags(text).filter((tag) => !tags.includes(tag) && tag !== tagDraft.trim())
     : [];
+
+  useEffect(() => {
+    if (!folderId && !existing && detectedInfo) {
+      const targetKey =
+        detectedInfo.type === 'instagram_post'
+          ? 'instagram'
+          : detectedInfo.type === 'x_post'
+            ? 'x'
+            : detectedInfo.type === 'reddit_post'
+              ? 'reddit'
+              : '';
+      if (targetKey) {
+        const match = data.folders.find((f) => getFolderAppKey(f) === targetKey);
+        if (match) setFolderId(match.id);
+      }
+    }
+  }, [detectedInfo, folderId, existing, data.folders]);
   const tagActionLabel = tagCount
     ? `Edit ${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}`
     : kind === 'auto' && suggestedTags.length

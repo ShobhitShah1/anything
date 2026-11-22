@@ -93,7 +93,7 @@ function SettingsRow({
   onPress?: () => void;
   divided?: boolean;
 }) {
-  const { colors } = useCollection();
+  const { colors, dark } = useCollection();
   const content = (
     <View
       style={{
@@ -104,7 +104,7 @@ function SettingsRow({
         alignItems: 'center',
         gap: 12,
         borderTopWidth: divided ? 1 : 0,
-        borderTopColor: colors.line,
+        borderTopColor: dark ? 'rgba(255, 255, 255, 0.03)' : colors.line,
       }}
     >
       <View style={{ flex: 1, gap: 4 }}>
