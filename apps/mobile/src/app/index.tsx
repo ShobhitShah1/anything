@@ -40,9 +40,9 @@ import {
   X,
   Undo2,
   ArrowDownUp,
-  LayoutGrid,
-  List,
-  Maximize2,
+  Grid2X2,
+  Rows3,
+  Expand,
   Clipboard,
   Folder,
   Plus,
@@ -60,6 +60,7 @@ import { SaveCard, type CardAnchor } from '../components/save-card';
 import { CollectionCell, CollectionMotion } from '../components/collection-motion';
 import { itemText } from '../utils/item';
 import { draftItem } from '../utils/draft';
+import { autoDetectClipboardContent } from '../shared/utils/clipboard';
 import { captureScroll } from '../utils/capture-scroll';
 import { captureFrame } from '../utils/capture-frame';
 import { useQuickAi } from '../components/use-quick-ai';
@@ -95,14 +96,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: -6,
-  },
-  viewButton: {
-    width: 40,
-    height: 44,
-    borderRadius: 10,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 
@@ -160,6 +153,10 @@ export default function Home() {
 
   const ai = useQuickAi(captureOpen, quickText, setQuickText);
   const hasText = Boolean(quickText.trim());
+  const quickCode = useMemo(
+    () => hasText && autoDetectClipboardContent(quickText).type === 'code',
+    [hasText, quickText],
+  );
   const rendered =
     captureOpen &&
     !!ai.generated &&
@@ -321,7 +318,7 @@ export default function Home() {
     return {
       opacity: interpolate(scroll, [0, 1], [1, 0]) * interpolate(expand, [0, 0.45], [1, 0]),
       transform: [
-        { translateX: interpolate(scroll, [0, 1], [0, -38]) },
+        { translateX: interpolate(scroll, [0, 1], [0, -34]) },
         { translateY: interpolate(expand, [0, 0.45], [0, -5]) },
       ],
     };
@@ -501,9 +498,9 @@ export default function Home() {
   const controls = (
     <View
       onLayout={({ nativeEvent }) => setControlsHeight(nativeEvent.layout.height)}
-      style={{ paddingHorizontal: 6, paddingTop: 6, paddingBottom: 10, gap: 4 }}
+      style={{ paddingHorizontal: 6, paddingTop: 4, paddingBottom: 4, gap: 2 }}
     >
-      <View style={{ marginBottom: 8 }}>
+      <View>
         <CollectionSearch
           label={folderName ? `Search ${folderName}` : 'Search saves'}
           placeholder={folderName ? `Search ${folderName}\u2026` : 'Find it again\u2026'}
@@ -566,29 +563,26 @@ export default function Home() {
 
         <View style={styles.viewButtons}>
           {[
-            { value: 'grid', label: 'Grid view', Icon: LayoutGrid },
-            { value: 'list', label: 'List view', Icon: List },
-            { value: 'focus', label: 'Focus view', Icon: Maximize2 },
+            { value: 'grid', label: 'Grid view', Icon: Grid2X2 },
+            { value: 'list', label: 'List view', Icon: Rows3 },
+            { value: 'focus', label: 'Focus view', Icon: Expand },
           ].map(({ value, label, Icon }) => (
-            <Pressable
+            <IconButton
               key={value}
-              accessibilityRole="tab"
-              accessibilityLabel={label}
-              accessibilityState={{ selected: layout === value }}
+              label={label}
+              icon={Icon}
+              active={layout === value}
+              activeBackground={false}
+              width={40}
+              iconSize={value === 'focus' ? 18 : 20}
+              hitSlop={2}
               onPress={() => {
                 if (layout !== value) {
                   prepareTransition();
                   setLayout(value);
                 }
               }}
-              style={styles.viewButton}
-            >
-              <Icon
-                size={20}
-                color={layout === value ? colors.ink : colors.muted}
-                strokeWidth={2}
-              />
-            </Pressable>
+            />
           ))}
         </View>
       </View>
@@ -625,7 +619,7 @@ export default function Home() {
             style={[
               {
                 position: 'absolute',
-                left: 38,
+                left: 34,
                 color: colors.ink,
                 fontSize: 20,
                 fontWeight: '600',
@@ -848,7 +842,7 @@ export default function Home() {
                     width: '100%',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    gap: 16,
+                    gap: 12,
                   }}
                 >
                   <Text
@@ -919,7 +913,12 @@ export default function Home() {
                       setFilter('all');
                       router.setParams({ folder: '' });
                     }}
-                    style={{ padding: 14 }}
+                    style={{
+                      minHeight: 44,
+                      paddingHorizontal: 14,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     <Text allowFontScaling={false} style={{ color: colors.accent }}>
                       See all finds
@@ -1042,17 +1041,22 @@ export default function Home() {
                 onFocus={() => setCaptureOpen(true)}
                 editable={!saving && !aiWorking}
                 multiline={captureOpen}
+                scrollEnabled={captureOpen}
                 numberOfLines={captureOpen ? undefined : 1}
                 textAlignVertical={captureOpen ? 'top' : 'center'}
                 style={{
                   display: rendered || generating ? 'none' : 'flex',
                   flex: 1,
+                  minHeight: 0,
                   minWidth: 0,
                   paddingHorizontal: captureOpen ? 20 : 0,
-                  paddingTop: captureOpen ? 16 : 0,
-                  paddingBottom: captureOpen ? 16 : 0,
-                  fontSize: 17,
-                  lineHeight: 26,
+                  paddingTop: captureOpen ? (quickCode ? 14 : 4) : 0,
+                  paddingBottom: captureOpen ? (quickCode ? 14 : 12) : 0,
+                  fontFamily: captureOpen && quickCode ? fonts.mono : undefined,
+                  backgroundColor: 'transparent',
+                  fontSize: captureOpen && quickCode ? 14 : type.body.fontSize,
+                  lineHeight: captureOpen && quickCode ? 23 : type.body.lineHeight,
+                  includeFontPadding: false,
                   color: colors.ink,
                 }}
               />

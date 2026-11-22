@@ -61,19 +61,22 @@ export const QuickCaptureToolbar = memo(function QuickCaptureToolbar({
           : result && ai.generated?.truncated
             ? 'Length limit reached. Edit or undo to continue.'
             : '');
+  const hint = ai.enabled ? 'Describe what you want AI to make' : 'Write, paste, or dictate';
 
   return (
     <View style={styles.toolbar}>
-      <View style={styles.statusRow}>
-        <Text
-          allowFontScaling={false}
-          accessibilityLiveRegion="polite"
-          numberOfLines={1}
-          style={{ flex: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }}
-        >
-          {status}
-        </Text>
-      </View>
+      {(status || !hasText) && (
+        <View style={styles.statusRow}>
+          <Text
+            allowFontScaling={false}
+            accessibilityLiveRegion="polite"
+            numberOfLines={1}
+            style={{ flex: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }}
+          >
+            {status || hint}
+          </Text>
+        </View>
+      )}
       <View style={styles.row}>
         <View style={styles.side}>
           <Pressable
@@ -237,6 +240,7 @@ const VoiceBar = memo(function VoiceBar({
 const styles = StyleSheet.create({
   toolbar: {
     paddingHorizontal: 20,
+    paddingTop: 12,
     paddingBottom: 12,
     width: '100%',
     maxWidth: 720,

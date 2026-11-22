@@ -215,12 +215,9 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
   const handleVoiceError = useEffectEvent((error: string, message: string, code?: number) => {
     logVoice('native-error', { error, code, message });
     if (recognizing.current && error !== 'aborted') voiceSession.current.reason = `error:${error}`;
-    if (recognizing.current && error !== 'aborted') {
-      const detail =
-        error === 'no-speech' ? 'No speech detected. Tap the mic to try again.' : message;
-
-      setVoiceError(detail);
-      fail(new Error(detail));
+    if (recognizing.current && error !== 'aborted' && error !== 'no-speech') {
+      setVoiceError(message);
+      fail(new Error(message));
     }
   });
   const handleVoiceEnd = useEffectEvent(() => {
@@ -245,7 +242,7 @@ export function useQuickAi(active: boolean, text: string, setText: (text: string
     voiceDraft.current = null;
     voiceLevel.set(withTiming(0, { duration: 160 }));
     if (live.current) {
-      if (message) {
+      if (message && !(session.started && !session.resultEvents && !session.reason)) {
         setVoiceError(message);
         fail(new Error(message));
       }

@@ -1,6 +1,6 @@
 import { BlurTargetView } from 'expo-blur';
 import { useScrollHeader } from './use-scroll-header';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { NavigationBar } from 'expo-navigation-bar';
@@ -208,6 +208,7 @@ export function CaptureEditor() {
       .catch((error: unknown) => {
         if (active) setError(error instanceof Error ? error.message : 'Could not open credential.');
       });
+
     return () => {
       active = false;
     };
@@ -347,6 +348,7 @@ export function CaptureEditor() {
     const [cover, ...additionalImages] = images;
     const imageItem = draftItem('image', cover.uri, title, target, randomUUID);
     if (imageItem.type !== 'image') throw new Error('Could not prepare these images.');
+
     return {
       ...imageItem,
       caption: imageCaption.trim() || undefined,
@@ -466,7 +468,11 @@ export function CaptureEditor() {
             ? 'Saved to your collection'
             : `Saved ${items.length} finds`,
       );
-      close();
+      if (!existing && items.length === 1) {
+        router.replace({ pathname: '/item/[id]', params: { id: items[0].id } });
+      } else {
+        close();
+      }
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Could not save. Your draft is still here.',

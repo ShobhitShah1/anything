@@ -13,6 +13,7 @@ import { UpdateNotice } from '../components/update-notice';
 import { LaunchScreen } from '../components/launch-screen';
 import { loadSubscription } from '../services/subscription';
 import { SignInSheet } from '../components/sign-in-sheet';
+import { ShareIntentListener } from '../components/share-intent-listener';
 import { billingClient } from '../services/billing';
 import { hasPro } from '../utils/billing-config';
 import { confirmedFreeAccount } from '../utils/ad-eligibility';
@@ -140,6 +141,7 @@ export default function Layout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <CollectionProvider>
+          <ShareIntentListener />
           <LaunchScreen>
             <Routes />
           </LaunchScreen>

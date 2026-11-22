@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { cardWidths } from './card-widths.ts';
 import { imageSet, itemImage, itemText, typeLabel } from './item.ts';
-import { getItemTitle } from '../shared/utils/itemTitle.ts';
+import { getItemTitle, noteBodyAfterTitle } from '../shared/utils/itemTitle.ts';
 
 const colors = {
   ink: '#eee',
@@ -60,11 +60,13 @@ function load(component) {
       if (name === '../utils/open-link') return { openLink: async () => {} };
       if (name === '../utils/card-widths') return { cardWidths };
       if (name === '../utils/item') return { imageSet, itemImage, itemText, typeLabel };
-      if (name === '../shared/utils/itemTitle') return { getItemTitle };
+      if (name === '../shared/utils/itemTitle') return { getItemTitle, noteBodyAfterTitle };
       if (name === './markdown-content') return { MarkdownContent: 'MarkdownContent' };
       if (name === './collection-motion')
         return { CardFrame: 'CardFrame', MotionPosition: 'MotionPosition' };
       if (name === './adaptive-image') return { AdaptiveImage: 'AdaptiveImage' };
+      if (name === '../utils/code-format')
+        return { languageFromPath: () => 'text', codePreviewMarkdown: (_lang, code) => code };
       throw new Error(`Unexpected module: ${name}`);
     },
   });

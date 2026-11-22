@@ -28,7 +28,7 @@ export function FilterChips<T extends string>({
       edgeInset={edgeInset}
       value={value}
       onSelect={onSelect}
-      options={options ?? (homeFilters as readonly { value: T; label: string }[])}
+      options={options ?? (homeFilters as unknown as readonly { value: T; label: string }[])}
     />
   );
 }

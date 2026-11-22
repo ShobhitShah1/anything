@@ -115,15 +115,21 @@ export function IconButton({
   icon: Icon,
   onPress,
   active,
+  activeBackground = true,
   disabled,
   width = 44,
+  iconSize = 20,
+  hitSlop,
 }: {
   label: string;
   icon: LucideIcon;
   onPress: () => void;
   active?: boolean;
+  activeBackground?: boolean;
   disabled?: boolean;
   width?: number;
+  iconSize?: number;
+  hitSlop?: number;
 }) {
   const { colors } = useCollection();
 
@@ -133,6 +139,7 @@ export function IconButton({
       accessibilityLabel={label}
       accessibilityState={{ selected: active, disabled }}
       disabled={disabled}
+      hitSlop={hitSlop}
       onPress={onPress}
       style={{
         width,
@@ -140,10 +147,10 @@ export function IconButton({
         borderRadius: radius.pill,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: active ? colors.soft : 'transparent',
+        backgroundColor: active && activeBackground ? colors.soft : 'transparent',
       }}
     >
-      <Icon size={20} color={active ? colors.ink : colors.muted} strokeWidth={1.7} />
+      <Icon size={iconSize} color={active ? colors.ink : colors.muted} strokeWidth={1.7} />
     </Pressable>
   );
 }

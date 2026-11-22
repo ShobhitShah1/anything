@@ -1,6 +1,6 @@
 import type { SavedItem } from '../shared/types';
 import { normalizeUrl } from '../shared/utils/fetchPreview.ts';
-import { noteTitleFromContent } from '../shared/utils/itemTitle';
+import { noteTitleFromContent } from '../shared/utils/itemTitle.ts';
 export type DraftKind =
   'auto' | 'note' | 'checklist' | 'link' | 'image' | 'markdown' | 'code' | 'secret' | 'credential';
 export function draftItem(

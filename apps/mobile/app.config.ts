@@ -76,6 +76,23 @@ const config: ExpoConfig = {
     'react-native-fast-image',
     'expo-web-browser',
     'expo-asset',
+    [
+      'expo-share-intent',
+      {
+        iosShareExtensionName: 'Anything Share Extension',
+        iosAppGroupIdentifier: 'group.app.anything.mobile',
+        iosActivationRules: {
+          NSExtensionActivationSupportsWebURLWithMaxCount: 1,
+          NSExtensionActivationSupportsWebPageWithMaxCount: 1,
+          NSExtensionActivationSupportsText: true,
+          NSExtensionActivationSupportsImageWithMaxCount: 10,
+          NSExtensionActivationSupportsMovieWithMaxCount: 1,
+          NSExtensionActivationSupportsFileWithMaxCount: 5,
+        },
+        androidIntentFilters: ['text/*', 'image/*', '*/*'],
+        androidMultiIntentFilters: ['image/*'],
+      },
+    ],
     ...(admobAndroidAppId && admobIosAppId
       ? [
           [

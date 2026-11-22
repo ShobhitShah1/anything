@@ -63,9 +63,13 @@ export function ChipRow<T extends string>({
     indicatorWidth.set(animate ? withTiming(rect.width, config) : rect.width);
     indicatorValue.current = value;
 
-    if (!didInitialCenter.current && viewportWidth) {
-      didInitialCenter.current = true;
-      center(value, false);
+    if (viewportWidth) {
+      if (!didInitialCenter.current) {
+        didInitialCenter.current = true;
+        center(value, false);
+      } else if (animate) {
+        center(value);
+      }
     }
   }, [center, indicatorWidth, indicatorX, reduced, value, viewportWidth]);
 

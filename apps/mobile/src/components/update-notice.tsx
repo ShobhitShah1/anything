@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   AppState,
   Image,
   Modal,
+  Platform,
   Pressable,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
 import * as Updates from 'expo-updates';
+import * as StoreUpdates from 'expo-in-app-updates';
 import { RotateCw } from 'lucide-react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,23 +26,63 @@ export function UpdateNotice() {
   const sheetWidth = Math.min(width, 520);
   const reducedMotion = useReducedMotion();
   const checking = useRef(false);
+  const storeChecked = useRef(false);
   const [restartError, setRestartError] = useState(false);
   const { isRestarting, isUpdatePending } = Updates.useUpdates();
 
   useEffect(() => {
-    if (__DEV__ || !Updates.isEnabled) return;
+    if (__DEV__) return;
 
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState !== 'active' || checking.current) return;
+    const checkForUpdates = async () => {
+      if (checking.current) return;
 
       checking.current = true;
-      void Updates.checkForUpdateAsync()
-        .then((result) => (result.isAvailable ? Updates.fetchUpdateAsync() : undefined))
-        .catch(() => {})
-        .finally(() => {
-          checking.current = false;
-        });
+
+      try {
+        if (Updates.isEnabled) {
+          try {
+            const result = await Updates.checkForUpdateAsync();
+            if (result.isAvailable) {
+              await Updates.fetchUpdateAsync();
+
+              return;
+            }
+          } catch {
+            // A failed OTA check should not prevent checking the platform store.
+          }
+        }
+
+        if (storeChecked.current) return;
+
+        storeChecked.current = true;
+
+        if (Platform.OS === 'android') {
+          await StoreUpdates.checkAndStartUpdate();
+        } else if (Platform.OS === 'ios') {
+          const storeResult = await StoreUpdates.checkForUpdate();
+          if (storeResult.updateAvailable) {
+            Alert.alert('Update available', 'A newer version of Anything is available.', [
+              { text: 'Not now', style: 'cancel' },
+              {
+                text: 'Update',
+                isPreferred: true,
+                onPress: () => void StoreUpdates.startUpdate().catch(() => {}),
+              },
+            ]);
+          }
+        }
+      } catch {
+        // Store and network checks are best effort; keep the installed app usable offline.
+      } finally {
+        checking.current = false;
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') void checkForUpdates();
     });
+
+    void checkForUpdates();
 
     return () => subscription.remove();
   }, []);
