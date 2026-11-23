@@ -13,7 +13,8 @@
   "host_permissions": [
     "http://localhost/*",
     "http://127.0.0.1/*",
-    "https://shobhitshah1.github.io/*"
+    "https://shobhitshah1.github.io/*",
+    "https://anything.universallabs.space/*"
   ],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "optional_permissions": ["clipboardRead"],

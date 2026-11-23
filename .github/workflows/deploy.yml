@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy to Cloudflare Pages
 
 on:
   push:
@@ -9,18 +9,13 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: 'pages'
+  group: 'cloudflare-pages'
   cancel-in-progress: true
 
 jobs:
   build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -32,19 +27,6 @@ jobs:
           node-version: 24
           cache: 'npm'
           cache-dependency-path: apps/web/package-lock.json
-
-      - name: Check Pages configuration
-        id: pages
-        uses: actions/configure-pages@v5
-        continue-on-error: true
-
-      - name: Explain missing Pages setup
-        if: steps.pages.outcome == 'failure'
-        env:
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          echo "::error::Enable Pages first: https://github.com/$REPOSITORY/settings/pages - under Build and deployment, set Source to GitHub Actions, then re-run this workflow."
-          exit 1
 
       - name: Install dependencies
         run: npm ci --prefix apps/web
@@ -75,11 +57,9 @@ jobs:
       - name: Include product website and policies
         run: node apps/showcase/pages.mjs
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: './dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=anything --branch=main

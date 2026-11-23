@@ -81,7 +81,7 @@ export function renderLegalPage(config, key) {
   <meta name="theme-color" content="#101011" />
   <meta name="description" content="${escape(title)} for ${escape(config.product.name)}. ${escape(page.subtitle)}" />
   <title>${escape(title)} — ${escape(config.product.name)}</title>
-  <link rel="canonical" href="https://shobhitshah1.github.io/anything/about/${key}.html" />
+  <link rel="canonical" href="https://anything.universallabs.space/about/${key}.html" />
   <link rel="icon" type="image/png" href="assets/icon.png?v=folded-a-1" />
   <link rel="stylesheet" href="site.css" />
   <link rel="stylesheet" href="legal.css?v=20261027-centered" />

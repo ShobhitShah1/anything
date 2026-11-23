@@ -7,6 +7,8 @@
     "build": "npm run build --prefix apps/web",
     "lint": "npm run lint --prefix apps/web",
     "preview": "npm run preview --prefix apps/web",
+    "build:full": "npm run build --prefix apps/web && node apps/showcase/pages.mjs",
+    "deploy:cloudflare": "npm run build:full && npx wrangler pages deploy dist --project-name=anything --branch=main",
     "format": "npm --prefix apps/mobile exec -- prettier --write -- .",
     "format:check": "npm --prefix apps/mobile exec -- prettier --check -- .",
     "format:admin": "npm --prefix apps/mobile exec -- prettier --write -- apps/admin-console",
