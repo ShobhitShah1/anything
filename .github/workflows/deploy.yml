@@ -61,4 +61,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID || '44056c53642db656cc0cd2d4ced5f15b' }}
-        run: npx --yes wrangler pages deploy dist --project-name=anything --branch=main --commit-dirty=true
+        run: |
+          npx --yes wrangler pages project create anything --production-branch main || true
+          npx --yes wrangler pages deploy dist --project-name=anything --branch=main --commit-dirty=true
