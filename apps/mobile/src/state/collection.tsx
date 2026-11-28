@@ -21,7 +21,7 @@ import { cloudStore } from '../services/cloud-store';
 import { palettes } from '../theme';
 import { itemUrl } from '../utils/item';
 import { loadText, saveText } from '../utils/device-storage';
-import { guestLimitReached, GuestLimitError } from '../utils/guest-limit';
+import { GUEST_ITEM_LIMIT, guestLimitReached, GuestLimitError } from '../utils/guest-limit';
 import { deleteLocalCredential } from '../utils/local-credentials';
 import { DEFAULT_FOLDERS, getFolderMeta } from '../shared/utils/storage';
 
@@ -256,6 +256,11 @@ function useCollectionState() {
 
       await commit((value) => {
         const result = createQuickCaptures(text, value.items, linksOnly, folderId);
+        const items = [...result.items, ...value.items];
+
+        if (quiet && guestLimitReached(value.items, items, !!auth?.currentUser)) {
+          throw new GuestLimitError();
+        }
 
         created = result.items;
         if (!quiet)
@@ -265,7 +270,7 @@ function useCollectionState() {
               : 'Already in your collection',
           );
 
-        return created.length ? { ...value, items: [...created, ...value.items] } : value;
+        return created.length ? { ...value, items } : value;
       });
       enrich(created);
     },
@@ -284,14 +289,23 @@ function useCollectionState() {
     [commit, enrich],
   );
   const lastClipboard = useRef('');
+  const canCaptureClipboard =
+    ready && authReady && data.autoClipboard && (!!uid || data.items.length < GUEST_ITEM_LIMIT);
 
   useEffect(() => {
-    if (!ready || !data.autoClipboard) return;
+    if (!canCaptureClipboard) return;
 
     let checking = false;
     let disposed = false;
+    let recheck = false;
     const check = async () => {
-      if (disposed || AppState.currentState !== 'active' || checking) return;
+      if (disposed || AppState.currentState !== 'active') return;
+      if (checking) {
+        recheck = true;
+
+        return;
+      }
+
       checking = true;
       try {
         const text = (await Clipboard.getStringAsync()).trim();
@@ -309,6 +323,10 @@ function useCollectionState() {
         // Automatic clipboard checks stay quiet; persistence errors are reported by commit.
       } finally {
         checking = false;
+        if (recheck) {
+          recheck = false;
+          void check();
+        }
       }
     };
     const subscription = AppState.addEventListener('change', (state) => {
@@ -330,7 +348,7 @@ function useCollectionState() {
       subscription.remove();
       focusSubscription?.remove();
     };
-  }, [ready, data.autoClipboard, capture]);
+  }, [canCaptureClipboard, capture]);
   useEffect(() => {
     if (notice) {
       const timer = setTimeout(() => setNotice(''), 1800);

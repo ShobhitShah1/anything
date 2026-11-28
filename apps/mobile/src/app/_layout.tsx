@@ -62,6 +62,7 @@ function Routes() {
       client?.removeCustomerInfoUpdateListener(changed);
     };
   }, [uid, setMembership]);
+
   useEffect(() => {
     if (!ready || systemBackgroundSet.current) return;
     systemBackgroundSet.current = true;
@@ -69,6 +70,7 @@ function Routes() {
     // The native window color is only a startup fallback; screen surfaces follow collection state.
     // Updating both during a theme toggle repaints the window separately from the React views.
   }, [ready, colors.canvas]);
+
   if (!ready)
     return (
       <View

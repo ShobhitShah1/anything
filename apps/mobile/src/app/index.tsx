@@ -277,13 +277,16 @@ export default function Home() {
     },
     [captureHidden, onScroll],
   );
+
   const fullPanelHeight = Math.max(captureHeight, (viewHeight || height) - topInset);
+
   const panelHeight = useDerivedValue(() =>
     withTiming(expanded.get() ? fullPanelHeight : captureHeight, {
       duration: reducedMotion ? 0 : 240,
       easing: Easing.out(Easing.quad),
     }),
   );
+
   // The reveal clips a fixed-size editor so expansion does not reflow its text each frame.
   const captureBodyStyle = useAnimatedStyle(() => {
     const frame = captureFrame(
@@ -297,12 +300,14 @@ export default function Home() {
 
     return { height: frame.height, paddingBottom: frame.paddingBottom };
   });
+
   const expandProgress = useDerivedValue(() =>
     withTiming(expanded.get() ? 1 : 0, {
       duration: reducedMotion ? 0 : 240,
       easing: Easing.out(Easing.quad),
     }),
   );
+
   const homeHeaderStyle = useAnimatedStyle(() => {
     const p = expandProgress.get();
 
@@ -311,6 +316,7 @@ export default function Home() {
       transform: [{ translateY: interpolate(p, [0, 0.45], [0, -5]) }],
     };
   });
+
   const brandNameStyle = useAnimatedStyle(() => {
     const scroll = brandScrollProgress.get();
     const expand = expandProgress.get();
@@ -323,6 +329,7 @@ export default function Home() {
       ],
     };
   });
+
   const captureHeaderStyle = useAnimatedStyle(() => {
     const p = expandProgress.get();
 
@@ -331,6 +338,7 @@ export default function Home() {
       transform: [{ translateY: interpolate(p, [0.4, 1], [5, 0]) }],
     };
   });
+
   const scrollOffset = useDerivedValue(() =>
     withTiming(
       captureHidden.get() && !capturePinned.get() && !reducedMotion
@@ -339,6 +347,7 @@ export default function Home() {
       { duration: reducedMotion ? 0 : 180, easing: Easing.bezier(0.23, 1, 0.32, 1) },
     ),
   );
+
   const captureStyle = useAnimatedStyle(() => {
     const hidden = captureHidden.get() && !capturePinned.get();
     const frame = captureFrame(
@@ -360,6 +369,7 @@ export default function Home() {
       ],
     };
   });
+
   const selectionShapeStyle = useAnimatedStyle(() => {
     const progress = selectionMorph.get();
     const frame = captureFrame(
@@ -388,6 +398,7 @@ export default function Home() {
       ],
     };
   });
+
   const selectionBarStyle = useAnimatedStyle(() => {
     const progress = selectionMorph.get();
     const targetY = captureHeight / 2 - insets.bottom - 12 - 28;
@@ -412,8 +423,11 @@ export default function Home() {
       importantForAccessibility: hidden ? 'no-hide-descendants' : 'auto',
     };
   });
+
   const captureInset = selecting ? insets.bottom + 88 : captureHeight + 20;
+
   const columns = layout === 'grid' ? (width >= 800 ? 3 : width >= 350 ? 2 : 1) : 1;
+
   const items = useMemo(
     () =>
       data.items
@@ -448,8 +462,10 @@ export default function Home() {
 
     return () => clearTimeout(timer);
   }, [items, layout, motionEnabled]);
+
   // Keep the ad setup intact, but hide its collection placement for now.
   const showCollectionAd = false;
+
   const quickSave = async (draft?: string) => {
     if (saving) return;
     setSaving(true);
@@ -484,17 +500,22 @@ export default function Home() {
       setSaving(false);
     }
   };
+
   const quickSaveText = () => void quickSave(quickText);
+
   const handleEdit = useCallback(() => {
     setEditingId(rendered ? ai.generated!.id : null);
     if (rendered) requestAnimationFrame(() => quickRef.current?.focus());
     else Keyboard.dismiss();
   }, [rendered, ai.generated]);
+
   const collectionMotion = useMemo(
     () => ({ enabled: motionEnabled, ids: items.map((item) => item.id), liftedId }),
     [motionEnabled, items, liftedId],
   );
+
   const folderName = data.folders.find((value) => value.id === folder)?.name;
+
   const controls = (
     <View
       onLayout={({ nativeEvent }) => setControlsHeight(nativeEvent.layout.height)}
@@ -588,6 +609,7 @@ export default function Home() {
       </View>
     </View>
   );
+
   const screenOptions = useMemo(
     () => ({
       ...headerOptions,
@@ -783,6 +805,7 @@ export default function Home() {
       style={{ flex: 1, backgroundColor: colors.canvas }}
     >
       <Stack.Screen options={screenOptions} />
+
       {data.items.length ? (
         <CollectionMotion value={collectionMotion}>
           <View
@@ -943,6 +966,7 @@ export default function Home() {
           />
         </View>
       )}
+
       <Animated.View
         pointerEvents="none"
         style={[
@@ -961,6 +985,7 @@ export default function Home() {
           selectionShapeStyle,
         ]}
       />
+
       <Animated.View
         pointerEvents={selecting ? 'none' : 'auto'}
         collapsable={false}
@@ -981,146 +1006,143 @@ export default function Home() {
           captureStyle,
         ]}
       >
-          <Animated.View
-            style={[
-              { position: 'absolute', left: 0, right: 0, bottom: 0 },
-              captureBodyStyle,
-              captureContentStyle,
-            ]}
+        <Animated.View
+          style={[
+            { position: 'absolute', left: 0, right: 0, bottom: 0 },
+            captureBodyStyle,
+            captureContentStyle,
+          ]}
+        >
+          {captureOpen && (
+            <AiEditorLight
+              active={ai.enabled || ['listening', 'starting', 'finishing'].includes(ai.phase)}
+              working={aiWorking}
+            />
+          )}
+          <View
+            style={{
+              flex: 1,
+              minHeight: 0,
+              flexDirection: 'row',
+              maxWidth: 720,
+              width: '100%',
+              alignSelf: 'center',
+            }}
           >
-            {captureOpen && (
-              <AiEditorLight
-                active={ai.enabled || ['listening', 'starting', 'finishing'].includes(ai.phase)}
-                working={aiWorking}
-              />
-            )}
-            <View
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open full capture screen"
+              disabled={saving}
+              onPress={() => openCapture()}
               style={{
-                flex: 1,
-                minHeight: 0,
-                flexDirection: 'row',
-                maxWidth: 720,
-                width: '100%',
-                alignSelf: 'center',
+                display: captureOpen ? 'none' : 'flex',
+                width: 54,
+                minHeight: 58,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Open full capture screen"
-                disabled={saving}
-                onPress={() => openCapture()}
-                style={{
-                  display: captureOpen ? 'none' : 'flex',
-                  width: 54,
-                  minHeight: 58,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+              <Plus size={22} color={colors.accent} strokeWidth={1.5} />
+            </Pressable>
+            <TextInput
+              allowFontScaling={false}
+              ref={quickRef}
+              accessibilityLabel={
+                captureOpen && ai.enabled ? 'What should AI make?' : 'Quick add text'
+              }
+              placeholder={captureOpen && ai.enabled ? 'What should I make?' : 'Keep something...'}
+              placeholderTextColor={colors.muted}
+              value={quickText}
+              autoCorrect={false}
+              autoCapitalize="none"
+              selection={
+                ai.phase === 'streaming' || ai.phase === 'listening' || ai.phase === 'finishing'
+                  ? { start: quickText.length, end: quickText.length }
+                  : undefined
+              }
+              onChangeText={setQuickText}
+              onFocus={() => setCaptureOpen(true)}
+              editable={!saving && !aiWorking}
+              multiline={captureOpen}
+              scrollEnabled={captureOpen}
+              numberOfLines={captureOpen ? undefined : 1}
+              textAlignVertical={captureOpen ? 'top' : 'center'}
+              style={{
+                display: rendered || generating ? 'none' : 'flex',
+                flex: 1,
+                minHeight: 0,
+                minWidth: 0,
+                paddingHorizontal: captureOpen ? 20 : 0,
+                paddingTop: captureOpen ? (quickCode ? 14 : 16) : 0,
+                paddingBottom: captureOpen ? (quickCode ? 14 : 16) : 0,
+                fontFamily: captureOpen && quickCode ? fonts.mono : undefined,
+                backgroundColor: 'transparent',
+                fontSize: captureOpen && quickCode ? 14 : type.body.fontSize,
+                lineHeight: captureOpen && quickCode ? 23 : type.body.lineHeight,
+                includeFontPadding: false,
+                color: colors.ink,
+              }}
+            />
+            {(rendered || generating) && (
+              <ScrollView
+                ref={responseRef}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ padding: 24, paddingTop: 28, paddingBottom: 32 }}
+                onScroll={({ nativeEvent: { contentOffset, contentSize, layoutMeasurement } }) => {
+                  followResponse.current =
+                    contentOffset.y + layoutMeasurement.height >= contentSize.height - 64;
+                }}
+                scrollEventThrottle={100}
+                onContentSizeChange={() => {
+                  if (ai.phase === 'streaming' && followResponse.current)
+                    responseRef.current?.scrollToEnd({ animated: false });
                 }}
               >
-                <Plus size={22} color={colors.accent} strokeWidth={1.5} />
-              </Pressable>
-              <TextInput
-                allowFontScaling={false}
-                ref={quickRef}
-                accessibilityLabel={
-                  captureOpen && ai.enabled ? 'What should AI make?' : 'Quick add text'
-                }
-                placeholder={
-                  captureOpen && ai.enabled ? 'What should I make?' : 'Keep something...'
-                }
-                placeholderTextColor={colors.muted}
-                value={quickText}
-                autoCorrect={false}
-                autoCapitalize="none"
-                selection={
-                  ai.phase === 'streaming' || ai.phase === 'listening' || ai.phase === 'finishing'
-                    ? { start: quickText.length, end: quickText.length }
-                    : undefined
-                }
-                onChangeText={setQuickText}
-                onFocus={() => setCaptureOpen(true)}
-                editable={!saving && !aiWorking}
-                multiline={captureOpen}
-                scrollEnabled={captureOpen}
-                numberOfLines={captureOpen ? undefined : 1}
-                textAlignVertical={captureOpen ? 'top' : 'center'}
-                style={{
-                  display: rendered || generating ? 'none' : 'flex',
-                  flex: 1,
-                  minHeight: 0,
-                  minWidth: 0,
-                  paddingHorizontal: captureOpen ? 20 : 0,
-                  paddingTop: captureOpen ? (quickCode ? 14 : 16) : 0,
-                  paddingBottom: captureOpen ? (quickCode ? 14 : 16) : 0,
-                  fontFamily: captureOpen && quickCode ? fonts.mono : undefined,
-                  backgroundColor: 'transparent',
-                  fontSize: captureOpen && quickCode ? 14 : type.body.fontSize,
-                  lineHeight: captureOpen && quickCode ? 23 : type.body.lineHeight,
-                  includeFontPadding: false,
-                  color: colors.ink,
-                }}
-              />
-              {(rendered || generating) && (
-                <ScrollView
-                  ref={responseRef}
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ padding: 24, paddingTop: 28, paddingBottom: 32 }}
-                  onScroll={({
-                    nativeEvent: { contentOffset, contentSize, layoutMeasurement },
-                  }) => {
-                    followResponse.current =
-                      contentOffset.y + layoutMeasurement.height >= contentSize.height - 64;
-                  }}
-                  scrollEventThrottle={100}
-                  onContentSizeChange={() => {
-                    if (ai.phase === 'streaming' && followResponse.current)
-                      responseRef.current?.scrollToEnd({ animated: false });
-                  }}
-                >
-                  <AiResponseStatus
-                    prompt={
-                      generating && ai.phase === 'thinking' ? quickText : ai.generated?.prompt || ''
-                    }
-                    phase={generationPhase}
-                  />
-                  {ai.phase !== 'thinking' && (
-                    <MarkdownContent text={quickText} streaming={ai.phase === 'streaming'} />
-                  )}
-                </ScrollView>
-              )}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Paste and save clipboard"
-                accessibilityState={{ disabled: saving, busy: saving }}
-                disabled={saving}
-                onPress={() => void quickSave()}
-                style={{
-                  display: captureOpen ? 'none' : 'flex',
-                  minHeight: 58,
-                  paddingHorizontal: 18,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {saving ? (
-                  <ActivityIndicator color={colors.accent} />
-                ) : (
-                  <Clipboard size={19} color={colors.accent} strokeWidth={1.6} />
+                <AiResponseStatus
+                  prompt={
+                    generating && ai.phase === 'thinking' ? quickText : ai.generated?.prompt || ''
+                  }
+                  phase={generationPhase}
+                />
+                {ai.phase !== 'thinking' && (
+                  <MarkdownContent text={quickText} streaming={ai.phase === 'streaming'} />
                 )}
-              </Pressable>
-            </View>
-            {captureOpen && (
-              <QuickCaptureToolbar
-                ai={ai}
-                hasText={hasText}
-                saving={saving}
-                rendered={rendered}
-                onEdit={handleEdit}
-                onSave={quickSaveText}
-              />
+              </ScrollView>
             )}
-          </Animated.View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Paste and save clipboard"
+              accessibilityState={{ disabled: saving, busy: saving }}
+              disabled={saving}
+              onPress={() => void quickSave()}
+              style={{
+                display: captureOpen ? 'none' : 'flex',
+                minHeight: 58,
+                paddingHorizontal: 18,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {saving ? (
+                <ActivityIndicator color={colors.accent} />
+              ) : (
+                <Clipboard size={19} color={colors.accent} strokeWidth={1.6} />
+              )}
+            </Pressable>
+          </View>
+          {captureOpen && (
+            <QuickCaptureToolbar
+              ai={ai}
+              hasText={hasText}
+              saving={saving}
+              rendered={rendered}
+              onEdit={handleEdit}
+              onSave={quickSaveText}
+            />
+          )}
+        </Animated.View>
       </Animated.View>
+
       <Animated.View
         pointerEvents={selecting ? 'box-none' : 'none'}
         accessibilityElementsHidden={!selecting}
@@ -1205,6 +1227,7 @@ export default function Home() {
           </View>
         )}
       </Animated.View>
+
       {deleteIds && (
         <DeleteSheet
           open
@@ -1221,6 +1244,7 @@ export default function Home() {
           }}
         />
       )}
+
       {contextItem && context && (
         <CardContextMenu
           key={contextItem.id}

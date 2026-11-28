@@ -5,12 +5,23 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 
 const source = readFileSync(new URL('../state/collection.tsx', import.meta.url), 'utf8');
+const gateStart = source.indexOf('  const canCaptureClipboard =');
+const effectStart = source.indexOf('  useEffect(() => {', gateStart);
+const gate = source.slice(gateStart, effectStart);
 const effect = source.slice(
-  source.indexOf('    if (!ready || !data.autoClipboard) return;'),
-  source.indexOf('  }, [ready, data.autoClipboard, capture]);'),
+  effectStart + '  useEffect(() => {'.length,
+  source.indexOf('  }, [canCaptureClipboard, capture]);', effectStart),
 );
 
-function setup({ enabled = true, ready = true, fail = false } = {}) {
+function setup({
+  enabled = true,
+  ready = true,
+  authReady = true,
+  uid = '',
+  count = 0,
+  fail = false,
+  read,
+} = {}) {
   const listeners = new Map();
   const saved = [];
   let text = 'first';
@@ -25,13 +36,16 @@ function setup({ enabled = true, ready = true, fail = false } = {}) {
     },
   };
   const cleanup = runInNewContext(
-    ts.transpile(`(function() { ${effect} })()`, { target: ts.ScriptTarget.ES2022 }),
+    ts.transpile(`(function() { ${gate} ${effect} })()`, { target: ts.ScriptTarget.ES2022 }),
     {
       ready,
-      data: { autoClipboard: enabled },
+      authReady,
+      uid,
+      GUEST_ITEM_LIMIT: 10,
+      data: { autoClipboard: enabled, items: Array(count) },
       AppState,
       Platform: { OS: 'android' },
-      Clipboard: { getStringAsync: async () => text },
+      Clipboard: { getStringAsync: read ?? (async () => text) },
       lastClipboard: { current: '' },
       capture: async (value) => {
         if (failures-- > 0) throw new Error('Disk full');
@@ -89,12 +103,37 @@ test('failed capture retries the same clipboard instead of marking it handled', 
   await flush();
   assert.deepEqual(app.saved, ['first']);
 });
-test('disabled capture and unhydrated storage never read the clipboard', async () => {
-  for (const options of [{ enabled: false }, { ready: false }]) {
+test('clipboard capture waits for storage and auth, and stays idle when disabled or at the guest limit', async () => {
+  for (const options of [
+    { enabled: false },
+    { ready: false },
+    { authReady: false },
+    { count: 10 },
+  ]) {
     const app = setup(options);
 
     await flush();
     assert.equal(app.listeners.size, 0);
     assert.deepEqual(app.saved, []);
   }
+
+  const signedIn = setup({ uid: 'restored-account', count: 10 });
+
+  await flush();
+  assert.deepEqual(signedIn.saved, ['first']);
+});
+
+test('Android focus retries a startup read that began before clipboard access', async () => {
+  let finishFirstRead;
+  const firstRead = new Promise((resolve) => {
+    finishFirstRead = resolve;
+  });
+  const link = 'https://example.com/copied-link';
+  let reads = 0;
+  const app = setup({ read: () => (reads++ === 0 ? firstRead : Promise.resolve(link)) });
+
+  app.listeners.get('focus')();
+  finishFirstRead('');
+  await flush();
+  assert.deepEqual(app.saved, [link]);
 });
